@@ -11,6 +11,21 @@
    and the rim is what makes it read as a floating layer rather than a panel
    that happens to hover.
 
+   Redesign notes (2026-10):
+   · The card MATERIALIZES from the trigger — scale + rise on a spring, with
+     the transform origin on the corner that touches the trigger, so the card
+     reads as growing out of the button instead of dissolving in.
+   · The selected model row is a FILLED plate (an Apple source-list fill), not
+     a tinted name: the selection is the strongest fact in the list and a
+     colour-only hint cannot outrank hover.
+   · Thinking effort is an inline segmented control that shares the card with
+     the model list. The track is deliberately SOLID — glass on glass reads as
+     mud, so inside the one glass surface every control is a vibrant solid.
+     One thumb travels; the labels never cross-fade.
+   · The rate chip states the selected provider's own schedule (DeepSeek
+     price peaks, 智谱 quota peaks) — providers without a schedule show no
+     chip at all.
+
    The host trigger is hidden rather than removed: the app still owns it, still
    focuses it for shortcuts, and would re-render it if we deleted the node.
    ========================================================================== */
@@ -108,7 +123,12 @@
    L3: a large floating surface. At this size an L1 fill lets the 180%-saturated
    blur's chroma take over the panel, so the fill is heavy and the saturation is
    dialled back — vibrancy belongs to the rim and the blur, the fill buys
-   legibility. */
+   legibility.
+
+   The entrance is a materialization, not a fade: the card scales up from the
+   corner that touches the trigger and rises into place on the spring curve.
+   The origin follows the placement (the card opens above, right-aligned with
+   the trigger), so the growth visibly starts AT the button. */
 .lg-picker-card {
   position: fixed;
   z-index: 1100;
@@ -131,13 +151,14 @@
     var(--lg-shadow-3);
   color: var(--dsw-alias-label-primary);
   overflow: hidden;
-  animation: lg-picker-in 160ms var(--lg-ease-out) both;
+  transform-origin: 100% 100%;
+  animation: lg-picker-in 240ms var(--lg-ease-spring) both;
 }
 
 @keyframes lg-picker-in {
   from {
     opacity: 0;
-    transform: translateY(4px) scale(0.985);
+    transform: translateY(8px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -145,16 +166,16 @@
   }
 }
 
-/* ---- Search + price -----------------------------------------------------
-   One row, two facts: what you are filtering by, and what the model costs
-   right now. The hairline separates the header from the list without a second
-   fill, which would band against the card. */
+/* ---- Search + rate ------------------------------------------------------
+   One row, two facts: what you are filtering by, and what the selected
+   provider's clock says right now. The hairline separates the header from the
+   list without a second fill, which would band against the card. */
 .lg-picker-search {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: none;
-  padding: 8px 9px 7px;
+  padding: 9px;
   box-shadow: inset 0 -0.5px 0 var(--lg-hairline);
 }
 
@@ -164,7 +185,8 @@
   height: 24px;
   padding: 0 7px;
   border: none;
-  border-radius: var(--lg-r-xs);
+  /* Concentric with the card: 18px rim − 9px row padding = 9px. */
+  border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
   color: var(--dsw-alias-label-primary);
@@ -183,9 +205,11 @@
     0 0 0 2px var(--lg-accent-ring);
 }
 
-/* The price chip. Colour alone is not a signal — the dot carries the state for
-   a reader who cannot separate the two hues, and the reason is appended so an
-   off-peak reading on a holiday explains itself. */
+/* The rate chip. Colour alone is not a signal — the dot carries the state for
+   a reader who cannot separate the two hues, and the countdown says when the
+   reading expires. The schedule itself belongs to the SELECTED provider:
+   DeepSeek states a price, 智谱 states a quota burn, everyone else shows no
+   chip — a chip with the wrong clock is worse than no chip. */
 .lg-picker-badge {
   display: inline-flex;
   align-items: center;
@@ -222,7 +246,9 @@
   font-style: normal;
 }
 
+/* Off-peak is good news: green, in both themes. */
 .lg-picker-badge[data-lg-tone='off'] {
+  background-color: rgba(31, 157, 85, 0.1);
   color: #1f9d55;
 }
 
@@ -231,6 +257,7 @@
 }
 
 body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] {
+  background-color: rgba(79, 208, 138, 0.12);
   color: #4fd08a;
 }
 
@@ -238,13 +265,105 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
   color: #6ee0a2;
 }
 
+/* Peak is a heads-up, not a warning: amber, quieter than an error red, so the
+   chip can sit permanently in the header without alarming it. */
+.lg-picker-badge[data-lg-tone='peak'] {
+  background-color: rgba(214, 137, 16, 0.12);
+  color: #b97a0e;
+}
+
+.lg-picker-badge[data-lg-tone='peak'] b {
+  color: #996606;
+}
+
+body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] {
+  background-color: rgba(255, 184, 77, 0.14);
+  color: #f0a93e;
+}
+
+body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
+  color: #ffc46b;
+}
+
+/* ---- Thinking effort: inline segmented control --------------------------
+   The control rides WITH the model list — same card, same glance — instead of
+   replacing it in a pane swap. The track is a solid sunken fill with a
+   hairline: inside the card's one glass surface a second translucent layer
+   would stack muddily, and a segmented control's affordance comes from the
+   thumb's shadow, not from any material of its own. */
+.lg-picker-seg {
+  position: relative;
+  display: flex;
+  flex: none;
+  gap: 0;
+  margin: 8px 9px 2px;
+  padding: 2px;
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+/* ONE thumb, translated by whole segments (the inline style sets its width and
+   x-offset; the percentage is of the thumb's own width, so index*100% lands
+   exactly on each stop). It travels on the spring curve — the selection is one
+   object moving, not two backgrounds swapping. */
+.lg-picker-seg-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-surface-raised);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-1);
+  transition: transform 240ms var(--lg-ease-spring);
+}
+
+.lg-picker-seg-item {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 26px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--lg-r-pill);
+  background-color: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+.lg-picker-seg-item:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-picker-seg-item[aria-checked='true'] {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 560;
+}
+
+.lg-picker-seg-item:focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: -2px;
+}
+
 /* ---- List ---------------------------------------------------------------
    Rows are FLAT. A plate per row would redraw the group once per row; the
    section heading is the grouping, and the hover wash is the only fill a row
-   ever earns. */
-/* The foot sits outside the scroll area so the two entries stay reachable no
-   matter how long the list gets. A hairline, not a plate: it is a boundary
-   between two kinds of row, not a third surface. */
+   ever earns — except the selection, which is a FILLED plate: Apple source
+   lists fill the selected row, because the selection must outrank hover and a
+   tinted glyph cannot. */
+/* The foot sits outside the scroll area so the door stays reachable no matter
+   how long the list gets. A hairline, not a plate: it is a boundary between
+   two kinds of row, not a third surface. */
 .lg-picker-foot {
   flex: none;
   padding: 4px 6px 6px;
@@ -320,48 +439,8 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
   font-size: 10px;
 }
 
-.lg-picker-effort-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 32px;
-  margin-top: 2px;
-  padding: 5px 7px;
-  border: 0;
-  border-radius: var(--lg-r-sm);
-  background-color: transparent;
-  color: var(--dsw-alias-label-secondary);
-  font: inherit;
-  font-size: 12px;
-  text-align: start;
-  cursor: pointer;
-}
-
-.lg-picker-effort-row:hover {
-  background-color: var(--lg-hairline);
-}
-
-.lg-picker-effort-row:focus-visible {
-  outline: 2px solid var(--lg-accent-ring);
-  outline-offset: -2px;
-}
-
-.lg-picker-effort-value {
-  margin-inline-start: auto;
-  color: var(--dsw-alias-label-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-.lg-picker-effort-row .lg-picker-chevron {
-  flex: none;
-  margin-inline-start: 0;
-}
-
-/* The door to the rest of the catalog. It is the same kind of row as the
-   effort row above it — same height, same hover, same chevron — because both
-   are "one more level" entries at the foot of a list. */
+/* The door to the rest of the catalog: a "one more level" entry at the foot of
+   the list. */
 .lg-picker-more {
   display: flex;
   align-items: center;
@@ -405,74 +484,6 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
   z-index: 1101;
 }
 
-.lg-picker-effort-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-height: 0;
-  padding: 4px 6px 6px;
-  overflow-y: auto;
-}
-
-.lg-picker-back {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 2px 0 4px;
-  padding: 4px 6px 4px 2px;
-  border: 0;
-  border-radius: var(--lg-r-sm);
-  background-color: transparent;
-  color: var(--dsw-alias-label-tertiary);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 560;
-  letter-spacing: 0.01em;
-  text-align: start;
-  cursor: pointer;
-}
-
-.lg-picker-back:hover {
-  color: var(--dsw-alias-label-secondary);
-}
-
-.lg-picker-back:focus-visible {
-  outline: 2px solid var(--lg-accent-ring);
-  outline-offset: -2px;
-}
-
-.lg-picker-effort-option {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 34px;
-  padding: 5px 7px;
-  border: 0;
-  border-radius: var(--lg-r-sm);
-  background-color: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.lg-picker-effort-option:hover,
-.lg-picker-effort-option:focus-visible {
-  background-color: var(--lg-hairline);
-}
-
-.lg-picker-effort-option:focus-visible {
-  outline: 2px solid var(--lg-accent-ring);
-  outline-offset: -2px;
-}
-
-.lg-picker-effort-option[aria-checked='true'] .lg-picker-name {
-  color: var(--lg-accent);
-  font-weight: 560;
-}
-
 .lg-picker-option {
   display: flex;
   align-items: center;
@@ -497,6 +508,36 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
 .lg-picker-option:focus-visible {
   outline: 2px solid var(--lg-accent-ring);
   outline-offset: -2px;
+}
+
+/* The selection: a filled plate, one per card. Hover on the selected row
+   DEEPENS the fill rather than washing it away — the row stays claimed. */
+.lg-picker-option[aria-checked='true'] {
+  background-color: var(--lg-selection-fill);
+}
+
+.lg-picker-option[aria-checked='true']:hover {
+  background-color: var(--lg-selection-fill-hover);
+}
+
+.lg-picker-option[aria-checked='true'] .lg-picker-name {
+  color: var(--lg-selection-label);
+  font-weight: 560;
+}
+
+.lg-picker-option[aria-checked='true'] .lg-picker-desc {
+  color: color-mix(in srgb, var(--lg-selection-label) 72%, transparent);
+}
+
+.lg-picker-option[aria-checked='true'] .lg-picker-check {
+  color: var(--lg-selection-label);
+}
+
+/* The reseller ratio plate rides along on the filled row as a translucent
+   white chip, so it survives the accent fill instead of fighting it. */
+.lg-picker-option[aria-checked='true'] .lg-picker-mult {
+  background-color: color-mix(in srgb, var(--lg-selection-label) 16%, transparent);
+  color: var(--lg-selection-label);
 }
 
 .lg-picker-copy {
@@ -554,11 +595,6 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
   font-weight: 700;
 }
 
-.lg-picker-option[aria-checked='true'] .lg-picker-name {
-  color: var(--lg-accent);
-  font-weight: 560;
-}
-
 .lg-picker-empty {
   padding: 18px 12px 22px;
   color: var(--dsw-alias-label-tertiary);
@@ -573,6 +609,11 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
   }
   .lg-picker-chevron,
   .lg-picker-option {
+    transition: none;
+  }
+  /* No travel under reduced motion: the thumb still lands where it belongs,
+     it just does not narrate the trip. */
+  .lg-picker-seg-thumb {
     transition: none;
   }
 }
@@ -590,6 +631,9 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='off'] b {
   .lg-picker-card,
   .lg-picker-heading {
     background-color: var(--lg-surface-raised);
+    box-shadow: inset 0 0 0 1px var(--dsw-alias-label-primary);
+  }
+  .lg-picker-seg {
     box-shadow: inset 0 0 0 1px var(--dsw-alias-label-primary);
   }
 }

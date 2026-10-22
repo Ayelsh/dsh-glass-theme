@@ -30,6 +30,33 @@
  * Built by tools/build.mjs, which inlines src/css/*.css into `sheets` and
  * src/catalog.js into `catalog`. Edit the sources, never lib/client.js.
  */
+/* ---- temporary diagnostic beacon (remove after the dead-glass hunt) ---- */
+var __lgDiag = function (stage, data) {
+	try {
+		var payload = JSON.stringify({ stage: stage, at: Date.now(), data: data || {} });
+		if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+			navigator.sendBeacon('/dsh-glass-theme/diag', payload);
+			return;
+		}
+		fetch('/dsh-glass-theme/diag', { method: 'POST', body: payload, keepalive: true }).catch(function () {});
+	} catch (error) { /* diagnostics must never throw */ }
+};
+try {
+	__lgDiag('script', {
+		href: String(location.href).slice(0, 120),
+		mlMode: (window.__ModuleLoader__ || {}).mode,
+		sheetsNow: document.querySelectorAll('style[data-plugin-css]').length
+	});
+} catch (error) { /* beacon only */ }
+try {
+	window.addEventListener('error', function (event) {
+		__lgDiag('window-error', { message: String(event.message).slice(0, 200), where: String(event.filename || '').slice(-60), line: event.lineno });
+	});
+	window.addEventListener('unhandledrejection', function (event) {
+		__lgDiag('unhandled-rejection', { reason: String(event.reason).slice(0, 200) });
+	});
+} catch (error) { /* beacon only */ }
+
 window.__ModuleLoader__.load({
 	id: 'dsh-glass-theme',
 	factory: (require) => {
@@ -56,6 +83,8 @@ window.__ModuleLoader__.load({
 		const built = /*__BUILT__*/"";
 
 		const PACKAGE = 'dsh-glass-theme';
+
+		__lgDiag('factory', {});
 
 		/* ================================================================== *
 		 * Stylesheet mounting
@@ -276,8 +305,18 @@ window.__ModuleLoader__.load({
 			const now = Date.now();
 			if (peakCache.value !== null && now - peakCache.at < 20000) return peakCache.value;
 
-			const { windows, weekdaysOnly, offPeakFactor, utcOffsetMinutes, holidays } = catalog.pricing;
-			const offset = utcOffsetMinutes * 60000;
+			/* The catalog moved to per-provider schedules (pricing.providers);
+			   this legacy header only ever priced the first-party DeepSeek
+			   account, so resolve that one schedule and fall back to the flat
+			   pre-split shape so an old bundled catalog still renders. */
+			const pricing = catalog.pricing || {};
+			const deepseek = (pricing.providers && pricing.providers.deepseek) || pricing;
+			const offsetMinutes =
+				deepseek.utcOffsetMinutes != null ? deepseek.utcOffsetMinutes :
+				pricing.utcOffsetMinutes != null ? pricing.utcOffsetMinutes : 480;
+			const holidays = deepseek.holidays || pricing.holidays;
+			const { windows, weekdaysOnly, peakFactor, offPeakFactor } = deepseek;
+			const offset = offsetMinutes * 60000;
 
 			const beijing = (ms) => {
 				const date = new Date(ms + offset);
@@ -322,7 +361,11 @@ window.__ModuleLoader__.load({
 			const today = beijing(now);
 			const reason = isHoliday(today) ? 'holiday' : today.weekday === 0 || today.weekday === 6 ? 'weekend' : 'window';
 
-			const value = { peak, factor: peak ? 1 / offPeakFactor : 1, switchAt, reason };
+			/* DeepSeek states its factors from the cheaper baseline (peak 2×,
+			   off 1×); peakFactor now carries the peak side directly, with the
+			   reciprocal kept as the fallback for the old flat shape. */
+			const peakFactorValue = peakFactor != null ? peakFactor : 1 / (offPeakFactor || 0.5);
+			const value = { peak, factor: peak ? peakFactorValue : 1, switchAt, reason };
 			peakCache.value = value;
 			peakCache.at = now;
 			return value;
@@ -383,7 +426,10 @@ window.__ModuleLoader__.load({
 
 			const price = document.createElement('div');
 			price.setAttribute(ATTR.price, '');
+			/* The note travels with the DeepSeek schedule in the catalog; the
+			   literal is only the fallback for a catalog without one. */
 			price.title =
+				(catalog.pricing?.providers?.deepseek?.note) ||
 				'高峰：北京时间周一至周五 9:00–12:00、14:00–18:00（中国法定节假日除外）；空闲时段价格为其一半。';
 
 			const state = document.createElement('span');
@@ -614,10 +660,13 @@ window.__ModuleLoader__.load({
 			applyFilter(groups, sections);
 		};
 
+		/* This header can only render the DeepSeek clock (see peakInfo), so the
+		   chip is shown exactly when a DeepSeek-account section is present —
+		   not for any provider that merely has a schedule somewhere else. */
 		const hasPricing = (sections) => {
 			for (const section of sections) {
 				const key = section.getAttribute(ATTR.provider);
-				if (key !== null && catalog.pricing.providerKeys.includes(key)) return true;
+				if (key !== null && catalog.pricing?.providers?.deepseek && key === 'deepseek') return true;
 			}
 			return false;
 		};
@@ -773,6 +822,12 @@ window.__ModuleLoader__.load({
 			} catch (error) {
 				console.error('dsh-glass-theme: could not mark the document', error);
 			}
+			try {
+				__lgDiag('applied', {
+					htmlAttr: document.documentElement.getAttribute('data-dsh-glass-theme'),
+					bodyAttr: document.body.getAttribute('data-dsh-glass-theme')
+				});
+			} catch (error) { /* beacon only */ }
 
 			try {
 				ctx.effect(() => trackModality());
@@ -933,6 +988,23 @@ window.__ModuleLoader__.load({
 				// with the plugin, including on hot reload.
 				ctx.effect(() => {
 					const tags = mount();
+					try {
+						__lgDiag('sheets', {
+							count: tags.length,
+							ids: tags.map((tag) => String(tag.getAttribute('data-plugin-css')).slice(-40))
+						});
+					} catch (error) { /* beacon only */ }
+					setTimeout(() => {
+						try {
+							__lgDiag('settled', {
+								mlMode: (window.__ModuleLoader__ || {}).mode,
+								htmlAttr: document.documentElement.getAttribute('data-dsh-glass-theme'),
+								bodyAttr: document.body.getAttribute('data-dsh-glass-theme'),
+								glassSheets: document.querySelectorAll('style[data-plugin="dsh-glass-theme"]').length,
+								allSheets: document.querySelectorAll('style[data-plugin-css]').length
+							});
+						} catch (error) { /* beacon only */ }
+					}, 5000);
 					return () => {
 						for (const tag of tags) tag.remove();
 						clear();

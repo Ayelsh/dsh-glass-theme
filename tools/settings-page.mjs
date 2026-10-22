@@ -69,6 +69,9 @@ try {
     const rows = [...root.querySelectorAll('.lg-settings-row')];
     const scroller = root.closest('[class*=wCInkW_content]') || root.parentElement;
     const rs = root.getBoundingClientRect();
+    const board = root.querySelector('.lg-settings-board');
+    const meter = root.querySelector('.lg-settings-meter');
+    const bs = board ? board.getBoundingClientRect() : null;
     return {
       present: true,
       title: title ? title.textContent : null,
@@ -77,6 +80,28 @@ try {
       names: rows.map((r) => (r.querySelector('.lg-settings-name') || {}).textContent),
       notes: rows.map((r) => (r.querySelector('.lg-settings-note') || {}).textContent),
       switches: rows.map((r) => { const s = r.querySelector('.lg-settings-switch'); return s ? s.getAttribute('aria-checked') : null; }),
+      /* The redesigned board: one material object per page, lit from inside. */
+      board: board ? (() => {
+        const s = getComputedStyle(board);
+        return {
+          glass: s.backdropFilter !== 'none' || s.webkitBackdropFilter !== undefined,
+          blur: s.backdropFilter,
+          radius: s.borderRadius,
+          glyph: board.querySelectorAll('.lg-settings-glyph').length,
+          rowsInBoard: board.querySelectorAll('.lg-settings-row').length,
+          foot: board.querySelector('.lg-settings-foot') !== null,
+          box: bs ? [Math.round(bs.x), Math.round(bs.y), Math.round(bs.width), Math.round(bs.height)] : null,
+        };
+      })() : null,
+      glow: root.querySelector('.lg-settings-glow') !== null,
+      meter: meter
+        ? {
+            full: meter.getAttribute('data-full'),
+            pips: meter.querySelectorAll('.lg-settings-pip').length,
+            pipsOn: meter.querySelectorAll('.lg-settings-pip[data-on=true]').length,
+            count: (meter.querySelector('.lg-settings-count') || {}).textContent,
+          }
+        : null,
       box: [Math.round(rs.x), Math.round(rs.y), Math.round(rs.width), Math.round(rs.height)],
       scrollerBox: scroller ? (() => { const c = scroller.getBoundingClientRect(); return [Math.round(c.x), Math.round(c.y), Math.round(c.width), Math.round(c.height)]; })() : null,
       overflowX: scroller ? scroller.scrollWidth > scroller.clientWidth : null
@@ -86,17 +111,46 @@ try {
 	if (page1.present) {
 		check('page: titled', page1.title === '快捷供应商', page1.title);
 		check('page: heading is a page heading', page1.titleSize === '17px/640', page1.titleSize);
-		check('page: lists the providers', page1.rows === 6, page1.rows);
+		/* The provider count is whatever the account has — assert a non-empty
+		   list, not a magic number. */
+		check('page: lists the providers', page1.rows >= 1, page1.rows);
 		check('page: every row names a provider and a count', page1.notes.every((n) => typeof n === 'string' && n.indexOf('个模型') > 0), page1.notes);
 		check('page: nothing selected yet', page1.switches.every((v) => v === 'false'), page1.switches);
 		check('page: fits its scroller', page1.overflowX === false && page1.box[2] <= page1.scrollerBox[2], [page1.box, page1.scrollerBox]);
+		/* The board carries the page: every row lives inside it, each row has a
+		   glyph, the pane is actual frosted glass, and the light field exists. */
+		check('page: board present and glassy', page1.board !== null && String(page1.board.blur).indexOf('blur') === 0, page1.board && page1.board.blur);
+		check('page: board holds every row', page1.board && page1.board.rowsInBoard === page1.rows, page1.board && [page1.board.rowsInBoard, page1.rows]);
+		check('page: every row has a glyph', page1.board && page1.board.glyph === page1.rows, page1.board && [page1.board.glyph, page1.rows]);
+		check('page: board has a foot', page1.board && page1.board.foot === true);
+		check('page: light field present', page1.glow === true);
+		check('page: meter matches the count', page1.meter && page1.meter.pips === 4 && page1.meter.pipsOn === 0 && page1.meter.full === 'false' && page1.meter.count === '0 / 4', page1.meter);
 	}
 
 	// ---- a switch writes ------------------------------------------------
 	check('switch: pressable', await press(page, '.lg-settings-row .lg-settings-switch'));
 	await wait(500);
-	const after = await page.evaluate(`(() => { const raw = window.localStorage.getItem(${JSON.stringify(KEY)}); return raw === null ? null : JSON.parse(raw); })()`);
-	check('switch: wrote the quick list', Array.isArray(after) && after.length === 1, after);
+	const after = await page.evaluate(`(() => {
+    const raw = window.localStorage.getItem(${JSON.stringify(KEY)});
+    const root = document.querySelector('.lg-settings');
+    const onRow = root ? root.querySelector('.lg-settings-row[data-on=true]') : null;
+    const meter = root ? root.querySelector('.lg-settings-meter') : null;
+    return {
+      stored: (() => { try { return raw === null ? null : JSON.parse(raw); } catch (e) { return null; } })(),
+      rowOn: onRow !== null && onRow.getAttribute('data-on') === 'true',
+      glyphLit: onRow !== null && getComputedStyle(onRow.querySelector('.lg-settings-glyph')).color !== getComputedStyle(root.querySelector('.lg-settings-row:not([data-on=true]) .lg-settings-glyph') || onRow.querySelector('.lg-settings-glyph')).color,
+      reset: root ? root.querySelector('.lg-settings-reset') !== null : false,
+      meterFull: meter ? meter.getAttribute('data-full') : null,
+      pipsOn: meter ? meter.querySelectorAll('.lg-settings-pip[data-on=true]').length : 0,
+      count: meter && meter.querySelector('.lg-settings-count') ? meter.querySelector('.lg-settings-count').textContent : null
+    };
+  })()`);
+	check('switch: wrote the quick list', Array.isArray(after.stored) && after.stored.length === 1, after.stored);
+	/* The selection is legible in three places at once: the row's plate, the
+	   meter's pips, and the foot's reset button. */
+	check('switch: row reflects selection', after.rowOn === true, after.rowOn);
+	check('switch: meter counts the selection', after.pipsOn === 1 && after.count === '1 / 4', [after.pipsOn, after.count]);
+	check('switch: reset appears with a selection', after.reset === true, after.reset);
 
 	// ---- the picker honours it without a reload --------------------------
 	await page.evaluate(`(() => { const c = document.querySelector('[class*=wCInkW_close], [class*=wCInkW_closeButton]'); if (c) c.click(); })()`);
@@ -128,6 +182,9 @@ try {
 	} else {
 		check('picker: trigger present', false, 'no trigger after closing settings');
 	}
+
+	// Leave the profile as it was found: the probe's toggle is a probe, not a choice.
+	await page.evaluate(`(() => { try { window.localStorage.removeItem(${JSON.stringify(KEY)}); } catch (e) {} })()`);
 
 	if (process.argv.includes('--shot')) await page.screenshot('G:/dsh-build/research/settings-page.png');
 } catch (error) {

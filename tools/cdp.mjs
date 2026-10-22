@@ -176,44 +176,48 @@ class Page {
   }
 }
 
-export async function launch({ headless = true, width = 1440, height = 960 } = {}) {
-  const dir = mkdtempSync(resolve(tmpdir(), 'lg-cdp-'))
-  const args = [
-    headless ? '--headless=new' : '--start-maximized',
-    '--disable-gpu',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-extensions',
-    '--disable-background-networking',
-    '--disable-features=Translate,MediaRouter',
-    '--hide-scrollbars',
-    '--remote-debugging-port=0',
-    `--user-data-dir=${resolve(dir, 'ud')}`,
-    `--window-size=${width},${height}`,
-    'about:blank',
-  ]
-  const child = spawn(chromePath(), args, { stdio: ['ignore', 'pipe', 'pipe'] })
-  let stderr = ''
-  child.stderr.on('data', (d) => {
-    stderr += d.toString()
-  })
+/**
+ * With `port`, attaches to an already-running Chrome instead of spawning one —
+ * the escape hatch for sandboxes that forbid Chrome's own crashpad child.
+ */
+export async function launch({ headless = true, width = 1440, height = 960, port: fixedPort = null } = {}) {
+  let dir = null
+  let child = null
+  let port = fixedPort
+  if (port === null) {
+    dir = mkdtempSync(resolve(tmpdir(), 'lg-cdp-'))
+    const args = [
+      headless ? '--headless=new' : '--start-maximized',
+      '--disable-gpu',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-features=Translate,MediaRouter',
+      '--hide-scrollbars',
+      '--remote-debugging-port=0',
+      `--user-data-dir=${resolve(dir, 'ud')}`,
+      `--window-size=${width},${height}`,
+      'about:blank',
+    ]
+    child = spawn(chromePath(), args, { stdio: 'ignore' })
 
-  const portFile = resolve(dir, 'ud', 'DevToolsActivePort')
-  let port
-  for (let i = 0; i < 100; i++) {
-    if (existsSync(portFile)) {
-      const first = readFileSync(portFile, 'utf8').split('\n')[0]
-      if (/^\d+$/.test(first.trim())) {
-        port = Number(first.trim())
-        break
+    const portFile = resolve(dir, 'ud', 'DevToolsActivePort')
+    for (let i = 0; i < 100; i++) {
+      if (existsSync(portFile)) {
+        const first = readFileSync(portFile, 'utf8').split('\n')[0]
+        if (/^\d+$/.test(first.trim())) {
+          port = Number(first.trim())
+          break
+        }
       }
+      if (child.exitCode !== null) break
+      await sleep(100)
     }
-    if (child.exitCode !== null) break
-    await sleep(100)
-  }
-  if (port === undefined) {
-    child.kill()
-    throw new Error('Chrome did not expose a debugging port\n' + stderr.slice(-2000))
+    if (port === null || port === undefined) {
+      child.kill()
+      throw new Error('Chrome did not expose a debugging port')
+    }
   }
 
   let wsUrl
@@ -228,7 +232,7 @@ export async function launch({ headless = true, width = 1440, height = 960 } = {
     await sleep(100)
   }
   if (wsUrl === undefined) {
-    child.kill()
+    if (child !== null) child.kill()
     throw new Error('Chrome DevTools endpoint never answered')
   }
 
@@ -258,7 +262,8 @@ export async function launch({ headless = true, width = 1440, height = 960 } = {
       } catch {
         /* already gone */
       }
-      child.kill()
+      if (child !== null) child.kill()
+      if (dir === null) return
       await sleep(300)
       try {
         rmSync(dir, { recursive: true, force: true })

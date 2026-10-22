@@ -382,10 +382,14 @@
    across sheets and cropped it to a 9px radius with a 4px inset. */
 [role='tooltip']:not([class~='xpvNua_preview']) {
   border-radius: var(--lg-r-sm);
-  background-color: var(--lg-glass-2);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  color: var(--dsw-alias-label-primary);
+  /* Solid on purpose. Tooltips render inline inside glass surfaces — the
+     composer card among them — so a translucent tooltip needed a
+     backdrop-filter of its own: a blur nested inside the host's blur, which
+     Chromium re-composites every frame while the backdrop animates (the
+     streaming pending dot) and shows as page-wide flicker. macOS tooltips are
+     solid too; a one-line label needs no material. */
+  background-color: var(--dsw-alias-tooltip-bg);
+  color: var(--dsw-static-neutral-bluish-00);
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     var(--lg-shadow-2);

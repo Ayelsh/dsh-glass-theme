@@ -106,10 +106,20 @@ try {
 	const page = await b.newPage();
 	await page.cookie({ name: cookie.slice(0, eq), value: cookie.slice(eq + 1), domain: '127.0.0.1', path: '/' });
 	await page.addInitScript(`(() => {
-    document.addEventListener('DOMContentLoaded', () => {
-      document.body.setAttribute('data-ds-dark-theme', '${THEME === 'dark' ? '1' : '0'}');
-      if ('${THEME}' === 'light') document.body.removeAttribute('data-ds-dark-theme');
-    });
+    /* The host re-applies the user's saved theme some time after
+       DOMContentLoaded, so a one-shot flip loses the race; keep enforcing
+       the probe's theme for the life of the page. */
+    setInterval(() => {
+      const b = document.body;
+      if (!b) return;
+      if ('${THEME}' === 'light') {
+        b.removeAttribute('data-ds-dark-theme');
+        document.documentElement.removeAttribute('data-ds-dark-theme');
+      } else {
+        b.setAttribute('data-ds-dark-theme', '1');
+        document.documentElement.setAttribute('data-ds-dark-theme', '1');
+      }
+    }, 250);
   })()`);
 	await page.goto(URL_BASE, { settleMs: 12000 });
 
@@ -121,8 +131,15 @@ try {
 	await page.evaluate(`(() => { try { window.localStorage.removeItem('dsh-glass-theme:quick-providers'); } catch (e) {} })()`);
 	await reload(page);
 	let state = await openPicker(page);
+	/* The provider census is data, not a constant: the live directory has
+	   grown before (6 → 8 groups, 40 → 52 rows). Pin the door's counts to
+	   what the unconfigured pass itself counted, not to history. */
+	let everyCount = 0;
+	let everyRows = 0;
 	check('unconfigured: card opens', state !== null && state.open === true, state === null ? 'no trigger' : state.open === false ? 'card stayed shut' : (state.groups || []).length);
 	if (state && state.open) {
+		everyCount = state.groups.length;
+		everyRows = state.groups.reduce((n, g) => n + g.rows, 0);
 		check('unconfigured: lists every provider', state.groups.length > 1, state.groups.map((g) => g.name));
 		check('unconfigured: no "all providers" door', state.more === null, state.more);
 	}
@@ -133,10 +150,17 @@ try {
 	state = await openPicker(page);
 	check('configured: card opens', state !== null && state.open === true);
 	if (state && state.open) {
-		check('configured: only the pinned providers', state.groups.length === 1 && state.groups[0].name === 'workbuddy', state.groups.map((g) => g.name));
+		/* The pinned set no longer stands alone: the session's current model
+		   may live outside it, and its provider's group is shown beside the
+		   pinned ones (m00550). Expect exactly [pinned..., current?]. */
+		const currentProvider = await page.evaluate(`(() => { try { const ctx = window.__lgCtx; const v = ctx.get('uiSession').current.value; const c = ctx.get('modelDirectories').directoryFor(v.key).store.getSnapshot().current; return c ? c.provider : null; } catch (e) { return null; } })()`);
+		const slug = (v) => String(v).toLowerCase().replace(/[^a-z0-9]/g, '');
+		const expected = (currentProvider && slug(currentProvider) !== 'workbuddy' ? [currentProvider] : []).concat(['workbuddy']);
+		const names = state.groups.map((g) => g.name);
+		check('configured: pinned providers plus the current one', names.length === expected.length && names.every((n, i) => slug(n) === slug(expected[i])), names);
 		check('configured: rows are visible', state.groups[0] && state.groups[0].visible === state.groups[0].rows && state.groups[0].rows > 0, state.groups[0]);
 		check('configured: the door is present', state.more !== null && state.more.indexOf('所有供应商') === 0, state.more);
-		check('configured: door names the total', state.more !== null && state.more.indexOf('6') >= 0, state.more);
+		check('configured: door names the total', state.more !== null && state.more.indexOf(String(everyCount)) >= 0, state.more);
 	}
 
 	// ---- state 3: the second card ----------------------------------------
@@ -145,8 +169,8 @@ try {
 	state = await page.evaluate(PROBE);
 	check('all card: opened', !!(state && state.all), state && state.all ? state.all.groups.length : 'absent');
 	if (state && state.all) {
-		check('all card: lists every provider', state.all.groups.length === 6, state.all.groups.map((g) => g.name));
-		check('all card: all 40 rows', state.all.groups.reduce((n, g) => n + g.rows, 0) === 40, state.all.groups.reduce((n, g) => n + g.rows, 0));
+		check('all card: lists every provider', state.all.groups.length === everyCount, state.all.groups.map((g) => g.name));
+		check('all card: every row', state.all.groups.reduce((n, g) => n + g.rows, 0) === everyRows, state.all.groups.reduce((n, g) => n + g.rows, 0));
 		check('all card: has its own search', state.all.search === '搜索全部模型', state.all.search);
 		check('all card: glass material', state.all.backdrop.indexOf('blur') >= 0 && state.all.radius === '18px', [state.all.backdrop, state.all.radius]);
 		check('all card: does not cover the first card', state.all.overlaps === false, state.all.box);

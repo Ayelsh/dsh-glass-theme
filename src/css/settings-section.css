@@ -1,15 +1,25 @@
 /* ===========================================================================
    Settings — Liquid Glass section.
 
-   This is a host settings PAGE, not a dialog: it lives inside the settings
-   shell's content column, so it must speak the shell's own reading measure and
-   must NOT paint a card of its own. The shell already gives every section a
-   564px column with 24px of side padding; a second box inside that column would
-   be a box inside a box, which is the collision this skin has been fixing all
-   along.
+   The page has one material object, not three. The settings shell already IS a
+   frosted panel (L3 glass, 34px blur); draping a second card on it would be the
+   box-in-a-box collision this skin spends its rules fixing, and glass on glass
+   turns both panes into flat plastic. So the board below is the page's entire
+   surface: it is inset far enough to read as an object on the sheet, its fill is
+   deliberately LIGHTER than the sheet's so its own backdrop-filter shows a
+   different sample, and it carries its light rather than borrowing the page's.
 
-   So: rows are separated by a hairline, the switch is the only raised object,
-   and the page has no surface at all.
+   That last point is the one that makes a frosted pane read as glass instead of
+   as a grey rectangle: `backdrop-filter` can only frost what is behind it, and
+   behind this page is a white settings sheet. `lg-settings-glow` paints a light
+   field inside the board's own footprint — a cool source upper-left, a warm one
+   upper-right, a violet floor — so the blur has coloured light to smear. The
+   pane then behaves like real glass: the light moves with the surface, and the
+   rows sit on top of a material instead of on a tint.
+
+   Legibility is bought with fill, never with blur: the board sits at ~0.52
+   white, the rows add their own solid plates when selected, and no body text
+   ever sits directly on the moving field.
    =========================================================================== */
 
 .lg-settings {
@@ -17,10 +27,36 @@
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
   line-height: 20px;
+
+  /* The board's own light. Alpha is high on purpose: it is refracted through a
+     24px blur and a half-opaque fill, so anything subtler disappears entirely. */
+  --lg-board-fill-top: rgba(255, 255, 255, 0.64);
+  --lg-board-fill-bottom: rgba(255, 255, 255, 0.46);
+  --lg-board-sheen: rgba(255, 255, 255, 0.5);
+  --lg-row-hover: rgba(255, 255, 255, 0.58);
+  --lg-glyph-fill-top: rgba(255, 255, 255, 0.96);
+  --lg-glyph-fill-bottom: rgba(255, 255, 255, 0.52);
+  --lg-glyph-ring: rgba(16, 22, 40, 0.07);
+  --lg-glow-1: rgba(61, 90, 254, 0.52);
+  --lg-glow-2: rgba(255, 146, 86, 0.4);
+  --lg-glow-3: rgba(126, 96, 255, 0.34);
+  --lg-grain-opacity: 0.05;
+}
+
+/* ---- Caption row -------------------------------------------------------
+   A page heading, not a dialog title: 17/640 is the shell's own heading size.
+   The meter rides on the same baseline so capacity is answered where the eye
+   already is. */
+.lg-settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
 .lg-settings-title {
-  margin: 0 0 6px;
+  margin: 0;
   color: var(--dsw-alias-label-primary);
   font-size: 17px;
   font-weight: 640;
@@ -28,59 +64,265 @@
   line-height: 24px;
 }
 
+/* ---- Capacity meter ----------------------------------------------------
+   Four pips and a count in a chip of glass. It is a picture, not a control:
+   the user should see the ceiling approaching before a switch refuses. */
+.lg-settings-meter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 10px 0 9px;
+  border-radius: var(--lg-r-pill);
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px) saturate(170%);
+  -webkit-backdrop-filter: blur(12px) saturate(170%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    0 0 0 0.5px rgba(16, 22, 40, 0.07),
+    0 1px 2px rgba(16, 22, 40, 0.05);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* Full is a different kind of state, not a louder colour: the chip picks up the
+   accent rim so the ceiling reads at a glance. */
+.lg-settings-meter[data-full='true'] {
+  background-color: color-mix(in srgb, var(--lg-accent) 9%, rgba(255, 255, 255, 0.62));
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 34%, transparent),
+    0 2px 8px -2px color-mix(in srgb, var(--lg-accent) 30%, transparent);
+}
+
+.lg-settings-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.lg-settings-pip {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--lg-r-pill);
+  background-color: rgba(16, 22, 40, 0.16);
+  box-shadow: inset 0 0 0 0.5px rgba(16, 22, 40, 0.06);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out),
+    transform var(--lg-t-base) var(--lg-ease-spring);
+}
+
+.lg-settings-pip[data-on='true'] {
+  background-image: linear-gradient(180deg, #6b83fb, var(--lg-accent));
+  box-shadow:
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent-strong) 40%, transparent),
+    0 1px 2px color-mix(in srgb, var(--lg-accent) 45%, transparent);
+  transform: scale(1.12);
+}
+
+.lg-settings-count {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11.5px;
+  font-weight: 560;
+  line-height: 17px;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
 .lg-settings-intro {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   max-width: 46em;
   color: var(--dsw-alias-label-tertiary);
   font-size: 12.5px;
   line-height: 20px;
 }
 
-.lg-settings-empty {
-  margin: 0;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 12.5px;
+/* ---- The pane ---------------------------------------------------------- */
+.lg-settings-stage {
+  position: relative;
+  isolation: isolate;
 }
 
-/* A grouped list, HIG style: one hairline between rows, no plate per row. */
+/* The light the pane refracts. Absolutely positioned, so it can never push the
+   settings column wider; the blur softens its edges inside the board's radius,
+   which is why the coloured wash reads as light in the material rather than as
+   a gradient painted on top of it. */
+.lg-settings-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--lg-r-xl);
+  background-image:
+    radial-gradient(58% 84% at 8% 0%, var(--lg-glow-1) 0%, transparent 62%),
+    radial-gradient(54% 78% at 96% 14%, var(--lg-glow-2) 0%, transparent 58%),
+    radial-gradient(76% 92% at 56% 108%, var(--lg-glow-3) 0%, transparent 64%);
+  filter: blur(18px) saturate(130%);
+  pointer-events: none;
+  animation: lg-settings-glow-in 520ms var(--lg-ease-out) both;
+}
+
+.lg-settings-board {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 6px 0;
+  border-radius: var(--lg-r-xl);
+  background-image: linear-gradient(180deg, var(--lg-board-fill-top), var(--lg-board-fill-bottom));
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.36),
+    0 0 0 0.5px rgba(16, 22, 40, 0.06),
+    0 2px 6px rgba(16, 22, 40, 0.05),
+    0 20px 44px -20px rgba(16, 22, 40, 0.2),
+    0 26px 64px -34px color-mix(in srgb, var(--lg-accent) 45%, transparent);
+  overflow: hidden;
+  /* Materialise: the surface arrives with a slight scale and lift, and its
+     shadow settles under it — not an opacity fade. */
+  animation: lg-settings-board-in 460ms var(--lg-ease-spring) both;
+}
+
+/* The lit top face of the glass. A pane this large catches the key light across
+   its upper third; without it the fill reads as flat paper. */
+.lg-settings-board::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 54%;
+  border-radius: var(--lg-r-xl) var(--lg-r-xl) 0 0;
+  background-image: linear-gradient(180deg, var(--lg-board-sheen), transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Frosted grain. Real etched glass scatters the light into speckle; a pure
+   blur+fill reads as plastic. This is a desaturated fractal-noise tile blended
+   OVER the pane's own sample (the board is a stacking context, so the blend
+   stops at the glass and never touches the rows' text). No z-index: the rows
+   and foot sit at z1 and stay above it. */
+.lg-settings-board::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  opacity: var(--lg-grain-opacity);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
 .lg-settings-list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin: 0;
-  padding: 0;
+  padding: 2px 0 4px;
   list-style: none;
 }
 
+/* ---- Rows --------------------------------------------------------------
+   No per-row plate by default — the pane is the plate. Hover borrows a lighter
+   sample of the same glass; a pinned row lays down a solid accent wash, which is
+   a different kind of thing from hover and so can outrank it. */
 .lg-settings-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 0;
+  padding: 9px 10px;
+  border-radius: 16px;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    background-image var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out),
+    transform 90ms var(--lg-ease-out);
+  animation: lg-settings-row-in 420ms var(--lg-ease-out) both;
+  animation-delay: calc(var(--lg-row-index, 0) * 34ms + 90ms);
 }
 
-.lg-settings-row + .lg-settings-row {
-  border-top: 0.5px solid var(--lg-hairline);
+.lg-settings-row:hover {
+  background-color: var(--lg-row-hover);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.85),
+    0 1px 2px rgba(16, 22, 40, 0.05);
 }
 
-/* A switch that cannot change anything looks like a switch that is broken. It
-   recedes instead, and the row's own label keeps full contrast: the provider is
-   still worth reading, only its control is unavailable. */
-.lg-settings-row[data-blocked='true'] .lg-settings-switch {
-  opacity: 0.4;
+/* Press feedback on pointer-down, continuous while the finger is on the row. */
+.lg-settings-row:active {
+  transform: scale(0.995);
 }
 
-.lg-settings-row[data-blocked='true'] .lg-settings-switch:hover .lg-settings-knob {
-  transform: none;
+.lg-settings-row[data-on='true'] {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--lg-accent) 15%, transparent),
+    color-mix(in srgb, var(--lg-accent) 5%, transparent)
+  );
+  box-shadow:
+    inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 32%, transparent),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.55);
 }
 
-.lg-settings-count {
-  margin: 10px 0 0;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
-  line-height: 17px;
-  font-variant-numeric: tabular-nums;
+.lg-settings-row[data-on='true']:hover {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--lg-accent) 19%, transparent),
+    color-mix(in srgb, var(--lg-accent) 7%, transparent)
+  );
+}
+
+/* Identity mark: the provider's first character on a small pane of glass. It
+   gives each row a face, and it is the only raised object besides the switch. */
+.lg-settings-glyph {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background-image: linear-gradient(160deg, var(--lg-glyph-fill-top), var(--lg-glyph-fill-bottom));
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 0.5px var(--lg-glyph-ring),
+    0 1px 2px rgba(16, 22, 40, 0.07);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12.5px;
+  font-weight: 620;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  transition:
+    color var(--lg-t-base) var(--lg-ease-out),
+    background-image var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out);
+}
+
+.lg-settings-row[data-on='true'] .lg-settings-glyph {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--lg-accent) 24%, white),
+    color-mix(in srgb, var(--lg-accent) 9%, white)
+  );
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 30%, transparent),
+    0 1px 3px color-mix(in srgb, var(--lg-accent) 22%, transparent);
+  color: var(--lg-accent-strong);
 }
 
 .lg-settings-copy {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
@@ -91,9 +333,15 @@
   font-size: 13px;
   font-weight: 500;
   line-height: 19px;
+  letter-spacing: -0.003em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: font-weight var(--lg-t-fast) var(--lg-ease-out);
+}
+
+.lg-settings-row[data-on='true'] .lg-settings-name {
+  font-weight: 600;
 }
 
 .lg-settings-note {
@@ -103,26 +351,45 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The switch: a 32x18 track with a 14px knob. iOS proportions, not the 88x20
-   toolbar control — this is a settings row, and a settings row's switch is the
-   smallest object that can be hit. */
+/* ---- Switch ------------------------------------------------------------
+   34x20 with a 16px knob: a settings switch, iOS proportions. The track has its
+   own specular rim so it reads as an object in the glass rather than as a
+   painted capsule; the knob is a lit sphere, which is why it keeps a white body
+   in both themes. */
 .lg-settings-switch {
   position: relative;
   flex: none;
   box-sizing: border-box;
-  width: 32px;
-  height: 18px;
+  width: 34px;
+  height: 20px;
   margin-inline-start: auto;
   padding: 0;
   border: 0;
   border-radius: var(--lg-r-pill);
-  background-color: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  background-color: rgba(16, 22, 40, 0.14);
+  box-shadow:
+    inset 0 0.5px 1px rgba(16, 22, 40, 0.12),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    background-image var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out),
+    transform 110ms var(--lg-ease-out);
 }
 
 .lg-settings-switch[data-on='true'] {
+  background-image: linear-gradient(180deg, #6f87ff, var(--lg-accent));
   background-color: var(--lg-accent);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -0.5px 0 rgba(0, 0, 0, 0.14),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent-strong) 45%, transparent),
+    0 2px 6px -1px color-mix(in srgb, var(--lg-accent) 45%, transparent);
+}
+
+.lg-settings-switch:active {
+  transform: scale(0.96);
 }
 
 .lg-settings-switch:focus-visible {
@@ -134,27 +401,319 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 14px;
-  height: 14px;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
   border-radius: var(--lg-r-pill);
-  background-color: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
-  transition: transform var(--lg-t-fast) var(--lg-ease-out);
+  background-image: linear-gradient(180deg, #ffffff, #f4f6fb);
+  box-shadow:
+    0 1px 2px rgba(16, 22, 40, 0.3),
+    0 0 0 0.5px rgba(16, 22, 40, 0.08),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform var(--lg-t-base) var(--lg-ease-spring),
+    width 140ms var(--lg-ease-out);
+}
+
+/* iOS stretches the knob while the finger is down; at rest it stays round. */
+.lg-settings-switch:active .lg-settings-knob {
+  width: 19px;
 }
 
 .lg-settings-switch[data-on='true'] .lg-settings-knob {
   transform: translateX(14px);
 }
 
+.lg-settings-switch[data-on='true']:active .lg-settings-knob {
+  transform: translateX(11px);
+}
+
+/* A switch that cannot change anything looks like a switch that is broken. It
+   recedes instead, and the row's own label keeps full contrast: the provider is
+   still worth reading, only its control is unavailable. */
+.lg-settings-row[data-blocked='true'] .lg-settings-switch {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* ---- Foot --------------------------------------------------------------
+   A hairline that floats inside the pane, not a border under it: the line is
+   inset so the glass keeps its edge all the way around. */
+.lg-settings-foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 4px;
+  padding: 8px 8px 12px;
+  box-shadow: inset 0 0.5px 0 var(--lg-hairline);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  line-height: 17px;
+}
+
+.lg-settings-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lg-settings-reset {
+  flex: none;
+  margin: 0;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: var(--lg-r-pill);
+  background-color: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform 90ms var(--lg-ease-out);
+}
+
+.lg-settings-reset:hover {
+  background-color: rgba(16, 22, 40, 0.06);
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-settings-reset:active {
+  transform: scale(0.96);
+}
+
+.lg-settings-reset:focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: 2px;
+}
+
+.lg-settings-empty {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 26px 18px 28px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* ---- Entrance ----------------------------------------------------------
+   Short, stagger-limited, and never on a gesture path: the page is entered by
+   navigation, so travel is allowed here and stops at 6px. */
+@keyframes lg-settings-board-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.986);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Travel is expressed on the individual `translate` property, not on
+   `transform`: the entrance uses `animation-fill-mode: both`, so its final
+   keyframe would otherwise pin `transform` to `none` and swallow the row's
+   press-down scale. `translate` and `transform` compose instead of competing. */
+@keyframes lg-settings-row-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes lg-settings-glow-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- Dark --------------------------------------------------------------
+   Glass in the dark is not white fill at low alpha: it is a lighter material on
+   a darker field, so the fill stays near-transparent while the rim stays bright.
+   The light field gets *more* saturated, because a 24px blur through an 8% fill
+   eats most of it. */
+body[data-ds-dark-theme] .lg-settings {
+  --lg-board-fill-top: rgba(255, 255, 255, 0.085);
+  --lg-board-fill-bottom: rgba(255, 255, 255, 0.04);
+  --lg-board-sheen: rgba(255, 255, 255, 0.09);
+  --lg-row-hover: rgba(255, 255, 255, 0.06);
+  --lg-glyph-fill-top: rgba(255, 255, 255, 0.11);
+  --lg-glyph-fill-bottom: rgba(255, 255, 255, 0.045);
+  --lg-glyph-ring: rgba(255, 255, 255, 0.12);
+  --lg-glow-1: rgba(123, 147, 255, 0.55);
+  --lg-glow-2: rgba(255, 158, 120, 0.28);
+  --lg-glow-3: rgba(150, 118, 255, 0.36);
+  --lg-grain-opacity: 0.07;
+}
+
+body[data-ds-dark-theme] .lg-settings-board {
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 0.5px rgba(255, 255, 255, 0.09),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 22px 48px -20px rgba(0, 0, 0, 0.72),
+    0 28px 68px -34px color-mix(in srgb, var(--lg-accent) 55%, transparent);
+}
+
+body[data-ds-dark-theme] .lg-settings-meter {
+  background-color: rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 0.5px rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+body[data-ds-dark-theme] .lg-settings-meter[data-full='true'] {
+  background-color: color-mix(in srgb, var(--lg-accent) 16%, transparent);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 55%, transparent),
+    0 2px 10px -2px color-mix(in srgb, var(--lg-accent) 45%, transparent);
+}
+
+body[data-ds-dark-theme] .lg-settings-pip {
+  background-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+
+body[data-ds-dark-theme] .lg-settings-row:hover {
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+/* In the dark the wash is measured against the accent at 20%, not 15%: at 15%
+   the plate and the pane are the same value and selection disappears. */
+body[data-ds-dark-theme] .lg-settings-row[data-on='true'] {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--lg-accent) 22%, transparent),
+    color-mix(in srgb, var(--lg-accent) 7%, transparent)
+  );
+  box-shadow:
+    inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 45%, transparent),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
+}
+
+body[data-ds-dark-theme] .lg-settings-row[data-on='true']:hover {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--lg-accent) 27%, transparent),
+    color-mix(in srgb, var(--lg-accent) 10%, transparent)
+  );
+}
+
+body[data-ds-dark-theme] .lg-settings-row[data-on='true'] .lg-settings-glyph {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--lg-accent) 30%, transparent),
+    color-mix(in srgb, var(--lg-accent) 10%, transparent)
+  );
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 38%, transparent);
+  color: #ffffff;
+}
+
+body[data-ds-dark-theme] .lg-settings-glyph {
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 0.5px var(--lg-glyph-ring),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body[data-ds-dark-theme] .lg-settings-switch {
+  background-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 0.5px 1px rgba(0, 0, 0, 0.36),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.1);
+}
+
+body[data-ds-dark-theme] .lg-settings-reset:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Environment answers ----------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
+  .lg-settings-board,
+  .lg-settings-glow,
+  .lg-settings-row {
+    animation: none;
+  }
+
+  .lg-settings-row,
+  .lg-settings-row:active,
   .lg-settings-switch,
-  .lg-settings-knob {
+  .lg-settings-switch:active,
+  .lg-settings-knob,
+  .lg-settings-reset,
+  .lg-settings-meter,
+  .lg-settings-pip {
     transition: none;
+    transform: none;
+  }
+
+  /* The knob still has to land on the right side; only the travel goes. */
+  .lg-settings-switch[data-on='true'] .lg-settings-knob {
+    transform: translateX(14px);
+  }
+}
+
+/* Reduced transparency: the pane stops being glass and becomes a surface. The
+   light field goes with it, because a solid fill would hide it anyway. */
+@media (prefers-reduced-transparency: reduce) {
+  .lg-settings-board {
+    background-image: none;
+    background-color: var(--lg-glass-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .lg-settings-glow {
+    display: none;
+  }
+
+  .lg-settings-board::after {
+    display: none;
+  }
+
+  .lg-settings-meter {
+    background-color: var(--lg-glass-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 
 @media (prefers-contrast: more) {
+  .lg-settings-board {
+    box-shadow:
+      inset 0 0.5px 0 var(--lg-edge-top),
+      0 0 0 1px var(--dsw-alias-label-primary),
+      0 2px 6px rgba(16, 22, 40, 0.08);
+  }
+
   .lg-settings-switch {
     box-shadow: inset 0 0 0 1px var(--dsw-alias-label-primary);
+  }
+
+  .lg-settings-row[data-on='true'] {
+    box-shadow: inset 0 0 0 1px var(--dsw-alias-brand-primary);
   }
 }

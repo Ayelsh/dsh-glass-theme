@@ -9,6 +9,12 @@ Pure CSS plus a ~150-line client runtime. Nothing in the shipped app is patched;
 the skin loads as an ordinary Harness bundle and layers its stylesheets after the
 app's own.
 
+| Light | Dark |
+| --- | --- |
+| ![The Liquid Glass settings page, light theme](assets/screenshots/settings-light.png) | ![The Liquid Glass settings page, dark theme](assets/screenshots/settings-dark.png) |
+
+![The provider board at capacity, with the capacity meter full](assets/screenshots/settings-capacity.png)
+
 ## What it does
 
 - **Re-keys the app's whole token vocabulary.** The shipped theme publishes an
@@ -21,13 +27,22 @@ app's own.
 - **Replaces the composer's model picker.** `src/picker.js` mounts its own React
   card into `conversation.input.model` and hides the host trigger: grouped
   providers, a one-line description per model, the reseller price ratio as a
-  badge, a live peak/off-peak chip, and an effort pane. Configured providers
+  badge, a live peak/off-peak chip that follows the SELECTED model's provider
+  (DeepSeek: 工作日 9:00–12:00 + 14:00–18:00, ≈2×; 智谱: 工作日 14:00–18:00,
+  ≈2×; providers without a schedule show no chip), and an inline effort
+  segmented control beside the model list (both visible at once; picking a
+  model keeps the card open). Configured providers
   narrow the default list; everything else stays behind one "所有供应商" row.
 - **Merges the usage readouts.** `src/stats.js` replaces the two stat pills and
   the context ring with one control that opens a single panel: context pressure
-  and its three buckets, session timings, and the token ledger.
+  and its three buckets, session timings, and the token ledger. The pill sits at
+  the input box's right edge and the panel hangs off that same right edge.
 - **Adds its own settings page** (`settings.section`, "Liquid Glass") where the
-  quick-provider list is chosen.
+  quick-provider list is chosen. The page has one material object — a frosted
+  board lit from inside by its own light field (the settings sheet is already
+  glass; a second card would be glass on glass) — with a capacity meter, glyph
+  tiles, staggered entrance, and etched grain that answers
+  `prefers-reduced-transparency`.
 - **Answers the accessibility questions**: `prefers-reduced-transparency`,
   `prefers-contrast`, `prefers-reduced-motion`, `hover: none`, and keyboard-only
   focus rings (gated on input modality, so a pointer user never sees one).
@@ -91,7 +106,7 @@ Live probes (each needs the GUI running; they mint their own auth cookie):
 node tools/two-level.mjs                # the picker's three states: unconfigured, configured, the second card
 node tools/settings-page.mjs            # the skin's settings page renders, lists providers, and its switches write
 node tools/pick-check.mjs               # one row checked, across providers that share a model id
-node tools/effort3.mjs                  # the effort pane applies a level
+node tools/effort3.mjs                  # the effort segment applies a level
 node tools/picker-rows.mjs              # fail if any row lacks a description or its ratio badge is block-level
 node tools/chk-chip.mjs                 # the peak/off-peak chip's state and countdown
 node tools/meter.mjs --shot G:/tmp/m    # the context meter panel

@@ -10,31 +10,58 @@
    ========================================================================== */
 
 /* ---- The card ---------------------------------------------------------- */
+/* A backdrop-filter — or any non-none transform — on the card makes it the
+   containing block of every `position: fixed` descendant. Composer tooltips,
+   the stop button's included, are NOT portaled: the app computes the bubble's
+   coordinates for the viewport and renders it as an inline fixed child of this
+   card. Behind element-level glass those viewport coordinates resolved
+   against the card instead, so the bubble landed in the wrong place, and the
+   tooltip's own blur nested inside the card's blur — a combination Chromium
+   re-composites on every frame of anything animating in the backdrop (the
+   streaming pending dot) and shows as page-wide flicker. The material
+   therefore lives on a pseudo-element, exactly as it does on the sidebar
+   column: a pseudo cannot be an ancestor, so the card never becomes a
+   containing block and fixed children keep the viewport. */
 [class~='RlGAzG_card'] {
   border-radius: var(--lg-r-panel);
-  background-color: var(--lg-glass-2);
-  backdrop-filter: blur(30px) saturate(190%);
-  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     inset 0 -0.5px 0 var(--lg-edge-bottom),
     var(--lg-shadow-2);
   border: 0;
-  transition:
-    box-shadow var(--lg-t-base) var(--lg-ease-out),
-    background-color var(--lg-t-base) var(--lg-ease-out),
-    transform var(--lg-t-base) var(--lg-ease-out);
+  position: relative;
+  isolation: isolate;
+  transition: box-shadow var(--lg-t-base) var(--lg-ease-out);
 }
 
-/* Focus lift: the card rises a hair and its ambient shadow widens. Transform is
-   used rather than a margin so the layout never reflows under the caret. */
+[class~='RlGAzG_card']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  pointer-events: none;
+  transition: background-color var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* Focus lift: the material deepens a step and the ambient shadow widens. The
+   old translateY(-1px) is gone — a transform is as much a containing block as
+   a filter, and the lift read as a shadow change anyway. */
 [class~='RlGAzG_card']:focus-within {
-  background-color: var(--lg-glass-3);
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     inset 0 -0.5px 0 var(--lg-edge-bottom),
     var(--lg-shadow-3);
-  transform: translateY(-1px);
+}
+
+[class~='RlGAzG_card']:focus-within::before {
+  background-color: var(--lg-glass-3);
 }
 
 /* Disabled / pending: the card stops claiming attention. */
@@ -314,9 +341,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class~='RlGAzG_card']:focus-within {
-    transform: none;
-  }
   [class~='RlGAzG_primary']:active:not(:disabled) {
     transform: none;
   }

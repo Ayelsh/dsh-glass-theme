@@ -196,17 +196,29 @@ function createStats(require, ctx, catalog) {
 				const panel = panelRef.current;
 				if (trigger_ === null || panel === null) return;
 				const a = trigger_.getBoundingClientRect();
-				const b = panel.getBoundingClientRect();
+				/* The panel opens on a 150ms scale animation; a rect would read
+				   the animated box (1% small), swing the anchor, and leave the
+				   right edges 3px apart once the scale settles. offsetWidth /
+				   offsetHeight are the layout box — the settled truth. */
+				const panelWidth = panel.offsetWidth;
+				const panelHeight = panel.offsetHeight;
 				const gap = 8;
 				const margin = 10;
-				let top = a.top - b.height - gap;
-				if (top < margin) top = Math.min(a.bottom + gap, window.innerHeight - b.height - margin);
-				let left = a.left;
-				if (left + b.width > window.innerWidth - margin) left = window.innerWidth - margin - b.width;
-				if (left < margin) left = margin;
-				setPlacement({ top: Math.round(Math.max(margin, Math.min(top, window.innerHeight - b.height - margin))), left: Math.round(left) });
+				let top = a.top - panelHeight - gap;
+				if (top < margin) top = Math.min(a.bottom + gap, window.innerHeight - panelHeight - margin);
+				/* The trigger hangs off the input box's right edge, so the panel
+				   hangs off the trigger's right edge — right edges ride together,
+				   and the clamps only engage near the window's own margin. */
+				let left = a.right - panelWidth;
+				left = Math.max(margin, Math.min(left, window.innerWidth - margin - panelWidth));
+				setPlacement({ top: Math.round(Math.max(margin, Math.min(top, window.innerHeight - panelHeight - margin))), left: Math.round(left) });
 			};
 			place();
+			/* The first pass measures while the panel is still materialising —
+			   web fonts and the scrollbar can nudge the pill a few pixels after
+			   it runs. A second pass one painted frame later reads the settled
+			   geometry, so the right edges really touch. */
+			requestAnimationFrame(() => requestAnimationFrame(place));
 			window.addEventListener('resize', place);
 			return () => window.removeEventListener('resize', place);
 		}, [open]);
@@ -389,6 +401,54 @@ function createStats(require, ctx, catalog) {
 			dock.appendChild(seat);
 		}
 		document.documentElement.setAttribute('data-lg-stats', '');
+		/* Right-edge alignment with the INPUT BOX, not the conversation column:
+		   the host centres a narrower glass card in the wide column, so the dock
+		   (full column width) runs past the card's right edge. The card is the
+		   dock's card-shaped sibling that holds the editable; the gap between
+		   the column edge and the card edge rides on the seat as an end margin
+		   and the pill lands exactly on the card's rim. The card is re-resolved
+		   on every pass — switching sessions swaps the node — and a
+		   ResizeObserver on the persistent column plus the card itself, with a
+		   slow poll as the belt to that brace, keeps the margin honest across
+		   window resizes, font swaps, and layout transitions. */
+		const findCard = () =>
+			Array.prototype.find.call(
+				dock.parentElement.children,
+				(el) => el !== dock && el.querySelector('textarea, [contenteditable=true]')
+			);
+		const align = () => {
+			const card = findCard();
+			if (card === undefined) return;
+			/* The gap rides on the seat as a margin, never as dock padding: the
+			   dock's own rect must stay independent of the value it is used to
+			   measure, or the next pass chases itself and the inset creeps. */
+			const inset = dock.getBoundingClientRect().right - card.getBoundingClientRect().right;
+			seat.style.marginInlineEnd = Math.max(0, Math.round(inset)) + 'px';
+		};
+		align();
+		/* The card is observed directly — a web-font swap changes its width
+		   without moving the column, and only an observation of the card itself
+		   catches that. Session switches swap the card node, so every observer
+		   pass re-aligns AND re-targets the observation onto the current card
+		   (a detached node is observed no longer). The slow poll is the belt to
+		   this brace, for environments where neither resize nor font moves. */
+		let observer = null;
+		let observedCard = findCard();
+		const alignAndRetarget = () => {
+			align();
+			if (observer === null) return;
+			const card = findCard();
+			if (card !== undefined && card !== observedCard) {
+				observedCard = card;
+				observer.observe(card);
+			}
+		};
+		if (typeof ResizeObserver === 'function') {
+			observer = new ResizeObserver(alignAndRetarget);
+			observer.observe(dock.parentElement);
+			if (observedCard !== undefined) observer.observe(observedCard);
+		}
+		const poll = setInterval(alignAndRetarget, 2000);
 		const root = ReactDOM.createRoot(seat);
 		root.render(React.createElement(Stats));
 		return () => {
@@ -397,6 +457,8 @@ function createStats(require, ctx, catalog) {
 			} catch (error) {
 				/* already gone */
 			}
+			if (observer !== null) observer.disconnect();
+			clearInterval(poll);
 			document.documentElement.removeAttribute('data-lg-stats');
 			if (seat && seat.parentNode) seat.parentNode.removeChild(seat);
 		};

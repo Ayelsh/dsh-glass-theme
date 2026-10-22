@@ -23,6 +23,22 @@ html[data-lg-stats] [class~='_2WTFBq_root'] {
   display: none;
 }
 
+/* The readout ends where the input box ends. The host centers this footer row
+   (`justify-content: center`, shrink-to-fit width), which parks the usage
+   figure under the middle of the composer — page furniture, not part of the
+   input. Stretched full width and pushed to the end it would align with the
+   CONVERSATION COLUMN, whose right edge runs well past the centred input
+   card — so the seat (the pill's own span) carries the column→card gap as an
+   end margin (`--lg-dock-inset`, measured in src/stats.js against the card
+   holding the editable). The margin lives on the seat and not as padding on
+   the dock on purpose: padding widens the dock's own rect and the next
+   measurement would chase itself. The pill's right edge lands exactly on the
+   input box's right edge, in hero and conversation layouts alike. */
+html[data-lg-stats] [data-composer-dock] {
+  width: 100%;
+  justify-content: flex-end;
+}
+
 .lg-stats {
   display: inline-flex;
   min-width: 0;

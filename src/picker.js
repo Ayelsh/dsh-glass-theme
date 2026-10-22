@@ -61,17 +61,17 @@ function createPicker(require, ctx, catalog) {
 		desc: 'lg-picker-desc',
 		check: 'lg-picker-check',
 		badge: 'lg-picker-badge',
-		footer: 'lg-picker-footer',
 		more: 'lg-picker-more',
 		search: 'lg-picker-search',
 		empty: 'lg-picker-empty',
-		effortRow: 'lg-picker-effort-row',
-		effortValue: 'lg-picker-effort-value',
-		effortPane: 'lg-picker-effort-pane',
-		effortOption: 'lg-picker-effort-option',
-		back: 'lg-picker-back',
-		pin: 'lg-picker-pin',
 		headingName: 'lg-picker-headingName',
+		/* The thinking-effort control: an inline segmented control that is
+		   visible AT THE SAME TIME as the model list (the pane swap it
+		   replaced hid one to show the other). One pill, translated — never
+		   cross-faded — so the selection reads as one object moving. */
+		seg: 'lg-picker-seg',
+		segThumb: 'lg-picker-seg-thumb',
+		segItem: 'lg-picker-seg-item',
 	};
 
 	/* ---- quick providers ------------------------------------------------
@@ -209,10 +209,40 @@ function createPicker(require, ctx, catalog) {
 	   rather than only the state: "off-peak" on a Wednesday and "off-peak" on
 	   National Day are different facts and the chip says which applies. */
 	const PRICING = (catalog && catalog.pricing) || null;
-	const BEIJING_OFFSET = (PRICING && PRICING.utcOffsetMinutes) || 480;
+	const SCHEDULES = PRICING && PRICING.providers ? PRICING.providers : null;
+	/* catalog.providers is keyed by provider ID ("zai-coding-cn") and each
+	   entry carries the short key ("zai") the schedules are keyed by. The
+	   directory's live ids do not always match the catalog's casing or
+	   spacing ("deepseek-account" vs "DeepSeek Account"), so the map also
+	   indexes a slug of every id and the lookup slugs what it is handed. */
+	const slugOf = (value) => String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+	const PROVIDER_KEYS = (() => {
+		const map = new Map();
+		const table = catalog && catalog.providers ? catalog.providers : {};
+		for (const id of Object.keys(table)) {
+			const entry = table[id];
+			if (!entry || typeof entry.key !== 'string') continue;
+			map.set(id, entry.key);
+			map.set(slugOf(id), entry.key);
+		}
+		return map;
+	})();
 
-	function beijingStamp(ms) {
-		const shifted = new Date(ms + BEIJING_OFFSET * 60000);
+	/** The schedule for a provider ID, or null when that provider has none. */
+	function scheduleFor(providerId) {
+		if (SCHEDULES === null || providerId == null) return null;
+		const key =
+			PROVIDER_KEYS.get(providerId) ||
+			PROVIDER_KEYS.get(slugOf(providerId)) ||
+			providerId;
+		const schedule = SCHEDULES[key];
+		return schedule && Array.isArray(schedule.windows) ? schedule : null;
+	}
+
+	const OFFSET = (PRICING && PRICING.utcOffsetMinutes) || 480;
+
+	function stampIn(ms) {
+		const shifted = new Date(ms + OFFSET * 60000);
 		const year = shifted.getUTCFullYear();
 		const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
 		const day = String(shifted.getUTCDate()).padStart(2, '0');
@@ -236,11 +266,10 @@ function createPicker(require, ctx, catalog) {
 		return Array.isArray(year) && year.indexOf(stamp.md) >= 0;
 	}
 
-	function isPeak(stamp) {
+	function isPeak(stamp, schedule) {
 		if (stamp.weekday === 0 || stamp.weekday === 6) return false;
 		if (isHoliday(stamp)) return false;
-		if (!PRICING || !Array.isArray(PRICING.windows)) return false;
-		for (const span of PRICING.windows) {
+		for (const span of schedule.windows) {
 			if (stamp.minutes >= span[0] && stamp.minutes < span[1]) return true;
 		}
 		return false;
@@ -256,19 +285,23 @@ function createPicker(require, ctx, catalog) {
 		return minutes + ' 分';
 	}
 
-	let cachedPrice = null;
-	let cachedAt = 0;
-	function price() {
+	/* One cache entry per provider: switching models must re-read the other
+	   schedule immediately, not serve the neighbour's clock for 20 seconds. */
+	const priceCache = new Map();
+	function price(providerId) {
+		const schedule = scheduleFor(providerId);
+		if (schedule === null) return null;
 		const now = Date.now();
-		if (cachedPrice !== null && now - cachedAt < 20000) return cachedPrice;
-		const today = beijingStamp(now);
-		const peak = isPeak(today);
+		const hit = priceCache.get(providerId);
+		if (hit && now - hit.at < 20000) return hit.value;
+		const today = stampIn(now);
+		const peak = isPeak(today, schedule);
 		/* Walk forward a minute at a time to the next boundary. The windows are
 		   at most a day apart, so eight days is a safe ceiling for a holiday. */
 		let switchAt = null;
 		const limit = now + 8 * 86400000;
 		for (let probe = now + 60000; probe < limit; probe += 60000) {
-			if (isPeak(beijingStamp(probe)) !== peak) {
+			if (isPeak(stampIn(probe), schedule) !== peak) {
 				switchAt = probe;
 				break;
 			}
@@ -276,9 +309,25 @@ function createPicker(require, ctx, catalog) {
 		let reason = 'window';
 		if (isHoliday(today)) reason = 'holiday';
 		else if (today.weekday === 0 || today.weekday === 6) reason = 'weekend';
-		cachedPrice = { peak, reason, switchAt };
-		cachedAt = now;
-		return cachedPrice;
+		const value = {
+			peak,
+			reason,
+			switchAt,
+			/* The factor is stated from the provider's own convention: DeepSeek
+			   prices (peak 2× / off 1×), 智谱 quota (peak 1× / off 0.5×). */
+			factor: peak ? schedule.peakFactor : schedule.offPeakFactor,
+			note: typeof schedule.note === 'string' ? schedule.note : '',
+		};
+		priceCache.set(providerId, { at: now, value });
+		return value;
+	}
+
+	/** 2 -> "≈2×", 0.5 -> "≈0.5×". For a subscription plan the factor reads
+	   "how much of the quota one use burns", not a currency price. */
+	function factorText(value) {
+		const n = Number(value);
+		if (!isFinite(n) || n <= 0) return '';
+		return '≈' + String(Math.round(n * 100) / 100) + '×';
 	}
 
 	/* ---- the seat -------------------------------------------------------- */
@@ -324,7 +373,6 @@ function createPicker(require, ctx, catalog) {
 			}
 		});
 		const [open, setOpen] = React.useState(false);
-		const [pane, setPane] = React.useState('root');
 		const [query, setQuery] = React.useState('');
 		const [tick, setTick] = React.useState(0);
 		const [placement, setPlacement] = React.useState(null);
@@ -354,34 +402,67 @@ function createPicker(require, ctx, catalog) {
 				const card = cardRef.current;
 				if (trigger === null || card === null) return;
 				const a = trigger.getBoundingClientRect();
-				const b = card.getBoundingClientRect();
+				/* Sizes come from the LAYOUT box (offset*), not the visual one:
+				   the open animation starts at scale(.96), and a rect read
+				   during those 240ms returns a card ~4% short — placing by it
+				   anchored the card 20px too low for its whole lifetime. The
+				   trigger is not animated, so its rect is safe for the anchor. */
+				const bHeight = card.offsetHeight;
+				const bWidth = card.offsetWidth;
 				const gap = 8;
 				const margin = 10;
-				let top = a.top - b.height - gap;
-				if (top < margin) top = Math.min(a.bottom + gap, window.innerHeight - b.height - margin);
-				let left = a.right - b.width;
+				let top = a.top - bHeight - gap;
+				if (top < margin) top = Math.min(a.bottom + gap, window.innerHeight - bHeight - margin);
+				let left = a.right - bWidth;
 				if (left < margin) left = margin;
-				if (left + b.width > window.innerWidth - margin) left = window.innerWidth - margin - b.width;
-				top = Math.max(margin, Math.min(top, window.innerHeight - b.height - margin));
+				if (left + bWidth > window.innerWidth - margin) left = window.innerWidth - margin - bWidth;
+				top = Math.max(margin, Math.min(top, window.innerHeight - bHeight - margin));
 				setPlacement({ top: Math.round(top), left: Math.round(left) });
 				/* The sub-card opens to the LEFT of the card it extends, the way a
-				   submenu opens away from the edge it is anchored to. If there is no
-				   room it opens to the right instead of going off-screen. */
+				   submenu opens away from the edge it is anchored to. If there is
+				   no room it opens to the right instead of going off-screen.
+				   Both cards carry the same width rule, so the distance is
+				   computed from the main card's LAID-OUT width: the sub-card is
+				   still hidden at auto position when this runs, and measuring it
+				   there once returned a pre-layout width 14px shy of the real
+				   one, which pushed the placed card 8px into the one it
+				   extends. */
 				const extra = allRef.current;
 				if (extra === null) {
 					setAllPlacement(null);
 					return;
 				}
-				const c = extra.getBoundingClientRect();
-				let allLeft = left - c.width - 6;
-				if (allLeft < margin) allLeft = Math.min(left + b.width + 6, window.innerWidth - margin - c.width);
+				const allWidth = bWidth;
+				const allHeight = extra.offsetHeight > 0 ? extra.offsetHeight : bHeight;
+				/* 12px reads as a deliberate gutter between two sibling cards;
+				   anything tighter and the pair reads as one torn surface. */
+				let allLeft = left - allWidth - 12;
+				if (allLeft < margin) allLeft = Math.min(left + bWidth + 12, window.innerWidth - margin - allWidth);
 				let allTop = top;
-				if (allTop + c.height > window.innerHeight - margin) allTop = window.innerHeight - margin - c.height;
+				if (allTop + allHeight > window.innerHeight - margin) allTop = window.innerHeight - margin - allHeight;
 				setAllPlacement({ top: Math.round(Math.max(margin, allTop)), left: Math.round(Math.max(margin, allLeft)) });
 			};
 			place();
 			window.addEventListener('resize', place);
-			return () => window.removeEventListener('resize', place);
+			/* Placement is not a one-shot decision: the card's height moves
+			   under it while it is open — picking a model outside the quick
+			   list appends that provider's group to the card (and picking one
+			   inside the list takes it away), and search filtering shrinks the
+			   list live. The position must follow the size, or the card's
+			   bottom edge drifts off the trigger it is anchored to. A
+			   ResizeObserver re-runs `place` on every actual size change; the
+			   state it sets does not itself change any size, so this cannot
+			   loop. Both cards are observed: the sub-card's own height clamp
+			   depends on it too. */
+			const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => place()) : null;
+			if (observer !== null) {
+				if (cardRef.current !== null) observer.observe(cardRef.current);
+				if (allRef.current !== null) observer.observe(allRef.current);
+			}
+			return () => {
+				window.removeEventListener('resize', place);
+				if (observer !== null) observer.disconnect();
+			};
 		}, [open, allOpen]);
 
 		/* The session can change under us (a new conversation, a switch in the
@@ -450,7 +531,6 @@ function createPicker(require, ctx, catalog) {
 				if (node && event.target instanceof Node && node.contains(event.target)) return;
 				if (event.target instanceof Element && event.target.closest('.' + C.card)) return;
 				setOpen(false);
-				setPane('root');
 				setAllOpen(false);
 			};
 			const onKey = (event) => {
@@ -462,7 +542,6 @@ function createPicker(require, ctx, catalog) {
 					return;
 				}
 				setOpen(false);
-				setPane('root');
 			};
 			document.addEventListener('pointerdown', onDown, true);
 			document.addEventListener('keydown', onKey, true);
@@ -535,7 +614,14 @@ function createPicker(require, ctx, catalog) {
 			return activeEffort;
 		})();
 
-		const select = (group, model) => {
+		/* `fromAll` marks a pick in the second card. Choosing a model keeps the
+		   picker open either way — the effort ladder that usually follows is
+		   one click away in the same card, and closing here would force the
+		   two-open dance the inline effort control exists to avoid. The
+		   all-card itself closes after a pick from it: its job (reach beyond
+		   the pinned providers) is done, and the main card — with the effort
+		   control — stays behind it. */
+		const select = (group, model, fromAll) => {
 			if (!directory || typeof directory.select !== 'function') return;
 			try {
 				/* Carry the new model's own default effort: `select` otherwise
@@ -547,8 +633,10 @@ function createPicker(require, ctx, catalog) {
 			} catch (error) {
 				/* the failure is already reported by the store */
 			}
-			setOpen(false);
-			setPane('root');
+			if (fromAll) {
+				setAllOpen(false);
+				setAllQuery('');
+			}
 		};
 
 		const pickEffort = (level) => {
@@ -559,7 +647,8 @@ function createPicker(require, ctx, catalog) {
 			} catch (error) {
 				/* the failure is already reported by the store */
 			}
-			setPane('root');
+			/* The card stays open: the effort control is inline now, and the
+			   pill travelling under the eye IS the confirmation. */
 		};
 
 		/* ================================================================== *
@@ -576,7 +665,6 @@ function createPicker(require, ctx, catalog) {
 				'aria-label': '选择模型',
 				onClick: () => {
 					setOpen((value) => !value);
-					setPane('root');
 					setQuery('');
 					setAllOpen(false);
 					setAllQuery('');
@@ -606,10 +694,10 @@ function createPicker(require, ctx, catalog) {
 
 		if (!open) return React.createElement('span', { className: C.root, ref: anchor }, trigger);
 
-		const active = price();
+		const activePrice = current !== null ? price(current.provider) : null;
 		const filtered = query.trim() === '' ? null : normalise(query);
 
-		const sectionFor = (group, models, filterOverride) => {
+		const sectionFor = (group, models, filterOverride, fromAll) => {
 			const filter = filterOverride === undefined ? filtered : filterOverride;
 			const shown = models.filter((model) => filter === null || normalise(model.name || model.id).indexOf(filter) >= 0);
 			if (shown.length === 0) return null;
@@ -645,7 +733,7 @@ function createPicker(require, ctx, catalog) {
 							className: C.option,
 							role: 'menuitemradio',
 							'aria-checked': chosen ? 'true' : 'false',
-							onClick: () => select(group, model),
+							onClick: () => select(group, model, fromAll === true),
 						},
 						React.createElement(
 							'span',
@@ -662,89 +750,103 @@ function createPicker(require, ctx, catalog) {
 			);
 		};
 
-		/* The reasoning ladder is its own pane, not a submenu of every row: one
-		   model is selected at a time, so there is exactly one ladder to show. */
-		const effortPane = React.createElement(
-			'section',
-			{ className: C.effortPane, key: 'effort' },
-			React.createElement(
-				'button',
-				{ type: 'button', className: C.back, onClick: () => setPane('root') },
-				React.createElement(
-					'span',
-					{ className: C.chevron, 'aria-hidden': 'true' },
-					React.createElement('svg', { viewBox: '0 0 12 12', width: 12, height: 12 }, React.createElement('path', { d: 'M7.5 3 4.5 6l3 3', fill: 'none', stroke: 'currentColor', strokeWidth: '1.4', strokeLinecap: 'round', strokeLinejoin: 'round' }))
-				),
-				'思考强度'
-			),
+		/* Thinking effort is an INLINE segmented control, not a second pane:
+		   the selector and the model list are on screen at the same time, and
+		   one pill translates under the labels instead of cross-fading — the
+		   selection reads as one object moving. */
+		const hasActiveEffort = activeEffort !== null;
+		const effortIndex = Math.max(0, effortChoices.findIndex((level) => level.id === activeEffort));
+		const effortSeg =
 			effortChoices.length === 0
-				? React.createElement('div', { className: C.empty }, '当前模型未提供推理等级')
-				: effortChoices.map((level) => {
-						/* With no explicit choice the host runs the model's own
-						   default, so THAT level is the one the check belongs to. */
+				? null
+				: React.createElement(
+					'div',
+					{
+						className: C.seg,
+						role: 'radiogroup',
+						'aria-label': '思考强度',
+						title: '思考强度：' + (hasActiveEffort ? effortLabel + (isDefaultEffort ? '（模型默认）' : '') : '跟随模型默认（未显式选择）'),
+					},
+					/* One thumb, translated by whole segments; the percentage is
+					   of the thumb's own width, so index*100% lands on each stop.
+					   The thumb HIDES when nothing is chosen: many models declare
+					   no defaultEffort and the host leaves the choice unset —
+					   parking the pill on the first stop would claim a selection
+					   that does not exist. */
+					React.createElement('span', {
+						className: C.segThumb,
+						'aria-hidden': 'true',
+						style: {
+							width: 'calc((100% - 4px) / ' + effortChoices.length + ')',
+							transform: 'translateX(' + effortIndex * 100 + '%)',
+							opacity: hasActiveEffort ? 1 : 0,
+						},
+					}),
+					effortChoices.map((level) => {
 						const chosen = activeEffort === level.id;
-						const suffix = chosen && isDefaultEffort ? '默认' : '';
 						return React.createElement(
 							'button',
 							{
 								type: 'button',
 								key: level.id,
-								className: C.effortOption,
-								role: 'menuitemradio',
+								className: C.segItem,
+								role: 'radio',
 								'aria-checked': chosen ? 'true' : 'false',
+								title: level.description || level.name || level.id,
 								onClick: () => pickEffort(level.id),
 							},
-							React.createElement(
-								'span',
-								{ className: C.copy },
-								React.createElement('span', { className: C.name }, level.name || level.id, suffix === '' ? null : React.createElement('span', { className: 'lg-picker-mult' }, suffix)),
-								level.description ? React.createElement('span', { className: C.desc }, level.description) : null
-							),
-							React.createElement('span', { className: C.check, 'aria-hidden': 'true' }, chosen ? '✓' : '')
+							level.name || level.id
 						);
 					})
-		);
+				);
 
 		/* Which providers the card lists by default. A configured list narrows
 		   it; an empty one leaves the picker exactly as it was before the setting
-		   existed. The rest of the catalog stays one click away. */
+		   existed. The rest of the catalog stays one click away. The session's
+		   current model is NOT guaranteed to sit inside the pinned set — a
+		   model picked from 所有供应商 (or set by the host) can belong to any
+		   provider — so its group is shown alongside the pinned ones whenever
+		   it is missing there; otherwise switching to a sibling model would
+		   mean a detour through the second card. */
 		const quickList = quick === null ? [] : quick;
 		const pinnedGroups = groups.filter((group) => quickList.indexOf(group.id) >= 0);
 		const hasQuick = pinnedGroups.length > 0;
-		const shownGroups = hasQuick ? pinnedGroups : groups;
+		const currentGroupId = (() => {
+			if (current === null) return null;
+			for (const group of groups) {
+				if (group.id === current.provider || slugOf(group.id) === slugOf(current.provider)) return group.id;
+			}
+			return null;
+		})();
+		const missingCurrentGroup =
+			hasQuick && currentGroupId !== null && !pinnedGroups.some((group) => group.id === currentGroupId)
+				? groups.filter((group) => group.id === currentGroupId)
+				: [];
+		/* The current provider's group leads when it is not pinned: the user
+		   opened the picker with that model running, so its row — and the
+		   effort ladder under it — should be visible without scrolling past
+		   28 pinned rows to reach it. */
+		const shownGroups = !hasQuick ? groups : missingCurrentGroup.concat(pinnedGroups);
 		const allFilter = allQuery.trim() === '' ? null : normalise(allQuery);
 
-		/* The card's two footers. They live OUTSIDE the scrolling body: an entry
-		   that only appears after scrolling a 28-row list is an entry most users
-		   never see, and "思考强度" is a control, not the last row of a table. */
+		/* The card's footer holds only the catalog door. It lives OUTSIDE the
+		   scrolling body: an entry that only appears after scrolling a 28-row
+		   list is an entry most users never see. The effort control moved up
+		   into the card, next to what it configures. */
 		const foot =
-			effortChoices.length === 0 && (!hasQuick || filtered !== null)
+			!hasQuick || filtered !== null
 				? null
 				: React.createElement(
-						'div',
-						{ className: 'lg-picker-foot' },
-						effortChoices.length === 0
-							? null
-							: React.createElement(
-									'button',
-									{ type: 'button', className: C.effortRow, onClick: () => setPane('effort') },
-									React.createElement('span', null, '思考强度'),
-									React.createElement('span', { className: C.effortValue }, effortLabel === '' ? '默认' : effortLabel),
-									React.createElement('span', { className: C.chevron, 'aria-hidden': 'true' }, React.createElement('svg', { viewBox: '0 0 12 12', width: 12, height: 12 }, React.createElement('path', { d: 'M4.5 3 7.5 6l-3 3', fill: 'none', stroke: 'currentColor', strokeWidth: '1.4', strokeLinecap: 'round', strokeLinejoin: 'round' })))
-							  ),
-						/* The door to the rest of the catalog. It exists only when a
-						   quick list is configured — otherwise every model is already
-						   on this card and a second one would show the same rows. */
-						!hasQuick || filtered !== null
-							? null
-							: React.createElement(
-									'button',
-									{ type: 'button', className: C.more, onClick: () => setAllOpen(true) },
-									React.createElement('span', null, '所有供应商'),
-									React.createElement('span', { className: C.count }, groups.length),
-									React.createElement('span', { className: C.chevron, 'aria-hidden': 'true' }, React.createElement('svg', { viewBox: '0 0 12 12', width: 12, height: 12 }, React.createElement('path', { d: 'M4.5 3 7.5 6l-3 3', fill: 'none', stroke: 'currentColor', strokeWidth: '1.4', strokeLinecap: 'round', strokeLinejoin: 'round' })))
-							  )
-				  );
+					'div',
+					{ className: 'lg-picker-foot' },
+					React.createElement(
+						'button',
+						{ type: 'button', className: C.more, onClick: () => setAllOpen(true) },
+						React.createElement('span', null, '所有供应商'),
+						React.createElement('span', { className: C.count }, groups.length),
+						React.createElement('span', { className: C.chevron, 'aria-hidden': 'true' }, React.createElement('svg', { viewBox: '0 0 12 12', width: 12, height: 12 }, React.createElement('path', { d: 'M4.5 3 7.5 6l-3 3', fill: 'none', stroke: 'currentColor', strokeWidth: '1.4', strokeLinecap: 'round', strokeLinejoin: 'round' })))
+					)
+				);
 
 		const card = !open
 			? null
@@ -767,26 +869,34 @@ function createPicker(require, ctx, catalog) {
 							onChange: (event) => setQuery(event.target.value),
 							'aria-label': '搜索模型',
 						}),
-						React.createElement(
-							'span',
-							{ className: C.badge, 'data-lg-tone': active.peak ? 'peak' : 'off', title: '高峰：北京时间周一至周五 9:00–12:00、14:00–18:00（中国法定节假日除外）；空闲时段价格为其一半。' },
-							React.createElement('span', { className: 'lg-picker-badge-dot', 'aria-hidden': 'true' }),
-							active.peak ? '高峰' : '空闲',
-							React.createElement('b', null, active.peak ? '≈2×' : '≈1×'),
-							active.switchAt === null ? null : React.createElement('em', null, humanLeft(active.switchAt - Date.now()) + '后转' + (active.peak ? '空闲' : '高峰'))
-						)
+						/* The rate chip states the SELECTED provider's own clock:
+						   DeepSeek prices, 智谱 quota, and nothing at all for a
+						   provider we have no schedule for — a wrong chip is worse
+						   than no chip. */
+						activePrice === null
+							? null
+							: React.createElement(
+								'span',
+								{ className: C.badge, 'data-lg-tone': activePrice.peak ? 'peak' : 'off', title: activePrice.note },
+								React.createElement('span', { className: 'lg-picker-badge-dot', 'aria-hidden': 'true' }),
+								activePrice.peak ? '高峰' : '空闲',
+								React.createElement('b', null, factorText(activePrice.factor)),
+								activePrice.switchAt === null ? null : React.createElement('em', null, humanLeft(activePrice.switchAt - Date.now()) + '后转' + (activePrice.peak ? '空闲' : '高峰'))
+							)
 					),
-					pane === 'effort'
-						? effortPane
-						: groups.length === 0
+					/* The effort control rides with the list, not in a pane and
+					   not at the card's foot: it is a property of the selected
+					   model, on screen at the same time as the rows. */
+					effortSeg,
+					groups.length === 0
 						? React.createElement('div', { className: C.empty }, snapshot && snapshot.status === 'loading' ? '正在读取模型…' : '暂无可用模型')
 						: React.createElement(
-								'div',
-								{ className: 'lg-picker-body' },
-								shownGroups.map((group) => sectionFor(group, group.models || []))
-						  ),
+							'div',
+							{ className: 'lg-picker-body' },
+							shownGroups.map((group) => sectionFor(group, group.models || []))
+						),
 					foot
-			  );
+				);
 
 		/* The second card: every provider, for the models the quick list leaves
 		   out. Same glass, same rows — it is the same list with a wider filter, so
@@ -815,7 +925,10 @@ function createPicker(require, ctx, catalog) {
 					React.createElement(
 						'div',
 						{ className: 'lg-picker-body' },
-						groups.map((group) => sectionFor(group, group.models || [], allFilter))
+						/* A pick made here closes this card and leaves the main
+						   one behind — `fromAll` carries that intent into
+						   select(). */
+						groups.map((group) => sectionFor(group, group.models || [], allFilter, true))
 					)
 			  )
 			: null;

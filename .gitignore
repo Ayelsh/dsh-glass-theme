@@ -1,3 +1,10 @@
 node_modules/
 *.log
 .DS_Store
+
+# Local scratch: probe output, screenshots and preview pages produced by
+# tools/*.mjs land here, not in the repository. The curated screenshots that
+# ship live in assets/screenshots/ and are declared in screenshots.json.
+.tmp/
+.preview/
+.acl-recovery/

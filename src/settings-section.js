@@ -102,57 +102,136 @@ function createSettingsSection(require, ctx, catalog) {
 			writeQuick(next);
 		};
 
+		const full = quick.length >= QUICK_MAX;
+
+		/* The meter is a picture of the remaining capacity, not a control: four
+		   pips that fill as providers are pinned, so "how much room is left" is
+		   legible before the user reaches for a switch that would refuse. */
+		const meter = h(
+			'div',
+			{
+				className: 'lg-settings-meter',
+				'data-full': full ? 'true' : 'false',
+				role: 'img',
+				'aria-label': '已选 ' + quick.length + ' 个，最多 ' + QUICK_MAX + ' 个',
+			},
+			h(
+				'span',
+				{ className: 'lg-settings-pips', 'aria-hidden': 'true' },
+				Array.from({ length: QUICK_MAX }, (unused, index) =>
+					h('span', {
+						key: index,
+						className: 'lg-settings-pip',
+						'data-on': index < quick.length ? 'true' : 'false',
+					})
+				)
+			),
+			h('span', { className: 'lg-settings-count' }, quick.length + ' / ' + QUICK_MAX)
+		);
+
 		return h(
 			'div',
 			{ className: 'lg-settings' },
-			h('h2', { className: 'lg-settings-title' }, '快捷供应商'),
+			h(
+				'div',
+				{ className: 'lg-settings-head' },
+				h('h2', { className: 'lg-settings-title' }, '快捷供应商'),
+				meter
+			),
 			h(
 				'p',
 				{ className: 'lg-settings-intro' },
 				'模型选择器默认只列出这里勾选的供应商；其余供应商收在“所有供应商”里。',
 				'一个都不勾选时，选择器会列出全部供应商。'
 			),
-			list.length === 0
-				? h('p', { className: 'lg-settings-empty' }, '尚未读取到供应商，请先打开一个会话。')
-				: h(
-						'ul',
-						{ className: 'lg-settings-list' },
-						list.map((provider) => {
-							const on = quick.indexOf(provider.id) >= 0;
-							/* At the limit an unchecked switch cannot do anything. Saying
-							   so is the difference between a control that refuses and a
-							   control that appears broken. */
-							const blocked = !on && quick.length >= QUICK_MAX;
-							return h(
-								'li',
-								{ className: 'lg-settings-row', key: provider.id, 'data-blocked': blocked ? 'true' : 'false' },
+			/* The board is the page's one material object: a lit pane that the rows
+			   sit ON, not a second card around a card. `lg-settings-glow` is the
+			   light field painted INSIDE the pane's footprint — backdrop-filter has
+			   nothing to frost on a white settings sheet, so the page supplies the
+			   colour it refracts. */
+			h(
+				'div',
+				{ className: 'lg-settings-stage' },
+				h('div', { className: 'lg-settings-glow', 'aria-hidden': 'true' }),
+				h(
+					'div',
+					{ className: 'lg-settings-board' },
+					list.length === 0
+						? h('p', { className: 'lg-settings-empty' }, '尚未读取到供应商，请先打开一个会话。')
+						: h(
+								'ul',
+								{ className: 'lg-settings-list' },
+								list.map((provider, index) => {
+									const on = quick.indexOf(provider.id) >= 0;
+									/* At the limit an unchecked switch cannot do anything. Saying
+									   so is the difference between a control that refuses and a
+									   control that appears broken. */
+									const blocked = !on && full;
+									return h(
+										'li',
+										{
+											className: 'lg-settings-row',
+											key: provider.id,
+											style: { '--lg-row-index': index },
+											'data-on': on ? 'true' : 'false',
+											'data-blocked': blocked ? 'true' : 'false',
+										},
+										h(
+											'span',
+											{ className: 'lg-settings-glyph', 'aria-hidden': 'true' },
+											(provider.name.trim() || '?').slice(0, 1)
+										),
+										h(
+											'span',
+											{ className: 'lg-settings-copy' },
+											h('span', { className: 'lg-settings-name' }, provider.name),
+											h('span', { className: 'lg-settings-note' }, provider.count + ' 个模型')
+										),
+										h(
+											'button',
+											{
+												type: 'button',
+												className: 'lg-settings-switch',
+												role: 'switch',
+												'aria-checked': on ? 'true' : 'false',
+												'aria-disabled': blocked ? 'true' : 'false',
+												'aria-label': provider.name,
+												title: blocked ? '最多可选 ' + QUICK_MAX + ' 个，请先取消一个' : undefined,
+												'data-on': on ? 'true' : 'false',
+												onClick: () => toggle(provider.id),
+											},
+											h('span', { className: 'lg-settings-knob' })
+										)
+									);
+								})
+							),
+					list.length === 0
+						? null
+						: h(
+								'div',
+								{ className: 'lg-settings-foot' },
 								h(
 									'span',
-									{ className: 'lg-settings-copy' },
-									h('span', { className: 'lg-settings-name' }, provider.name),
-									h('span', { className: 'lg-settings-note' }, provider.count + ' 个模型')
+									{ className: 'lg-settings-hint' },
+									full ? '已达上限，取消一个再选' : '勾选的供应商会出现在选择器顶部'
 								),
-								h(
-									'button',
-									{
-										type: 'button',
-										className: 'lg-settings-switch',
-										role: 'switch',
-										'aria-checked': on ? 'true' : 'false',
-										'aria-disabled': blocked ? 'true' : 'false',
-										'aria-label': provider.name,
-										title: blocked ? '最多可选 ' + QUICK_MAX + ' 个，请先取消一个' : undefined,
-										'data-on': on ? 'true' : 'false',
-										onClick: () => toggle(provider.id),
-									},
-									h('span', { className: 'lg-settings-knob' })
-								)
-							);
-						})
-					),
-			list.length === 0
-				? null
-				: h('p', { className: 'lg-settings-count' }, '已选 ' + quick.length + ' / ' + QUICK_MAX)
+								quick.length === 0
+									? null
+									: h(
+											'button',
+											{
+												type: 'button',
+												className: 'lg-settings-reset',
+												onClick: () => {
+													setQuick([]);
+													writeQuick([]);
+												},
+											},
+											'清除'
+										)
+							)
+				)
+			)
 		);
 	}
 

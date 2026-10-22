@@ -192,12 +192,26 @@
   },
 
   /**
-   * DeepSeek's published peak/off-peak schedule, as of 2026-10.
+   * Peak / off-peak schedules. The chip in the picker reflects the SELECTED
+   * model's provider, so the clock is per provider, not global:
    *
-   * Source: https://api-docs.deepseek.com/zh-cn/quick_start/pricing/
-   *   空闲时段价格 = 高峰时段价格的一半
-   *   高峰时段 = 北京时间 周一至周五（不含法定节假日）9:00–12:00、14:00–18:00
-   *   其余时段（含周末及法定节假日全天）为 空闲时段
+   *   deepseek — https://api-docs.deepseek.com/zh-cn/quick_start/pricing/
+   *     高峰 = 北京时间 周一至周五（不含法定节假日）9:00–12:00、14:00–18:00
+   *     空闲时段价格 = 高峰时段价格的一半。Factors are stated from the CHEAPER
+   *     baseline (高峰 ≈2×, 空闲 ≈1×) — the convention the reference used.
+   *
+   *   zai — 智谱 GLM (told by the user, 2026-10):
+   *     高峰 = 工作日 14:00–18:00（北京时间，节假日除外），计费 ≈2×；
+   *     空闲时段价格为高峰的一半 (≈1×)。
+   *
+   * Providers with no entry here (workbuddy, Gemini, Grok, ChatGPT) have no
+   * published clock: the picker shows no chip for them rather than a borrowed
+   * one. workbuddy rows reuse DeepSeek names but are billed by the reseller's
+   * own `· xN.NN` multiplier, which is a different quantity and must not be
+   * mixed in.
+   *
+   * The calendar facts every Beijing-clock schedule shares live at the top
+   * level: the UTC offset and the holiday table.
    *
    * The holiday list is the part worth being careful about. 中国法定节假日 are
    * declared by the State Council each year and the 调休 (make-up work days)
@@ -208,24 +222,14 @@
    * of the data rather than of the logic. When the year rolls over the chip
    * stops claiming holiday accuracy for dates it has no table for: `holidays`
    * is keyed by year and a missing year simply falls back to the weekday rule.
-   *
-   * The schedule applies to the FIRST-PARTY DeepSeek account only. workbuddy
-   * rows reuse DeepSeek names but are billed by the reseller's own `· xN.NN`
-   * multiplier, which is a different quantity and must not be mixed in.
    */
   pricing: {
-    providerKeys: ['deepseek'],
-    windows: [
-      [9 * 60, 12 * 60],
-      [14 * 60, 18 * 60],
-    ],
-    weekdaysOnly: true,
-    offPeakFactor: 0.5,
-    /** Beijing time, regardless of where the window happens to be. */
+    /** Beijing time, regardless of where the reader happens to be. */
     utcOffsetMinutes: 8 * 60,
-    /** 中国法定节假日 (rest days), by Beijing calendar date. 调休 work days are
-     *  NOT included: they are ordinary weekdays and the weekday rule already
-     *  treats them as peak, which is what the published schedule says. */
+    /** 中国法定节假日 (rest days), by Beijing calendar date, shared by every
+     *  schedule below. 调休 work days are NOT included: they are ordinary
+     *  weekdays and the weekday rule already treats them as peak, which is
+     *  what every published schedule says. */
     holidays: {
       2026: [
         '01-01', '01-02', '01-03',
@@ -236,6 +240,28 @@
         '09-25', '09-26', '09-27',
         '10-01', '10-02', '10-03', '10-04', '10-05', '10-06', '10-07',
       ],
+    },
+    /** Keyed by the `key` in `providers` above. */
+    providers: {
+      deepseek: {
+        windows: [
+          [9 * 60, 12 * 60],
+          [14 * 60, 18 * 60],
+        ],
+        weekdaysOnly: true,
+        peakFactor: 2,
+        offPeakFactor: 1,
+        note: 'DeepSeek 高峰：北京时间周一至周五 9:00–12:00、14:00–18:00（中国法定节假日除外）；空闲时段价格为高峰的一半。',
+      },
+      zai: {
+        windows: [
+          [14 * 60, 18 * 60],
+        ],
+        weekdaysOnly: true,
+        peakFactor: 2,
+        offPeakFactor: 1,
+        note: '智谱高峰：北京时间工作日 14:00–18:00（中国法定节假日除外）；空闲时段价格为高峰的一半。',
+      },
     },
   },
 }
