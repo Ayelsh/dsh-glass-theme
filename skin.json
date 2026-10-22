@@ -1,0 +1,11 @@
+{
+  "id": "liquid-glass",
+  "name": "Liquid Glass",
+  "tagline": "Apple Liquid Glass material system — floating glass chrome over an ambient light field.",
+  "accent": "#0A84FF",
+  "bodyAttr": "data-dsh-glass-theme",
+  "package": "dsh-glass-theme",
+  "wiring": {
+    "id": "ui-skin-glass-theme"
+  }
+}

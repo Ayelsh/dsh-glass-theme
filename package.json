@@ -1,0 +1,69 @@
+{
+  "name": "dsh-glass-theme",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apple Liquid Glass material system for the DeepSeek Harness Web UI. A pure-CSS skin that redraws every surface: floating glass chrome over an ambient light field.",
+  "license": "MIT",
+  "author": "Ayelsh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayelsh/dsh-glass-theme.git"
+  },
+  "homepage": "https://github.com/Ayelsh/dsh-glass-theme#readme",
+  "bugs": {
+    "url": "https://github.com/Ayelsh/dsh-glass-theme/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "theme",
+    "skin",
+    "apple",
+    "liquid-glass",
+    "glassmorphism"
+  ],
+  "type": "module",
+  "main": "lib/host/index.js",
+  "exports": {
+    ".": "./lib/host/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./skin.json": "./skin.json",
+    "./locale/*": "./locale/*"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "cordis.patch.yml",
+    "skin.json"
+  ],
+  "engines": {
+    "dsh": ">=0.1.7"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.1.7"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

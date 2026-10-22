@@ -1,0 +1,673 @@
+/* ==========================================================================
+   Liquid Glass · conversation
+   --------------------------------------------------------------------------
+   The transcript is the one place glass must stop. Every surface here is opaque
+   or near-opaque: text that scrolls never sits on a moving blur, and a long read
+   never fights the ambient field for attention.
+
+   What the redesign changes is rhythm and hierarchy, not material:
+     · the header becomes a floating strip inside the column, not a divider
+     · the reading column gets Apple's measure and leading
+     · user turns become tinted plates; assistant turns stay open text
+     · tool/reasoning rows collapse into quiet, self-effacing capsules
+   ========================================================================== */
+
+/* ---- Column ------------------------------------------------------------ */
+[class~='Dc7zOa_root'] {
+  background-color: transparent;
+}
+
+[class~='Dc7zOa_body'] {
+  --dsh-chat-content-width: var(--dsh-chat-user-width, clamp(660px, calc(var(--dsh-conversation-column-width, 0px) * 0.62), 880px));
+  --dsh-chat-flow-gap: 10px;
+  --dsh-composer-side-clearance: 18px;
+}
+
+/* ---- Header ------------------------------------------------------------
+   The shipped header is a full-width bar with a bottom rule. Here it becomes a
+   chrome strip that floats above the transcript: no rule, a soft fade so text
+   dissolves under it instead of being cut. */
+[class~='Dc7zOa_header'] {
+  border-bottom: none;
+  min-height: 56px;
+  padding: 10px 22px 6px 16px;
+  position: relative;
+  z-index: 5;
+}
+
+[class~='Dc7zOa_header']::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -14px;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--lg-surface) 0%, transparent 100%);
+  opacity: 0.9;
+}
+
+[class~='Dc7zOa_headerBlank']::after {
+  display: none;
+}
+
+/* Title row: one line, tight tracking, and the breadcrumb reads as a single
+   object rather than a row of chips. */
+[class~='Dc7zOa_titleRow'] {
+  min-height: 32px;
+}
+
+[class~='Dc7zOa_titleCluster'] {
+  letter-spacing: -0.01em;
+  font-weight: 560;
+}
+
+[class~='Dc7zOa_crumb'] {
+  border-radius: var(--lg-r-sm);
+  padding: 2px 6px;
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Dc7zOa_crumb']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='Dc7zOa_crumbSep'] {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+[class~='Dc7zOa_crumbCurrent'] {
+  color: var(--dsw-alias-label-primary);
+  font-weight: 560;
+}
+
+/* Header controls: floating circular buttons, not flat icons. */
+[class~='Dc7zOa_headerActions'] button,
+[class~='Dc7zOa_headerUtilities'] button,
+[class~='Dc7zOa_headerCorner'] button {
+  border-radius: var(--lg-r-sm);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Dc7zOa_headerActions'] button:hover,
+[class~='Dc7zOa_headerUtilities'] button:hover,
+[class~='Dc7zOa_headerCorner'] button:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- View tabs (conversation / trajectory) -----------------------------
+   A segmented control: the track is a sunken capsule, the active segment is a
+   lit plate. This is the shipped "tabs" row, restyled as one control. */
+[class~='Dc7zOa_tabs'] {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0.5px 0 var(--lg-edge-bottom);
+}
+
+[class~='Dc7zOa_tab'] {
+  border-radius: calc(var(--lg-r-md) - 2px);
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    color var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='Dc7zOa_tab']:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='Dc7zOa_tab'][class~='Dc7zOa_tabActive'] {
+  background-color: var(--lg-surface-raised);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 560;
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 1px 2px rgba(16, 22, 40, 0.07);
+}
+
+/* ---- Scroll body ------------------------------------------------------- */
+[class~='Dc7zOa_viewArea'] {
+  min-height: 0;
+}
+
+[class~='xz4KEq_scroll'] {
+  padding-block: 20px 8px;
+}
+
+[class~='xz4KEq_column'] {
+  /* Apple's reading measure: a little wider than the shipped 748px default,
+     because the type ramp below runs slightly larger. */
+  max-width: min(var(--dsh-chat-content-width), 100%);
+}
+
+/* ---- User turns --------------------------------------------------------
+   A user message is a raised plate with a tinted edge — the one place in the
+   transcript that carries accent colour, so a scan down the page finds the
+   turns. Assistant output stays on the page with no container at all. */
+[class~='cJsG2q_bubble'] {
+  background-color: var(--dsw-specific-bubble);
+  border-radius: var(--lg-r-lg);
+  border-end-end-radius: var(--lg-r-xs);
+  padding: 10px 15px;
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 0 0 0.5px var(--lg-hairline);
+  letter-spacing: -0.003em;
+  line-height: 1.58;
+}
+
+[class~='cJsG2q_userRow'] {
+  gap: 4px;
+  padding-block: 6px;
+}
+
+[class~='cJsG2q_attachmentRow'],
+[class~='cJsG2q_fileCard'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  border: 0.5px solid var(--lg-hairline);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='cJsG2q_fileCard']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- Assistant output --------------------------------------------------
+   No container: the text is the object. Generous leading, a slight optical
+   tighten at the top of each block so headings sit close to what they head. */
+[class~='v5IAXa_root'] {
+  padding-block: 2px;
+}
+
+[class~='v5IAXa_body'] {
+  line-height: 1.68;
+  letter-spacing: -0.004em;
+}
+
+[class~='v5IAXa_body'] > *:first-child {
+  margin-top: 0;
+}
+
+[class~='v5IAXa_body'] > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Assistant action row: hidden until the turn is hovered or focused, so the
+   reading surface stays quiet. */
+[class~='v5IAXa_actions'],
+[class~='xD_KDq_actions'] {
+  opacity: 0;
+  transition: opacity var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='v5IAXa_root']:hover [class~='v5IAXa_actions'],
+[class~='v5IAXa_root']:focus-within [class~='v5IAXa_actions'],
+[class~='xD_KDq_actions']:hover,
+[class~='xD_KDq_actions']:focus-within,
+*:hover > [class~='xD_KDq_actions'] {
+  opacity: 1;
+}
+
+[class~='xD_KDq_action'] {
+  border-radius: var(--lg-r-sm);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='xD_KDq_action']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='xD_KDq_endInfo'],
+[class~='xD_KDq_timeStart'],
+[class~='xD_KDq_timeEnd'] {
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ---- Reasoning ---------------------------------------------------------
+   A quote, not a panel: a hairline on the leading edge, dimmed text, and a
+   summary row that reads like a disclosure. */
+[class~='_3GBCTG_root'] {
+  border-radius: var(--lg-r-md);
+}
+
+[class~='_3GBCTG_summary'] {
+  border-radius: var(--lg-r-sm);
+  padding: 3px 8px;
+  margin-inline-start: -8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-weight: 500;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='_3GBCTG_summary']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='_3GBCTG_thinkBody'] {
+  border-inline-start: 2px solid var(--lg-hairline);
+  padding-inline-start: 12px;
+  margin-block: 4px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: calc(var(--dsh-content-font-size, 14px) - 1px);
+  line-height: 1.66;
+}
+
+[class~='_3GBCTG_summaryText'] {
+  transition: transform var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* ---- Tool rows ---------------------------------------------------------
+   Tool calls are the "activity" layer: quiet capsules that light up on hover
+   and open into a code surface when expanded. */
+[class~='pFy1Ka_root'] {
+  border-radius: var(--lg-r-md);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='pFy1Ka_row'] {
+  border-radius: var(--lg-r-md);
+  padding: 4px 8px;
+  margin-inline: -8px;
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='pFy1Ka_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='pFy1Ka_title'] {
+  font-weight: 500;
+  letter-spacing: -0.002em;
+}
+
+[class~='pFy1Ka_leading'] {
+  border-radius: var(--lg-r-sm);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Expanded payloads are code surfaces: sunken, inset, monospaced. */
+[class~='pFy1Ka_bodyWrap'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--dsw-alias-markdown-code-block);
+  box-shadow:
+    inset 0 1px 2px rgba(16, 22, 40, 0.05),
+    0 0 0 0.5px var(--lg-hairline);
+  margin-block: 4px 8px;
+}
+
+[class~='pFy1Ka_codeBody'],
+[class~='pFy1Ka_terminalBody'],
+[class~='pFy1Ka_readBody'],
+[class~='pFy1Ka_searchBody'],
+[class~='pFy1Ka_diffBody'],
+[class~='pFy1Ka_webBody'] {
+  font-family: var(--ds-font-family-code);
+  font-size: calc(var(--dsh-content-font-size, 14px) - 1.5px);
+  line-height: 1.62;
+  text-autospace: no-autospace;
+}
+
+[class~='pFy1Ka_ioCard'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  border: 0.5px solid var(--lg-hairline);
+}
+
+[class~='pFy1Ka_ioLabel'] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-caption);
+}
+
+[class~='pFy1Ka_diffStat'] {
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--lg-r-pill);
+  padding: 1px 7px;
+  background-color: var(--lg-glass-tint);
+}
+
+[class~='pFy1Ka_diffAdded'] {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+[class~='pFy1Ka_diffRemoved'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+[class~='pFy1Ka_errorSummary'] {
+  border-radius: var(--lg-r-md);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-error-primary) 30%, transparent);
+}
+
+/* ---- Turn process ------------------------------------------------------
+   The collapsed "worked for Ns" row. Small caps, quiet, tabular. */
+[class~='_4AI11G_root'] {
+  border-radius: var(--lg-r-sm);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='_4AI11G_root']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='_4AI11G_durationNumber'] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 560;
+}
+
+[class~='_4AI11G_chevron'] {
+  transition: transform var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* ---- Running indicator -------------------------------------------------
+   A single travelling sheen along the divider, not a spinner: the transcript
+   already moves, so the status should not compete with it. */
+@keyframes lg-sheen {
+  0% {
+    background-position: -60% 0;
+  }
+  100% {
+    background-position: 160% 0;
+  }
+}
+
+[class~='xz4KEq_runningDivider'] {
+  height: 1.5px;
+  border-radius: var(--lg-r-pill);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--lg-accent) 42%,
+    color-mix(in srgb, var(--lg-accent) 40%, transparent) 58%,
+    transparent 100%
+  );
+  background-size: 55% 100%;
+  background-repeat: no-repeat;
+  animation: lg-sheen 1.9s var(--lg-ease-in-out) infinite;
+}
+
+[class~='xz4KEq_runningText'] {
+  font-size: 12.5px;
+  color: var(--dsw-alias-label-tertiary);
+  letter-spacing: 0.002em;
+}
+
+[class~='xz4KEq_runningText'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Jump to bottom ----------------------------------------------------
+   A floating capsule — L2 glass, since it hovers over moving content. */
+[class~='xz4KEq_toBottom'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-2);
+  border: none;
+  transition:
+    transform var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='xz4KEq_toBottom']:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-3);
+}
+
+[class~='xz4KEq_toBottom']:active {
+  transform: scale(0.94);
+}
+
+/* ---- Turn navigator rail ----------------------------------------------
+   A floating capsule of thin marks. The app models each turn as a 28x10
+   button translated down a 10px ladder; the button is the HIT AREA and the
+   only thing a reader ever sees is its ::before bar. Painting the button
+   (as an earlier pass did, with --lg-accent on the active turn) turns the
+   hit area into a 28x10 blue slab — the mark you are supposed to read is
+   20x2, so the fill is 14x the size of the thing it was meant to point at.
+   Every state therefore goes on the BAR, and the button stays invisible.
+
+   Scale note: the reference draws 24px ticks because it shows nine turns in
+   430px. This rail packs up to 45 into the same band, so the ladder is 10px
+   and the marks stay 2px hairlines — a density map, not a list. Widening the
+   shell (40px outer) keeps the reference's airiness around a 16px bar. */
+[class~='xpvNua_frame'] {
+  box-sizing: border-box;
+  width: 40px;
+  padding: 3px;
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-3);
+  background-image: linear-gradient(
+    145deg,
+    var(--lg-edge-top),
+    transparent 48%
+  );
+  background-blend-mode: soft-light;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    var(--lg-shadow-2);
+}
+
+/* The hit area is a rectangle of nothing. */
+[class~='xpvNua_mark'] {
+  border-radius: var(--lg-r-sm);
+  background-color: transparent;
+  transition: none;
+}
+
+/* The visible bar. Centred, so scaleX grows both ways from the middle
+   instead of sliding the mark off the rail's inner edge. */
+[class~='xpvNua_mark']::before {
+  left: 50%;
+  right: auto;
+  width: 16px;
+  height: 2px;
+  margin-left: -8px;
+  border-radius: 2px;
+  background-color: var(--lg-rail-tick);
+  transform-origin: center;
+  transform: translateY(-50%) scaleX(0.62);
+  transition:
+    transform var(--lg-t-fast) var(--lg-ease-out),
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    opacity var(--lg-t-fast) var(--lg-ease-out);
+}
+
+/* Hover and keyboard focus preview a turn: the bar lengthens and darkens. */
+[class~='xpvNua_mark']:hover::before,
+[class~='xpvNua_mark']:focus-visible::before {
+  background-color: var(--dsw-alias-label-secondary);
+  transform: translateY(-50%) scaleX(1.15);
+}
+
+[class~='xpvNua_mark']:active::before {
+  transform: translateY(-50%) scaleX(0.9);
+  transition-duration: 0ms;
+}
+
+[class~='xpvNua_markPreview']::before {
+  background-color: var(--dsw-alias-label-secondary);
+  transform: translateY(-50%) scaleX(1.38);
+}
+
+/* Where you are. Full-length bar in primary ink, plus a dot that sits
+   OUTSIDE the capsule — the reference keeps "current" and "previewing" on
+   two separate signals so browsing never looks like it moved the reader. */
+[class~='xpvNua_markActive'] {
+  background-color: transparent;
+}
+
+[class~='xpvNua_markActive']::before {
+  background-color: var(--dsw-alias-label-primary);
+  transform: translateY(-50%) scaleX(1);
+}
+
+[class~='xpvNua_markActive']::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--lg-accent);
+  transform: translateY(-50%);
+}
+
+/* A turn that is still streaming keeps the shipped opacity pulse; it just
+   pulses in the same ink as everything else. */
+[class~='xpvNua_markBusy'] {
+  background-color: transparent;
+}
+
+[class~='xpvNua_markBusy']::before {
+  background-color: var(--dsw-alias-label-secondary);
+  transform: translateY(-50%) scaleX(0.85);
+}
+
+/* A turn whose body has been unloaded from memory is still reachable, just
+   quieter — the bar shortens rather than the whole row fading out, because
+   fading the hit area would lie about where you can click. */
+[class~='xpvNua_markUnloaded'] {
+  opacity: 1;
+}
+
+[class~='xpvNua_markUnloaded']::before {
+  opacity: 0.45;
+  transform: translateY(-50%) scaleX(0.42);
+}
+
+/* The hover preview is a floating card over the transcript: L2 glass. */
+[class~='xpvNua_preview'] {
+  /* The shipped cap is 100px, which fits one prompt line plus three reply
+     lines only at the shipped 10px inset — with a reading inset of 11px and a
+     real line-height the third line was sliced through the middle of its
+     glyphs. 114px is exactly the content height (19.4 + 4 + 63 + 22) plus a
+     little slack, and the variable drives the clamp in the same rule so the
+     card cannot grow past what it can show. */
+  --turn-preview-height: 114px;
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-2);
+  background-image: linear-gradient(
+    145deg,
+    var(--lg-edge-top),
+    transparent 52%
+  );
+  background-blend-mode: soft-light;
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    var(--lg-shadow-3);
+  border: none;
+  padding: 11px 13px;
+}
+
+[class~='xpvNua_previewPrompt'] {
+  color: var(--dsw-alias-label-primary);
+  font-size: 12.5px;
+  font-weight: 560;
+  line-height: 1.55;
+}
+
+[class~='xpvNua_previewResponse'] {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+/* The fade at the rail's ends is a MASK on the scroller, not an overlay
+   element. `fadeTop`/`fadeBottom` are added to the SAME div that carries
+   `xpvNua_scroller`, so anything declared on them lands on the scroll
+   container — and `pointer-events: none` there silently disables every mark
+   inside it. The rail still scrolled, still looked right, and could not be
+   clicked or previewed at all. Nothing needs declaring here: the shipped
+   mask-image already does the fading. */
+
+/* ---- Empty / hero states ----------------------------------------------
+   The new-session page. The composer is the object; everything else recedes. */
+[class~='Dc7zOa_root'][data-phase='hero'] [class~='Dc7zOa_scrollBody'] {
+  padding-block: 0;
+}
+
+/* ---- Compaction and context markers ----------------------------------
+   System events, not messages: a centred hairline pill with quiet type. */
+[class~='cJsG2q_compactionRow'],
+[class~='cJsG2q_contextRow'] {
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+}
+
+[class~='cJsG2q_compactionButton'] {
+  border-radius: var(--lg-r-pill);
+  padding: 2px 10px;
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='cJsG2q_compactionButton']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- Errors ----------------------------------------------------------- */
+[class~='cJsG2q_turnErrorRow'] {
+  border-radius: var(--lg-r-md);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 9%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-error-primary) 28%, transparent);
+  padding: 10px 14px;
+}
+
+[class~='cJsG2q_turnErrorTitle'] {
+  font-weight: 600;
+  letter-spacing: -0.004em;
+}
+
+[class~='cJsG2q_turnErrorCode'] {
+  font-family: var(--ds-font-family-code);
+  font-size: 11.5px;
+  border-radius: var(--lg-r-xs);
+  padding: 1px 6px;
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class~='xz4KEq_runningDivider'] {
+    animation: none;
+    background-image: linear-gradient(90deg, transparent, var(--lg-accent), transparent);
+    background-size: 100% 100%;
+  }
+}

@@ -1,0 +1,174 @@
+/* ==========================================================================
+   Liquid Glass · shell
+   --------------------------------------------------------------------------
+   The three-column frame. In the shipped UI the columns are flat regions of one
+   background. Here the sidebar and rightbar become floating glass columns with
+   the ambient field visible in the gutters around them, and the centre column
+   becomes the opaque reading surface between them.
+
+   Why the centre stays opaque: it holds the transcript. Text that scrolls must
+   never sit on a moving blur, so the material stops at the column edge and the
+   reading surface is solid.
+   ========================================================================== */
+
+/* ---- Gutters -----------------------------------------------------------
+   The frame grid keeps its shipped column math (drag handles, collapse
+   animation and the Windows titlebar inset all depend on it). What changes is
+   that each column is inset from the frame so the ambient field shows through
+   the gap — the "floating above the page" read.
+
+   The columns are grid items sized by their track, so the inset has to be
+   padding on the column and the column has to be border-box; with the shipped
+   content-box the padding would widen the item past its track and the sidebar
+   would slide under the centre column. */
+[class~='BynINW_frame'] {
+  --lg-gutter: 10px;
+}
+
+[class*='_sidebarCol'],
+[class*='_rightbarCol'],
+[class*='_centerCol'] {
+  box-sizing: border-box;
+}
+
+[class*='_sidebarCol'] {
+  padding: var(--lg-gutter);
+  min-width: 0;
+}
+
+[class*='_rightbarCol'] {
+  padding: var(--lg-gutter) var(--lg-gutter) var(--lg-gutter) 0;
+  min-width: 0;
+}
+
+/* Collapsed columns must not keep their gutter, or the rail drifts. */
+[data-sidebar-collapsed='true'] [class*='_sidebarCol'] {
+  padding: 0;
+}
+[data-rightbar-collapsed='true'] [class*='_rightbarCol'] {
+  padding: 0;
+}
+
+/* ---- Centre column -----------------------------------------------------
+   The reading surface: opaque, lifted, floating in the same gutter as the
+   chrome. Margins rather than padding, because the column's children fill it
+   edge to edge (the transcript scroller and the composer dock both rely on
+   that), and a margin shrinks the item inside its track without changing what
+   its children measure against.
+
+   It is opaque on purpose — text that scrolls never sits on a moving blur. But
+   an opaque surface in a lit room is not a flat fill: it picks up the same light
+   as everything else. The ambient gradients are layered on as a *tint* at low
+   alpha, so the slab carries the direction of the light field without ever
+   moving under the text. This is what separates "a dark panel" from "a pane of
+   glass with a surface behind it". */
+[class*='_centerCol'] {
+  position: relative;
+  min-width: 0;
+  margin: var(--lg-gutter) var(--lg-gutter) var(--lg-gutter) 0;
+  border-radius: var(--lg-r-xl);
+  background-color: var(--lg-surface);
+  background-image: var(--lg-surface-light-1), var(--lg-surface-light-2);
+  box-shadow: var(--lg-shadow-1);
+  overflow: hidden;
+}
+
+/* When a side column is collapsed that edge of the reading surface reaches the
+   window, so its corners flatten — a panel that touches an edge does not round
+   it. The margin goes with it, otherwise a strip of wallpaper would show down
+   the edge of the window. */
+[data-sidebar-collapsed='true'] [class*='_centerCol'] {
+  margin-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+[data-rightbar-collapsed='true'] [class*='_centerCol'] {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ---- Windows titlebar -------------------------------------------------
+   The shipped app reserves a 40px drag strip above the grid, paints it with the
+   sidebar fill, and rounds the centre column into it. Leaving that strip as bare
+   ambient field is what made the top of the window read as a separate layer
+   pasted over the interface: the columns floated below it with rounded corners,
+   so the eye saw wallpaper, then a hard edge, then content.
+
+   The fix is to make the strip a real object. A macOS window with a sidebar has
+   a *unified toolbar* — one full-width bar at the top of the window, with the
+   sidebar and the content starting below it. That is a legitimate layer, and it
+   is what the reserved height is for. So the strip gets the L1 material and a
+   bottom hairline, which turns "leftover space" into "toolbar".
+
+   The columns keep their 10px gutter below it, because everything in this shell
+   floats in the same gutter; the toolbar is simply the one bar that does not. */
+[data-windows-titlebar] [class~='BynINW_frame'] {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+[data-windows-titlebar] [class~='BynINW_frame']::before {
+  background-color: var(--lg-glass-2) !important;
+  background-image: none !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 0.5px 0 var(--lg-hairline);
+  border-bottom-color: transparent !important;
+}
+
+/* The caption buttons sit in the top-right of this strip; a toolbar that ends
+   flush there would put a hairline through them, so the rule above is a
+   `box-shadow` rather than a border and the strip is allowed to reach the
+   window edge. */
+
+/* Inside the toolbar the drag region must still work, so nothing in the strip
+   may swallow pointer events. */
+[data-windows-titlebar] [class~='BynINW_frame']::before {
+  pointer-events: none;
+}
+
+[data-windows-titlebar] [class*='_centerCol'] {
+  border-radius: var(--lg-r-xl);
+  border-top-left-radius: var(--lg-r-xl);
+}
+
+/* ---- Drag handles -----------------------------------------------------
+   Invisible until hovered, then a thin lit seam — not a permanent divider. */
+[class*='_handle'] {
+  background: transparent !important;
+  transition: background-color var(--lg-t-base) var(--lg-ease-out);
+}
+[class*='_handle']:hover,
+[class*='_handle'][data-dragging='true'] {
+  background-color: var(--lg-accent-soft) !important;
+}
+
+/* ---- Overlay layer ----------------------------------------------------
+   Hosts toasts and quota notices. It is a pass-through layer, so it must not
+   paint; the items inside it own their own materials. */
+[class*='_overlayLayer'] {
+  background: transparent;
+  pointer-events: none;
+}
+[class*='_overlayLayer'] > * {
+  pointer-events: auto;
+}
+
+/* ---- Column resize transition ----------------------------------------
+   The shipped frame animates grid-template-columns. Keep it, but swap in the
+   Apple response curve so a drag release settles instead of stopping dead. */
+[class~='BynINW_frame'][data-animating] {
+  transition: grid-template-columns var(--lg-t-slow) var(--lg-ease-out) !important;
+}
+[class~='BynINW_frame'][data-dragging] {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class~='BynINW_frame'][data-animating] {
+    transition: none !important;
+  }
+}

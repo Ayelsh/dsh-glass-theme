@@ -1,0 +1,521 @@
+/* ==========================================================================
+   Liquid Glass · model picker
+   --------------------------------------------------------------------------
+   The composer's model picker is rendered by dsh-codex-subscription, not by the
+   app, and the app's own picker (wq12jW_*) has the same shape. Both show a flat
+   list of 40 model names under six provider headings, with no icon, no
+   description and no indication of what anything costs. That is the surface the
+   user asked to redraw.
+
+   The data (icons, one-liners, the peak schedule) lives in src/catalog.js and is
+   injected as attributes and sibling nodes by src/client.js. This sheet is
+   therefore only the appearance of what the decorator adds plus the shape of
+   the list it lives in — every rule below keys on either a plugin class or a
+   `data-lg-*` hook the decorator owns, never on a shipped hash.
+
+   Why a dedicated sheet rather than more of overlays.css: the menu material
+   there is shared with every popover in the app, and the picker needs a wider
+   footprint, a scroll region with a sticky header, and a two-line row. Changing
+   the shared material to get those would move every menu in the product.
+   ========================================================================== */
+
+/* ---- Provider tints ------------------------------------------------------
+   Decorative, deliberately desaturated: these are monograms, not logos, and a
+   row of saturated brand colours in a 240px menu reads as a paint chart. Each
+   is a light/dark pair because a 12% wash that is right on white is invisible
+   on #161a22. */
+body {
+  --lg-tint-deepseek: #4d6bfe;
+  --lg-tint-workbuddy: #7c5cff;
+  --lg-tint-zai: #2f9e6e;
+  --lg-tint-gemini: #3b7ded;
+  --lg-tint-grok: #4a5568;
+  --lg-tint-openai: #10a37f;
+  --lg-tint-kimi: #8b5cf6;
+  --lg-tint-minimax: #e0693a;
+  --lg-tint-step: #0ea5b7;
+  --lg-tint-hunyuan: #2563eb;
+  --lg-tint-router: #64748b;
+  --lg-tint-neutral: #6b7280;
+  --lg-tint-peak: #d97706;
+  --lg-tint-off: #0f9d58;
+}
+
+body[data-ds-dark-theme] {
+  --lg-tint-deepseek: #7f95ff;
+  --lg-tint-workbuddy: #a78bfa;
+  --lg-tint-zai: #4ecb8f;
+  --lg-tint-gemini: #6ea0f5;
+  --lg-tint-grok: #94a3b8;
+  --lg-tint-openai: #2ecc9b;
+  --lg-tint-kimi: #b294ff;
+  --lg-tint-minimax: #f08a5d;
+  --lg-tint-step: #35c9da;
+  --lg-tint-hunyuan: #6b9bff;
+  --lg-tint-router: #94a3b8;
+  --lg-tint-neutral: #9aa3af;
+  --lg-tint-peak: #f0a63a;
+  --lg-tint-off: #35c98a;
+}
+
+/* ==========================================================================
+   Menu shell
+   --------------------------------------------------------------------------
+   The plugin fixes the pane at min 240 / max 420 wide and 360 tall. A two-line
+   row with an icon needs more than 240 to avoid truncating every description,
+   so the floor is raised — but only the floor: on a narrow window the viewport
+   terms still win, because they are what keeps the menu on screen.
+   ========================================================================== */
+[class~='codexModelSelectMenu'] {
+  /* The shipped min() chain is re-stated with a wider floor. Both terms stay:
+     dropping the 100vw guard would let the menu overflow a 320px window. */
+  min-width: min(304px, 100vw - 32px);
+  max-height: min(460px, 100vh - 96px);
+  padding: 0;
+  border-radius: var(--lg-r-lg);
+  /* The rim. A floating layer over an opaque page earns its float from its own
+     edge; without this the menu is a flat rectangle that happens to hover. */
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    var(--lg-shadow-3);
+}
+
+/* The list region scrolls; the injected header must not. The plugin already
+   declares `flex: 1 1 auto; min-height: 0` here, so this only adds the inset
+   that keeps rows off the rounded edge. */
+[class~='codexModelSelectMenu'] > [class*='codexModelSelectGroups'] {
+  padding: 2px 6px 6px;
+  scroll-padding-block: 34px;
+}
+
+/* ---- Injected header ----------------------------------------------------
+   Appended as the menu's first child and lifted with `order`, so React's own
+   children keep their indices. Two rows: quick providers, then the price chip. */
+[class~='codexModelSelectMenu'] > [data-lg-header] {
+  order: -1;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 8px 7px;
+  /* A hairline, not a fill: the header sits on the menu's own material, and a
+     second fill here would band against it. */
+  box-shadow: inset 0 -0.5px 0 var(--lg-hairline);
+}
+
+/* ---- Quick providers ----------------------------------------------------
+   A row of provider chips. Selecting one filters the list to that provider and
+   pressing it again clears the filter; the pressed state is the app's own
+   accent, so it reads as a selection rather than as a button that lit up.
+
+   A three-column grid, not a wrapping flex row: the six providers otherwise
+   break 5+1 across two lines, which reads as an accident and costs the same
+   vertical space a balanced 3+3 does. Equal cells also make every chip the
+   same target size, so the row scans as one control rather than six. */
+[data-lg-quick] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+[data-lg-chip] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px 0 4px;
+  border: none;
+  border-radius: var(--lg-r-pill);
+  background-color: transparent;
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  /* The chip's whole job is to say "these are the providers"; a border alone
+     does that at rest, and the press is what needs the motion. */
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+/* A long provider name must not widen its cell: the grid owns the width. */
+[data-lg-chip] > span:not([data-lg-mark]) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-lg-chip]:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+[data-lg-chip][data-lg-on] {
+  background-color: var(--lg-accent-soft);
+  box-shadow: inset 0 0 0 0.5px var(--lg-accent-ring);
+  color: var(--lg-accent);
+}
+
+/* The monogram. `--lg-tint-*` is the provider's hue; the wash is derived from
+   it so one variable per provider is enough. */
+[data-lg-chip] > [data-lg-mark] {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--lg-r-xs);
+  background-color: color-mix(in srgb, var(--lg-tint, var(--lg-tint-neutral)) 16%, transparent);
+  color: var(--lg-tint, var(--lg-tint-neutral));
+  font-size: 8px;
+  font-weight: 640;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+[data-lg-chip][data-lg-tone='deepseek'] > [data-lg-mark] { --lg-tint: var(--lg-tint-deepseek); }
+[data-lg-chip][data-lg-tone='workbuddy'] > [data-lg-mark] { --lg-tint: var(--lg-tint-workbuddy); }
+[data-lg-chip][data-lg-tone='zai'] > [data-lg-mark] { --lg-tint: var(--lg-tint-zai); }
+[data-lg-chip][data-lg-tone='gemini'] > [data-lg-mark] { --lg-tint: var(--lg-tint-gemini); }
+[data-lg-chip][data-lg-tone='grok'] > [data-lg-mark] { --lg-tint: var(--lg-tint-grok); }
+[data-lg-chip][data-lg-tone='openai'] > [data-lg-mark] { --lg-tint: var(--lg-tint-openai); }
+
+/* ---- Price chip ---------------------------------------------------------
+   Only rendered when the list actually contains a first-party DeepSeek row,
+   because that is the only provider whose published schedule this reflects.
+   Showing it over a workbuddy list would attach a real number to the wrong
+   billing scheme. */
+[data-lg-price] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-lg-price][hidden] {
+  display: none;
+}
+
+[data-lg-state] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: var(--lg-r-pill);
+  background-color: color-mix(in srgb, var(--lg-tint-peak) 14%, transparent);
+  color: var(--lg-tint-peak);
+  font-weight: 560;
+}
+
+[data-lg-state][data-lg-tone='off'] {
+  background-color: color-mix(in srgb, var(--lg-tint-off) 14%, transparent);
+  color: var(--lg-tint-off);
+}
+
+/* The dot is what makes the chip legible at a glance: colour alone is not a
+   signal for a colour-blind reader, and the label is two characters wide. */
+[data-lg-state]::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: var(--lg-r-pill);
+  background-color: currentColor;
+}
+
+/* Why the window is open. On a weekend or a 法定节假日 the off-peak chip would
+   otherwise sit beside a clock that says 10:00 on a weekday, and a reader who
+   knows the schedule would think the chip was broken. The reason is a suffix,
+   not a second chip: it answers the question the state raises, it does not ask
+   for attention of its own. */
+[data-lg-state][data-lg-reason]::after {
+  content: attr(data-lg-reason);
+  color: var(--dsw-alias-label-caption);
+  font-weight: 500;
+}
+
+[data-lg-factor] {
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 560;
+}
+
+[data-lg-sep] {
+  color: var(--dsw-alias-separator-primary);
+}
+
+[data-lg-next] {
+  margin-inline-start: auto;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ==========================================================================
+   Provider groups
+   ========================================================================== */
+
+/* The plugin renders headings through the app's menu-group primitive
+   (`_heading_121p8_19`), which is 11px tertiary and sticky. With an icon and a
+   collapse control the heading becomes a real header row, so it needs height
+   and a background that matches the menu's fill — sticky content that is
+   transparent lets rows scroll through it. */
+[class*='codexModelSelectGroups'] [data-menu-group-heading] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  margin: 2px 0 1px;
+  padding: 0 6px;
+  border-radius: var(--lg-r-sm);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 16px;
+  background-color: var(--dsw-menu-surface-fill);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+[class*='codexModelSelectGroups'] [data-menu-group-heading] > [data-lg-mark] {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: var(--lg-r-xs);
+  background-color: color-mix(in srgb, var(--lg-tint, var(--lg-tint-neutral)) 16%, transparent);
+  color: var(--lg-tint, var(--lg-tint-neutral));
+  font-size: 8px;
+  font-weight: 640;
+  line-height: 1;
+}
+
+[data-menu-group-heading] > [data-lg-mark][data-lg-tone='deepseek'] { --lg-tint: var(--lg-tint-deepseek); }
+[data-menu-group-heading] > [data-lg-mark][data-lg-tone='workbuddy'] { --lg-tint: var(--lg-tint-workbuddy); }
+[data-menu-group-heading] > [data-lg-mark][data-lg-tone='zai'] { --lg-tint: var(--lg-tint-zai); }
+[data-menu-group-heading] > [data-lg-mark][data-lg-tone='gemini'] { --lg-tint: var(--lg-tint-gemini); }
+[data-menu-group-heading] > [data-lg-mark][data-lg-tone='grok'] { --lg-tint: var(--lg-tint-grok); }
+[data-menu-group-heading] > [data-lg-mark][data-lg-tone='openai'] { --lg-tint: var(--lg-tint-openai); }
+
+[data-menu-group-heading] > [data-lg-note] {
+  color: var(--dsw-alias-label-caption);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+
+/* Collapse control. Hidden until hover so six groups do not present six
+   chevrons as their most repeated element; it is still focusable, and
+   `:focus-visible` reveals it for keyboard users. */
+[data-menu-group-heading] > [data-lg-toggle] {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: none;
+  border-radius: var(--lg-r-xs);
+  background: none;
+  color: var(--dsw-alias-label-caption);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--lg-t-fast) var(--lg-ease-out),
+    background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[data-menu-group-heading] > [data-lg-toggle] svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[data-menu-group-heading]:hover > [data-lg-toggle],
+[data-menu-group-heading] > [data-lg-toggle]:focus-visible {
+  opacity: 1;
+}
+
+[data-menu-group-heading] > [data-lg-toggle]:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[data-menu-group][data-lg-collapsed] > [data-menu-group-heading] > [data-lg-toggle] svg {
+  transform: rotate(-90deg);
+}
+
+/* Collapsed: the heading stays, the rows go. `display: none` on the option
+   siblings rather than on a wrapper, because the plugin's rows are direct
+   children of the section. */
+[data-menu-group][data-lg-collapsed] > [role='menuitemradio'] {
+  display: none;
+}
+
+/* Filtered out by a quick-provider chip. */
+[data-menu-group][data-lg-filtered] {
+  display: none;
+}
+
+/* ==========================================================================
+   Model rows
+   --------------------------------------------------------------------------
+   The plugin's row is a single 34px line: name, optional description, check.
+   With an icon and a description it becomes a 46px two-line row, which is the
+   shape the reference used and the only shape in which a description is
+   readable rather than decorative.
+   ========================================================================== */
+[class*='codexModelSelectGroups'] [class~='codexModelSelectOption'] {
+  gap: 8px;
+  min-height: 40px;
+  padding: 5px 8px 5px 7px;
+  border-radius: var(--lg-r-md);
+}
+
+/* Family monogram. Sized to the two-line row, not to the first line, so the
+   block reads as a unit. */
+[class*='codexModelSelectGroups'] [class~='codexModelSelectOption'] > [data-lg-mark] {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--lg-r-sm);
+  background-color: color-mix(in srgb, var(--lg-tint, var(--lg-tint-neutral)) 14%, transparent);
+  color: var(--lg-tint, var(--lg-tint-neutral));
+  font-size: 9px;
+  font-weight: 640;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='deepseek'] { --lg-tint: var(--lg-tint-deepseek); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='openai'] { --lg-tint: var(--lg-tint-openai); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='gemini'] { --lg-tint: var(--lg-tint-gemini); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='grok'] { --lg-tint: var(--lg-tint-grok); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='kimi'] { --lg-tint: var(--lg-tint-kimi); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='zai'] { --lg-tint: var(--lg-tint-zai); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='minimax'] { --lg-tint: var(--lg-tint-minimax); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='step'] { --lg-tint: var(--lg-tint-step); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='hunyuan'] { --lg-tint: var(--lg-tint-hunyuan); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='router'] { --lg-tint: var(--lg-tint-router); }
+[class~='codexModelSelectOption'] > [data-lg-mark][data-lg-tone='workbuddy'] { --lg-tint: var(--lg-tint-workbuddy); }
+
+/* The multiplier the workbuddy provider folds into the label ("Fast · x0.34").
+   Split out, it becomes a secondary fact instead of part of the name — which is
+   the difference between a list of names and a list of prices.
+
+   It lives INSIDE the name span, and the name stays a block: the app's own
+   `overflow:hidden; text-overflow:ellipsis; white-space:nowrap` still does the
+   truncating, and the badge is inline-block so it sits on the text baseline
+   instead of stretching to the column width (which is what a flex/column parent
+   does to a bare sibling span). */
+[data-lg-mult] {
+  display: inline-block;
+  margin-inline-start: 5px;
+  padding: 0 5px;
+  border-radius: var(--lg-r-xs);
+  background-color: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 15px;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
+}
+
+/* The description reuses the plugin's own `OptionDescription` class, so this
+   only tunes the measure: 16px leading on 12px text inside a 40px row leaves
+   the two lines touching. */
+[class*='codexModelSelectGroups'] [class~='codexModelSelectOptionDescription'] {
+  margin-top: 1px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  line-height: 15px;
+}
+
+/* A selected row: the app's check plus a tinted plate, so the current model is
+   findable in a 40-row list without hunting for a 14px tick. */
+[class*='codexModelSelectGroups'] [class~='codexModelSelectOption'][aria-checked='true'] {
+  background-color: var(--lg-accent-soft);
+}
+
+[class~='codexModelSelectOption'][aria-checked='true'] [class*='codexModelSelectOptionName'] {
+  font-weight: 600;
+  color: var(--lg-accent);
+}
+
+[class~='codexModelSelectOption'][aria-checked='true'] > [data-lg-mark] {
+  background-color: color-mix(in srgb, var(--lg-tint, var(--lg-tint-neutral)) 22%, transparent);
+}
+
+/* ==========================================================================
+   Trigger
+   --------------------------------------------------------------------------
+   The composer's own control. Only the geometry changes: it is one of the most
+   frequently hit targets in the product and the shipped 28px height is below
+   the 32px the rest of the composer uses.
+   ========================================================================== */
+[class~='codexModelSelectTrigger'] {
+  height: 30px;
+  padding-inline: 8px;
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='codexModelSelectTrigger'][aria-expanded='true'] {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* The monogram in front of the trigger label, so the composer shows which
+   family is active without the menu being open. */
+[class~='codexModelSelectTrigger'] > [data-lg-mark] {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--lg-r-xs);
+  background-color: color-mix(in srgb, var(--lg-tint, var(--lg-tint-neutral)) 16%, transparent);
+  color: var(--lg-tint, var(--lg-tint-neutral));
+  font-size: 8px;
+  font-weight: 640;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   Narrow windows
+   --------------------------------------------------------------------------
+   At 320–420px the menu is the whole screen width; the quick-provider row would
+   wrap to three lines and push the list out of reach, so it scrolls sideways
+   instead. */
+@media (max-width: 480px) {
+  [data-lg-quick] {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  [data-lg-quick]::-webkit-scrollbar {
+    display: none;
+  }
+
+  [data-lg-chip] {
+    flex: none;
+  }
+}
+
+/* Pointer-coarse devices have no hover, so a hover-revealed control would be
+   permanently invisible. The collapse chevron is the only one here. */
+@media (hover: none) {
+  [data-menu-group-heading] > [data-lg-toggle] {
+    opacity: 1;
+  }
+}

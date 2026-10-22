@@ -1,0 +1,160 @@
+/* ===========================================================================
+   Settings — Liquid Glass section.
+
+   This is a host settings PAGE, not a dialog: it lives inside the settings
+   shell's content column, so it must speak the shell's own reading measure and
+   must NOT paint a card of its own. The shell already gives every section a
+   564px column with 24px of side padding; a second box inside that column would
+   be a box inside a box, which is the collision this skin has been fixing all
+   along.
+
+   So: rows are separated by a hairline, the switch is the only raised object,
+   and the page has no surface at all.
+   =========================================================================== */
+
+.lg-settings {
+  padding: 18px 0 40px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.lg-settings-title {
+  margin: 0 0 6px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 17px;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  line-height: 24px;
+}
+
+.lg-settings-intro {
+  margin: 0 0 18px;
+  max-width: 46em;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+  line-height: 20px;
+}
+
+.lg-settings-empty {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+}
+
+/* A grouped list, HIG style: one hairline between rows, no plate per row. */
+.lg-settings-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lg-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+}
+
+.lg-settings-row + .lg-settings-row {
+  border-top: 0.5px solid var(--lg-hairline);
+}
+
+/* A switch that cannot change anything looks like a switch that is broken. It
+   recedes instead, and the row's own label keeps full contrast: the provider is
+   still worth reading, only its control is unavailable. */
+.lg-settings-row[data-blocked='true'] .lg-settings-switch {
+  opacity: 0.4;
+}
+
+.lg-settings-row[data-blocked='true'] .lg-settings-switch:hover .lg-settings-knob {
+  transform: none;
+}
+
+.lg-settings-count {
+  margin: 10px 0 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lg-settings-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lg-settings-name {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lg-settings-note {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The switch: a 32x18 track with a 14px knob. iOS proportions, not the 88x20
+   toolbar control — this is a settings row, and a settings row's switch is the
+   smallest object that can be hit. */
+.lg-settings-switch {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 32px;
+  height: 18px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--lg-r-pill);
+  background-color: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
+  cursor: pointer;
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+.lg-settings-switch[data-on='true'] {
+  background-color: var(--lg-accent);
+}
+
+.lg-settings-switch:focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: 2px;
+}
+
+.lg-settings-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--lg-r-pill);
+  background-color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+.lg-settings-switch[data-on='true'] .lg-settings-knob {
+  transform: translateX(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-settings-switch,
+  .lg-settings-knob {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .lg-settings-switch {
+    box-shadow: inset 0 0 0 1px var(--dsw-alias-label-primary);
+  }
+}

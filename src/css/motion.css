@@ -1,0 +1,309 @@
+/* ==========================================================================
+   motion.css — the last sheet, and deliberately the smallest in intent.
+   --------------------------------------------------------------------------
+   Everything above this file draws surfaces. This file decides how they move,
+   and it exists because motion is the one property of an interface that cannot
+   be fixed surface by surface: if the sidebar plate takes 120ms and the menu
+   takes 300ms, the product feels assembled rather than designed, no matter how
+   good either one looks alone.
+
+   Three rules govern everything here.
+
+   One: motion is a consequence of state, never decoration. Nothing in this
+   file animates on load except a material arriving for the first time. There is
+   no idle animation, no ambient drift, no attention-seeking pulse. An interface
+   that moves without being touched is an interface asking for attention it was
+   not given.
+
+   Two: the same gesture always takes the same time. Press, release, hover and
+   selection all resolve inside the `--lg-t-*` ladder, so a fast flick across
+   three rows reads as one rhythm instead of three unrelated reactions.
+
+   Three: everything is interruptible. Transitions, not animations, wherever the
+   property is a value the user can re-target mid-flight. A row can be hovered
+   and unhovered faster than the transition completes, and the plate must follow
+   the pointer out of whatever intermediate opacity it had reached — which is
+   exactly what a CSS transition does and a keyframe animation does not.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. One transition language for every interactive surface.
+   --------------------------------------------------------------------------
+   The shipped stylesheets declare transitions one component at a time, which is
+   why the timings disagree. Rather than restate each one, this block sets the
+   default duration and curve on the surfaces the app actually has, and lets the
+   per-surface sheets above override the *properties* they care about. Anything
+   already carrying a transition keeps it: these rules are written at the same
+   specificity and simply land later in the cascade, so a component that opted
+   into a specific duration still wins by writing it in a later sheet or with a
+   more specific selector.
+   -------------------------------------------------------------------------- */
+[class~='_2H3hWW_newSession'],
+[class~='_2H3hWW_panelRow'],
+[class~='_2H3hWW_toggle'],
+[class~='hIlkoa_sessionRow'],
+[class~='hIlkoa_projectRow'],
+[class~='fO69Vq_row'],
+[class~='wCInkW_navCell'],
+[class~='RlGAzG_primary'],
+[class~='RlGAzG_add'],
+[class~='RlGAzG_tools'] button,
+[class~='RlGAzG_trailing'] button,
+[class~='xz4KEq_toBottom'],
+[class~='GjTS2W_card'],
+[class~='rtYPxa_chip'],
+[class~='wq12jW_trigger'],
+[class~='dlU_AG_trigger'],
+[class~='mP3ANa_selector'],
+[class~='wq12jW_cell'],
+[class~='wCInkW_close'],
+[class~='iq1doa_pill'] {
+  transition-duration: var(--lg-t-fast);
+  transition-timing-function: var(--lg-ease-out);
+}
+
+/* Selection is a slower, calmer event than hover. A pointer crossing a row
+   should light it instantly; the row that becomes *selected* is a state change
+   the user is meant to register, so it settles rather than snaps. */
+[class~='_2H3hWW_panelActive'],
+[class~='hIlkoa_selected'],
+[class~='Dc7zOa_tabActive'],
+[class~='Dc7zOa_tab'] {
+  transition-duration: var(--lg-t-base);
+  transition-timing-function: var(--lg-ease-in-out);
+}
+
+/* --------------------------------------------------------------------------
+   2. Press, and release.
+   --------------------------------------------------------------------------
+   The shipped press states scale the control down and leave it there until the
+   pointer lifts. That reads as the control being *deformed* rather than pushed,
+   because a real surface under a finger compresses and then returns with a
+   little overshoot as the pressure goes away.
+
+   The asymmetry is the point: compression is fast (the finger is already
+   moving), release is slower and uses the spring curve. Declaring the faster
+   duration on `:active` and the slower one on the base selector gives exactly
+   that, because on release the base rule takes over.
+   -------------------------------------------------------------------------- */
+[class~='_2H3hWW_newSession']:active,
+[class~='hIlkoa_sessionRow']:active,
+[class~='hIlkoa_projectRow']:active,
+[class~='GjTS2W_card']:active,
+[class~='rtYPxa_chip']:active,
+[class~='fO69Vq_row']:active,
+[class~='xz4KEq_toBottom']:active {
+  transition-duration: 70ms;
+  transition-timing-function: var(--lg-ease-out);
+}
+
+[class~='_2H3hWW_newSession'],
+[class~='hIlkoa_sessionRow'],
+[class~='hIlkoa_projectRow'],
+[class~='GjTS2W_card'],
+[class~='rtYPxa_chip'],
+[class~='fO69Vq_row'],
+[class~='xz4KEq_toBottom'] {
+  transition-property: background-color, border-color, box-shadow, color, transform, opacity;
+  transition-duration: var(--lg-t-fast);
+  transition-timing-function: var(--lg-ease-spring);
+}
+
+/* --------------------------------------------------------------------------
+   3. Materials arrive; they do not fade in.
+   --------------------------------------------------------------------------
+   A translucent surface that fades from transparent to translucent passes
+   through a state where its backdrop-filter is partially applied, which on
+   Chromium produces a visible flash as the blur radius resolves. Scaling up
+   from 0.96 while the opacity comes in over a shorter window keeps the blur
+   fully active for the whole transition, so the material looks like it is being
+   placed rather than dissolving into existence.
+   -------------------------------------------------------------------------- */
+@keyframes lg-surface-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lg-surface-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/* Menus and popovers grow out of the control that opened them. `transform-origin`
+   is set per-anchor by the sheets above where the anchor is known; the fallback
+   here is the top edge, which is right for the overwhelmingly common case of a
+   menu hanging below a button. */
+[class~='Z9Jnlq_menu'],
+[class*='_root_4ub78'],
+[class*='_card_1pq26'] {
+  animation: lg-surface-in var(--lg-t-base) var(--lg-ease-spring) both;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   4. The travelling indicator.
+   -------------------------------------------------------------------------- */
+/* A selection plate that cross-fades between positions reads as two plates
+   blinking. One plate that slides reads as a single object that moved, and the
+   eye tracks it. This is the only place in the skin where a longer duration is
+   correct: the travel has to be slow enough to be followed. */
+[class~='_2H3hWW_panelActive']::before,
+[class~='hIlkoa_selected']::before {
+  transition:
+    transform var(--lg-t-base) var(--lg-ease-spring),
+    opacity var(--lg-t-fast) var(--lg-ease-out);
+}
+
+/* --------------------------------------------------------------------------
+   5. Reduced motion — a real answer, not a blanket kill.
+   --------------------------------------------------------------------------
+   base.css already collapses durations globally for this preference. That is
+   the correct floor, but it is not the whole answer: collapsing a spring to 1ms
+   turns a scale-up into a hard cut, and a hard cut on a material is more
+   jarring than the motion it replaced. What the preference actually asks for is
+   no *travel* — nothing may move across the screen — while state changes stay
+   legible.
+
+   So: transforms are removed outright rather than shortened, and the
+   transitions that carry meaning (colour, opacity, shadow) keep a short
+   duration so the change is still readable as a change.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  [class~='Z9Jnlq_menu'],
+  [class*='_root_4ub78'] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* No element may translate or scale on interaction. Colour and shadow carry
+     the feedback instead, which is what the surfaces above already provide. */
+  [class~='_2H3hWW_newSession']:active,
+  [class~='hIlkoa_sessionRow']:active,
+  [class~='hIlkoa_projectRow']:active,
+  [class~='GjTS2W_card']:active,
+  [class~='rtYPxa_chip']:active,
+  [class~='fO69Vq_row']:active,
+  [class~='xz4KEq_toBottom']:active,
+  [class~='RlGAzG_primary']:active:not(:disabled),
+  [class~='RlGAzG_tools'] button:active,
+  [class~='RlGAzG_trailing'] button:active,
+  [class~='wCInkW_close']:active,
+  [class~='fO69Vq_addPrimary']:active,
+  [class~='fO69Vq_addMore']:active {
+    transform: none;
+  }
+
+  /* Hover lifts are travel too. Keep the shadow change — that is depth, not
+     motion — and drop the displacement. */
+  [class~='GjTS2W_card']:hover,
+  [class~='rtYPxa_chip']:hover,
+  [class~='RlGAzG_card']:focus-within,
+  [class~='xz4KEq_toBottom']:hover {
+    transform: none;
+  }
+
+  [class~='_2H3hWW_panelActive']::before,
+  [class~='hIlkoa_selected']::before {
+    transition-duration: 1ms;
+  }
+
+  /* The running-state sheen and the live-session breath are the only looping
+     animations in the skin. Under this preference they become static marks: the
+     running divider keeps its tinted line, the session dot keeps its lit state,
+     and neither pulses. */
+  [class~='xz4KEq_runningDivider'],
+  [class~='hIlkoa_dot'] {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Touch: hover is not a state that exists.
+   --------------------------------------------------------------------------
+   On a pointer that cannot hover, every `:hover` reveal in this skin — the
+   assistant action row, the scrollbar thumb, the row action buttons — would
+   either never appear or appear and stick after a tap. Both are wrong. Where a
+   surface is hidden until hover, this block shows it; where hover only adds
+   emphasis, it is left alone.
+   -------------------------------------------------------------------------- */
+@media (hover: none) {
+  [class~='v5IAXa_actions'],
+  [class~='xD_KDq_actions'] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Touch targets get the full row height back; the compacted hit areas above
+     assume a mouse can hit a 28px plate. */
+  [class~='hIlkoa_sessionRow'],
+  [class~='_2H3hWW_panelRow'] {
+    min-height: 36px;
+  }
+
+  /* Without hover there is no "hover lift", so pressed feedback has to carry
+     the whole interaction. The tint is already there; this only makes sure the
+     press is visible at all on a surface that has no pointer cursor to warn
+     the user something is interactive. */
+  [class~='GjTS2W_card']:active,
+  [class~='hIlkoa_sessionRow']:active {
+    background-color: var(--dsw-alias-interactive-bg-active);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   7. Focus is not motion.
+   --------------------------------------------------------------------------
+   Keyboard focus must never animate in a way that delays the ring, because the
+   ring is the user's only confirmation that the key press landed. The ring
+   itself is an `outline` (see base.css) and so is not animated; what has to
+   settle instantly is the colour and transform transition on the focused
+   control, so the ring never arrives over a half-lit plate.
+   -------------------------------------------------------------------------- */
+[class~='_2H3hWW_newSession']:focus-visible,
+[class~='hIlkoa_sessionRow']:focus-visible,
+[class~='fO69Vq_row']:focus-visible,
+[class~='RlGAzG_primary']:focus-visible,
+[class~='xz4KEq_toBottom']:focus-visible,
+[class~='wCInkW_close']:focus-visible {
+  transition-duration: 0ms;
+}
+
+/* --------------------------------------------------------------------------
+   8. Long transcripts.
+   --------------------------------------------------------------------------
+   A conversation with a thousand tool rows is the normal case, not the edge
+   case, and every one of those rows carries a blur, a shadow and a transition.
+   `content-visibility` lets the engine skip layout and paint for rows far
+   outside the viewport while keeping them in the DOM and in the accessibility
+   tree, which is exactly the trade this needs. `contain-intrinsic-size` gives
+   the engine a placeholder height so the scrollbar does not jump as rows
+   resolve.
+
+   This is the one performance rule in the skin, and it is here rather than in
+   conversation.css because it is what makes the motion above affordable.
+   -------------------------------------------------------------------------- */
+[class~='xz4KEq_flowItem'] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
+
+/* Never let the engine skip the row that is actually streaming: its height
+   changes every frame and a resolved placeholder would fight the live content. */
+[class~='xz4KEq_flowItem'][data-streaming],
+[class~='xz4KEq_flowItem'][data-running] {
+  content-visibility: visible;
+}

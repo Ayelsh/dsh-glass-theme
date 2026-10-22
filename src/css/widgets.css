@@ -1,0 +1,762 @@
+/* ==========================================================================
+   Liquid Glass · widgets
+   --------------------------------------------------------------------------
+   The right-hand dock, the attachment rail, file previews, the browser panel,
+   markdown, code blocks, and the small chrome pieces that appear all over the
+   app.
+
+   Rule applied here: the dock is chrome (L1), the panes inside it are reading
+   surfaces (opaque), and the markdown renderer gets Apple's typographic ramp.
+   ========================================================================== */
+
+/* ---- Right dock -------------------------------------------------------
+   The dock panel is an absolutely-positioned overlay that hangs off the right
+   edge of the rightbar column. When the column is collapsed to zero width the
+   panel still spans the viewport (its width comes from its content), and only
+   its dockkit children are hidden — the panelBody itself stays laid out.
+
+   That is why the material has to be gated on the open attribute rather than
+   applied to the body unconditionally: an unconditional glass panelBody paints
+   a 640px frosted rectangle over the middle of the transcript. */
+[class~='OUqwTW_panel'] {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  border: 0;
+}
+
+/* The panel is absolutely positioned against the rightbar column, so it ignores
+   that column's padding and spans the full frame height — flush to the top and
+   bottom edges while the sidebar and the centre column both float on a 10px
+   gutter. Inset it vertically so the dock keeps the same rhythm as the rest of
+   the shell; the RIGHT edge stays flush on purpose, because a dock slides in
+   from the edge and a gap there would read as a stray margin. The left corners
+   are the only rounded ones for the same reason. */
+[class~='OUqwTW_panel'] {
+  top: var(--lg-gutter);
+  bottom: var(--lg-gutter);
+}
+
+/* The dock is the widest glass surface in the app (it opens at ~640px), and at
+   that size an L1 fill is the wrong material: 4.5% white over a 180%-saturated
+   blur lets the ambient field's chroma take over the whole panel and the dock
+   reads as a coloured wash rather than as chrome. Large glass goes up the
+   ladder — a heavier fill and LESS saturation, because there is more area for
+   the backdrop to bleed through. The blur stays, so the panel still belongs to
+   the room; it just stops competing with the text on it. */
+[class~='OUqwTW_panel'][data-sidebar-right-open] [class~='OUqwTW_panelBody'] {
+  border-radius: var(--lg-r-xl) 0 0 var(--lg-r-xl);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(140%);
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    inset 0.5px 0 0 var(--lg-hairline),
+    var(--lg-shadow-1);
+  overflow: hidden;
+}
+
+/* In FULLSCREEN the dock stops being a column and becomes a sheet: it keeps its
+   absolute position but grows to `100vw` minus the sidebar, so it now lies ON
+   TOP OF the centre column instead of beside it.
+
+   The app does not raise the panel for this. It cannot rely on paint order
+   either: `BynINW_rightbarCol` and `BynINW_centerCol` are both
+   `position: relative; z-index: auto`, so neither opens a stacking context and
+   everything inside them competes in the frame's context. The transcript's
+   composer is a FLEX ITEM with `z-index: 1`, which does create a stacking
+   context even at `position: static`, so it paints above every `z-index: auto`
+   positioned box — including this panel. The result is the composer card
+   floating through the middle of a fullscreen dock.
+
+   The panel therefore has to be lifted explicitly, and only in fullscreen:
+   while docked it never overlaps the centre column, so raising it there would
+   only let it swallow the column resize handle. 20 clears the composer's 1 and
+   stays far below the app's real overlay layers (settings 1000, menus 1100). */
+[class~='OUqwTW_panel'][data-sidebar-right-panel='fullscreen'] {
+  z-index: 20;
+}
+
+/* Dockkit paints `--dsw-alias-bg-base` on a docked tab host, which is an opaque
+   slab sitting directly on the glass panel above and covering all of it. The
+   host has already opted out of that fill for FLOATING tab hosts
+   (`:not(._float_*)`), so a docked host is the one case that needs the fill
+   removed here. The header strip then becomes the panel's title bar: same
+   material, no fill of its own. */
+[class~='OUqwTW_panel'][data-sidebar-right-open] [class*='_tabHost_6nhg2_'],
+[class~='OUqwTW_panel'][data-sidebar-right-open] [class*='_emptyTabHost_6nhg2_'] {
+  background: transparent;
+}
+
+[class~='OUqwTW_panel'][data-sidebar-right-open] [class*='_tabHostHeader_6nhg2_'] {
+  padding-inline: 4px 10px;
+}
+
+/* A pane is a reading surface inside the dock, so it goes opaque and loses the
+   blur. Only one backdrop layer is allowed per stack. */
+[data-dockkit-pane] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  overflow: hidden;
+}
+
+[data-dockkit-divider] {
+  background-color: var(--lg-hairline);
+}
+
+[data-dockkit-empty] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+}
+
+[class~='OUqwTW_collapseGlyph'],
+[class~='OUqwTW_iconButton'],
+[class~='dzXS4q_button'] {
+  border-radius: var(--lg-r-sm);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='OUqwTW_iconButton']:hover,
+[class~='dzXS4q_button']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='OUqwTW_tabTitle'] {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ---- Attachments ----------------------------------------------------- */
+[class~='GjTS2W_card'],
+[class~='GjTS2W_card'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 0 0 0.5px var(--lg-hairline);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='GjTS2W_card']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  transform: translateY(-1px);
+}
+
+[class~='GjTS2W_card']:active {
+  transform: scale(0.985);
+}
+
+[class~='GjTS2W_name'],
+[class~='GjTS2W_name'] {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.002em;
+}
+
+[class~='GjTS2W_meta'],
+[class~='GjTS2W_meta'] {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-caption);
+}
+
+[class~='Mrat-G_rail'],
+[class~='srf2qa_rail'] {
+  gap: 8px;
+}
+
+[class~='Mrat-G_thumbnail'],
+[class~='srf2qa_thumbnail'],
+[class~='Nhu-QW_frame'] {
+  border-radius: var(--lg-r-md);
+  box-shadow:
+    inset 0 0 0 0.5px var(--lg-hairline),
+    0 1px 3px rgba(16, 22, 40, 0.08);
+  overflow: hidden;
+}
+
+/* ---- File previews -------------------------------------------------- */
+[class~='TdjKvG_preview'],
+[class~='mXcgTW_document'],
+[class~='BMNXqa_frame'],
+[class~='FYC9oG_frame'],
+[class~='ORj4nq_code'],
+[class~='j86_xG_body'],
+[class~='Woyo-G_root'] {
+  background-color: var(--lg-surface);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='ORj4nq_code'] pre,
+[class~='TdjKvG_preview'] pre {
+  font-family: var(--ds-font-family-code);
+  font-size: 12.5px;
+  line-height: 1.65;
+  text-autospace: no-autospace;
+}
+
+[class~='mXcgTW_document'] {
+  font-size: 14px;
+  line-height: 1.7;
+  letter-spacing: -0.003em;
+}
+
+[class~='GH6oSW_surface'] {
+  background-color: var(--lg-surface-sunken);
+}
+
+[class~='eQSa2q_loading'] {
+  color: var(--lg-accent);
+}
+
+/* ---- Browser panel -------------------------------------------------- */
+[class~='qWvkEq_root'] {
+  background-color: var(--lg-surface);
+}
+
+[class~='qWvkEq_toolbar'] {
+  border-radius: 0 0 var(--lg-r-md) var(--lg-r-md);
+  background-color: var(--lg-glass-1);
+  backdrop-filter: blur(20px) saturate(175%);
+  -webkit-backdrop-filter: blur(20px) saturate(175%);
+  box-shadow: inset 0 -0.5px 0 var(--lg-hairline);
+}
+
+[class~='qWvkEq_addressBox'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
+  border: none;
+  transition: box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='qWvkEq_addressBox']:focus-within {
+  box-shadow:
+    inset 0 1px 2px rgba(16, 22, 40, 0.05),
+    0 0 0 3px var(--lg-accent-ring);
+}
+
+[class~='qWvkEq_addressGo'] {
+  border-radius: var(--lg-r-pill);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='qWvkEq_addressGo']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover-solid);
+}
+
+[class~='qWvkEq_sandboxWarning'],
+[class~='qWvkEq_sandboxOff'] {
+  border-radius: var(--lg-r-sm);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 12%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent);
+  color: var(--dsw-alias-state-warn-primary);
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+[class~='qWvkEq_viewport'],
+[class~='qWvkEq_webview'] {
+  border-radius: var(--lg-r-md);
+  overflow: hidden;
+  background-color: #fff;
+}
+
+/* ---- Markdown ------------------------------------------------------
+   The typographic heart of the app. Apple's ramp: tighter tracking as size
+   grows, generous leading for body, a clear 4px/8px rhythm between blocks. */
+[class*='_markdown'],
+[class~='v5IAXa_body'] {
+  --lg-md-gap: 0.85em;
+}
+
+[class~='v5IAXa_body'] p {
+  margin-block: 0 var(--lg-md-gap);
+  line-height: 1.7;
+}
+
+[class~='v5IAXa_body'] h1,
+[class~='v5IAXa_body'] h2,
+[class~='v5IAXa_body'] h3,
+[class~='v5IAXa_body'] h4 {
+  margin-block: 1.5em 0.55em;
+  font-weight: 640;
+  letter-spacing: -0.018em;
+  line-height: 1.3;
+}
+
+[class~='v5IAXa_body'] h1 {
+  font-size: 1.62em;
+  letter-spacing: -0.024em;
+}
+
+[class~='v5IAXa_body'] h2 {
+  font-size: 1.32em;
+  letter-spacing: -0.02em;
+}
+
+[class~='v5IAXa_body'] h3 {
+  font-size: 1.12em;
+  letter-spacing: -0.014em;
+}
+
+[class~='v5IAXa_body'] h4 {
+  font-size: 1em;
+  letter-spacing: -0.01em;
+}
+
+[class~='v5IAXa_body'] ul,
+[class~='v5IAXa_body'] ol {
+  margin-block: 0 var(--lg-md-gap);
+  padding-inline-start: 1.35em;
+}
+
+[class~='v5IAXa_body'] li {
+  margin-block: 0.22em;
+  line-height: 1.68;
+}
+
+[class~='v5IAXa_body'] li::marker {
+  color: var(--dsw-alias-label-caption);
+}
+
+[class~='v5IAXa_body'] blockquote {
+  margin-block: 0 var(--lg-md-gap);
+  padding-inline-start: 14px;
+  border-inline-start: 2.5px solid var(--lg-hairline-strong);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='v5IAXa_body'] hr {
+  border: none;
+  border-top: 0.5px solid var(--lg-hairline);
+  margin-block: 1.5em;
+}
+
+[class~='v5IAXa_body'] a {
+  color: var(--dsw-alias-link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, var(--dsw-alias-link) 35%, transparent);
+  transition: text-decoration-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='v5IAXa_body'] a:hover {
+  text-decoration-color: currentColor;
+}
+
+[class~='v5IAXa_body'] strong {
+  font-weight: 620;
+  color: var(--dsw-alias-label-primary);
+}
+
+/* ---- Markdown tables -------------------------------------------------
+   Apple does not put tables in boxes. A table in Pages, Numbers, or a HIG spec
+   sheet is an open grid: no outer border, no header fill, no vertical rules —
+   only hairlines between rows, a slightly stronger one under the header, and
+   generous vertical padding so the eye can track across. The alignment edge is
+   the text column, so the table never looks indented relative to the prose.
+
+   The shipped renderer already strips the outer padding (`th:first-child,
+   td:first-child { padding-left: 0 }`, `td:last-child { padding-right: 0 }`), so
+   the table is meant to sit flush with the paragraph text. A rounded container
+   fought that: it re-indented the first column and put a visible frame around
+   something that is supposed to be open.
+
+   Row rules fade at the ends instead of running edge to edge — that is what
+   stops a wide table from reading as a stack of bars. */
+[class*='_tableScroll_1ypvv'] {
+  margin-block: 0.15em 1.05em;
+}
+
+[class~='v5IAXa_body'] table,
+[class*='_tableScroll_1ypvv'] table {
+  border-collapse: collapse;
+  border: 0;
+  font-size: 0.94em;
+  font-variant-numeric: tabular-nums;
+}
+
+[class~='v5IAXa_body'] th,
+[class*='_tableScroll_1ypvv'] th {
+  background-color: transparent;
+  padding-block: 6px 9px;
+  font-weight: 600;
+  font-size: 0.92em;
+  letter-spacing: 0.005em;
+  color: var(--dsw-alias-label-secondary);
+  text-align: start;
+  border: 0;
+  border-bottom: 0.5px solid var(--lg-hairline-strong);
+  white-space: nowrap;
+}
+
+[class~='v5IAXa_body'] td,
+[class*='_tableScroll_1ypvv'] td {
+  padding-block: 9px;
+  border: 0;
+  border-bottom: 0.5px solid var(--lg-hairline);
+  vertical-align: top;
+  line-height: 1.55;
+}
+
+/* The last row's rule would hang under the table with nothing after it. */
+[class~='v5IAXa_body'] tr:last-child td,
+[class*='_tableScroll_1ypvv'] tr:last-child td {
+  border-bottom-color: transparent;
+}
+
+/* Horizontal padding belongs to the CELL, not to a container, so the first
+   column starts on the text edge and the rest breathe. */
+[class~='v5IAXa_body'] th + th,
+[class*='_tableScroll_1ypvv'] th + th,
+[class~='v5IAXa_body'] td + td,
+[class*='_tableScroll_1ypvv'] td + td {
+  padding-inline-start: 18px;
+}
+
+/* Numeric columns line up by the decimal, which is the whole reason a table
+   earns tabular figures. */
+[class~='v5IAXa_body'] td:not(:first-child),
+[class*='_tableScroll_1ypvv'] td:not(:first-child) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A table wider than the column scrolls; the hint is a hairline that fades in
+   on the scroller itself rather than a scrollbar drawn over the text. */
+[class*='_tableScroll_1ypvv']:hover {
+  scrollbar-color: var(--dsw-alias-scrollbar-bg-l2) transparent;
+}
+[class~='v5IAXa_body'] :not(pre) > code {
+  font-family: var(--ds-font-family-code);
+  font-size: 0.88em;
+  padding: 0.14em 0.4em;
+  border-radius: var(--lg-r-xs);
+  background-color: var(--dsw-alias-markdown-inline-code);
+  letter-spacing: 0;
+  text-autospace: no-autospace;
+}
+
+/* ---- Code blocks --------------------------------------------------- */
+[class*='_card_7gxqk'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--dsw-alias-markdown-code-block);
+  box-shadow:
+    inset 0 1px 2px rgba(16, 22, 40, 0.05),
+    0 0 0 0.5px var(--lg-hairline);
+  overflow: hidden;
+}
+
+[class*='_card_7gxqk'] pre {
+  font-family: var(--ds-font-family-code);
+  font-size: calc(var(--dsh-content-font-size, 14px) - 1.5px);
+  line-height: 1.66;
+  text-autospace: no-autospace;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+[class*='_banner_7gxqk'],
+[data-code-block-banner] {
+  background-color: var(--dsw-alias-markdown-code-block-banner);
+  border-bottom: 0.5px solid var(--lg-hairline);
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--dsw-alias-label-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[class*='_banner_7gxqk'] button {
+  border-radius: var(--lg-r-xs);
+  padding: 1px 6px;
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class*='_banner_7gxqk'] button:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover-solid);
+}
+
+/* Shiki tokens: the theme ships its own palette; only the container is ours. */
+[class*='_shiki_7gxqk'] {
+  background-color: transparent !important;
+}
+
+/* ---- Citation chips ------------------------------------------------- */
+[class*='_pill_1bqmh'],
+[class*='_refChip_fbulu'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  padding: 0 7px;
+  font-size: 0.86em;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-secondary);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class*='_pill_1bqmh']:hover {
+  background-color: var(--lg-accent-soft);
+}
+
+/* ---- Reference chips (attached files in the composer) --------------- */
+[class~='rtYPxa_chip'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='rtYPxa_chip']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='rtYPxa_chip']:active {
+  transform: scale(0.97);
+}
+
+[class~='rtYPxa_invalid'] {
+  color: var(--dsw-alias-state-error-primary);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+}
+
+/* ---- Question composer / plan review cards ------------------------- */
+[class~='mAtvLq_header'] {
+  border-bottom: 0.5px solid var(--lg-hairline);
+  padding-bottom: 10px;
+}
+
+[class~='mAtvLq_badge'] {
+  border-radius: var(--lg-r-xs);
+  background-color: var(--lg-accent-soft);
+  color: var(--lg-accent);
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+[class~='mAtvLq_fieldInput'],
+[class~='mAtvLq_customInline'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
+  border: none;
+}
+
+[class~='mAtvLq_footer'] {
+  border-top: 0.5px solid var(--lg-hairline);
+  padding-top: 10px;
+}
+
+/* ---- Account -------------------------------------------------------
+   The account control lives at the foot of the sidebar, which is already a glass
+   column. Painting it as a second glass card put material on material: a 78%
+   opaque rounded box inside a translucent rounded column, which reads as a box
+   in a box and is exactly the "glass on glass" the material ladder forbids.
+
+   Apple's sidebar footer is a ROW, not a card — Finder, Mail and Music all put
+   the account entry in the same rhythm as the navigation rows above it. So the
+   fill goes away entirely and the row earns its affordance from hover, the same
+   way every other row in this column does. What remains is the avatar, which is
+   the one element here that is genuinely a distinct object. */
+[class~='ET65mq_root'] {
+  border-radius: var(--lg-r-md);
+  background-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  border: none;
+}
+
+[class~='ET65mq_trigger'] {
+  border-radius: var(--lg-r-md);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='ET65mq_trigger']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='ET65mq_trigger']:active {
+  transform: scale(0.985);
+}
+
+/* The avatar is the one raised object in the row: a lit disc, not a hole. */
+[class~='ET65mq_avatar'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-2);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    0 1px 2px rgba(16, 22, 40, 0.12);
+}
+
+/* The name is the row's label, so it takes label weight — the shipped row left
+   it at body weight, which made the account entry look like stray text. */
+[class~='ET65mq_label'] {
+  font-weight: 560;
+  letter-spacing: -0.004em;
+}
+
+[class~='KrzJGG_card'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+/* ---- Secret / masked text ----------------------------------------- */
+[class~='fnygdG_mask'] {
+  border-radius: var(--lg-r-xs);
+  background-color: var(--lg-surface-sunken);
+  font-family: var(--ds-font-family-code);
+  letter-spacing: 0.08em;
+}
+
+/* ---- Open-in-app --------------------------------------------------- */
+[class~='WgQWqa_main'],
+[class~='WgQWqa_main'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='WgQWqa_main']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- Directory picker --------------------------------------------- */
+[class~='Fv-y6W_row'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Fv-y6W_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='Fv-y6W_rowSelected'] {
+  background-color: var(--lg-accent-soft);
+}
+
+[class~='Fv-y6W_crumbBar'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.04);
+}
+
+[class~='Fv-y6W_crumb'] {
+  border-radius: var(--lg-r-xs);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Fv-y6W_crumb']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover-solid);
+}
+
+/* ---- Message feedback --------------------------------------------- */
+[class~='vpunvW_action'] {
+  border-radius: var(--lg-r-sm);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='vpunvW_action']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='FDoH3G_chip'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='FDoH3G_chip']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='FDoH3G_chip'][class~='FDoH3G_chipActive'] {
+  background-color: var(--lg-accent-soft);
+  color: var(--lg-accent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 40%, transparent);
+}
+
+[class~='FDoH3G_detail'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
+  border: none;
+}
+
+/* ---- Ask-question card -------------------------------------------- */
+[class~='LqhxcW_card'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow:
+    inset 0 0 0 0.5px var(--lg-hairline),
+    0 1px 3px rgba(16, 22, 40, 0.05);
+}
+
+[class~='LqhxcW_item'] {
+  border-radius: var(--lg-r-md);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='LqhxcW_item']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- Goal bar / status line --------------------------------------- */
+[class~='nJdiTq_bar'] {
+  border-radius: var(--lg-r-md);
+}
+
+[class~='nJdiTq_iconBtn'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='nJdiTq_iconBtn']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- Dockkit strip (tool strip inside the right dock) -------------- */
+[data-dockkit-host='dock'] {
+  background: transparent;
+}
+
+[data-dockkit-pointer] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-accent-soft);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class~='GjTS2W_card']:hover,
+  [class~='GjTS2W_card']:active,
+  [class~='rtYPxa_chip']:active {
+    transform: none;
+  }
+}

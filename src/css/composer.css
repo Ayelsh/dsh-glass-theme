@@ -1,0 +1,323 @@
+/* ==========================================================================
+   Liquid Glass · composer
+   --------------------------------------------------------------------------
+   The composer is the highest-value glass surface in the app: it floats over
+   the transcript, it is always on screen, and it is what the user touches.
+
+   It gets L2 material plus one thing the shipped card does not have — the card
+   lifts on focus. The lift is the feedback that says "the app is listening",
+   and it is the only place where a shadow changes on focus.
+   ========================================================================== */
+
+/* ---- The card ---------------------------------------------------------- */
+[class~='RlGAzG_card'] {
+  border-radius: var(--lg-r-panel);
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-2);
+  border: 0;
+  transition:
+    box-shadow var(--lg-t-base) var(--lg-ease-out),
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    transform var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* Focus lift: the card rises a hair and its ambient shadow widens. Transform is
+   used rather than a margin so the layout never reflows under the caret. */
+[class~='RlGAzG_card']:focus-within {
+  background-color: var(--lg-glass-3);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-3);
+  transform: translateY(-1px);
+}
+
+/* Disabled / pending: the card stops claiming attention. */
+[class~='RlGAzG_card']:has([class~='RlGAzG_inputDisabled']) {
+  opacity: 0.72;
+}
+
+/* A dashed outline marks "this composer will create a workspace" — kept, but
+   drawn inside the material instead of over it. */
+[class~='RlGAzG_cardWorkspaceTrigger']::after {
+  border-radius: var(--lg-r-panel);
+  border-color: var(--lg-hairline-strong);
+  color: var(--lg-hairline-strong);
+  transition: color var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='RlGAzG_cardWorkspaceTrigger']:hover::after {
+  color: var(--lg-accent);
+}
+
+/* ---- The text surface -------------------------------------------------- */
+[class~='RlGAzG_input'] {
+  padding: 6px 10px 2px 16px;
+  caret-color: var(--lg-accent);
+  letter-spacing: -0.003em;
+  line-height: 1.6;
+}
+
+[class~='RlGAzG_input']::placeholder,
+[class~='RlGAzG_placeholder'] {
+  color: var(--dsw-alias-label-caption);
+}
+
+/* Hero variant: the new-session page. Larger, centred, and it carries the
+   page — so it gets more air and a slightly wider measure. */
+[class~='RlGAzG_hero'] [class~='RlGAzG_input'] {
+  min-height: 64px;
+  font-size: calc(var(--dsh-content-font-size, 14px) + 1px);
+  line-height: 1.66;
+}
+
+[class~='RlGAzG_hero'] [class~='RlGAzG_card'] {
+  border-radius: var(--lg-r-panel);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-3);
+}
+
+/* ---- Send -------------------------------------------------------------
+   The one flooded-accent control in the app. It reads as the primary action
+   precisely because nothing else is filled with the accent. */
+[class~='RlGAzG_primary'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-accent);
+  color: #fff;
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.4),
+    0 1px 2px rgba(16, 22, 40, 0.18),
+    0 4px 12px -2px color-mix(in srgb, var(--lg-accent) 45%, transparent);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='RlGAzG_primary']:hover:not(:disabled) {
+  background-color: var(--lg-accent-strong);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.45),
+    0 2px 4px rgba(16, 22, 40, 0.2),
+    0 8px 20px -4px color-mix(in srgb, var(--lg-accent) 55%, transparent);
+}
+
+[class~='RlGAzG_primary']:active:not(:disabled) {
+  transform: translateY(-1px) scale(0.94);
+}
+
+[class~='RlGAzG_primary']:disabled {
+  opacity: 0.34;
+  box-shadow: none;
+}
+
+/* Pending: the button becomes a pulsing dot, so the state lives in the same
+   place the action did. */
+[class~='RlGAzG_pending'] {
+  background-color: var(--lg-accent);
+  box-shadow: 0 0 0 4px var(--lg-accent-soft);
+}
+
+@keyframes lg-pulse {
+  from {
+    transform: scale(0.86);
+    opacity: 0.72;
+  }
+  to {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+/* ---- Toolbar row ------------------------------------------------------
+   Buttons on the composer are "tool-bar" fill: translucent, and they only gain
+   a plate on hover. The send button is excluded because it is the one flooded
+   control in the app and carries its own shape; without the exclusion this
+   descendant rule (0-1-1) outranks the send rule's 0-1-0 and squares it off. */
+[class~='RlGAzG_tools'] button:not([class~='RlGAzG_primary']),
+[class~='RlGAzG_trailing'] button:not([class~='RlGAzG_primary']),
+[class~='RlGAzG_modes'] button:not([class~='RlGAzG_primary']),
+[class~='RlGAzG_add'] {
+  border-radius: var(--lg-r-sm);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='RlGAzG_tools'] button:not([class~='RlGAzG_primary']):hover,
+[class~='RlGAzG_trailing'] button:not([class~='RlGAzG_primary']):hover,
+[class~='RlGAzG_modes'] button:not([class~='RlGAzG_primary']):hover,
+[class~='RlGAzG_add']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='RlGAzG_tools'] button:not([class~='RlGAzG_primary']):active,
+[class~='RlGAzG_trailing'] button:not([class~='RlGAzG_primary']):active {
+  transform: scale(0.95);
+}
+
+/* ---- Dock --------------------------------------------------------------
+   The strip under the card: hints, stats, status. Quiet by design — it is
+   metadata about the composer, not part of it. */
+[class~='RlGAzG_dock'] {
+  gap: 10px;
+  padding-top: 6px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+}
+
+/* ---- Notices -----------------------------------------------------------
+   A notice inside the composer is a warning, not a modal: tinted, inset, and
+   it never covers the input. */
+[class~='RlGAzG_notice'],
+[class~='RlGAzG_retry'] {
+  border-radius: var(--lg-r-md);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 12%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 32%, transparent);
+  padding: 6px 12px;
+  margin-inline: 12px;
+  font-size: 12.5px;
+}
+
+[class~='RlGAzG_overlayAnchor'] {
+  border-radius: var(--lg-r-md);
+}
+
+/* ---- Selectors --------------------------------------------------------
+   Model, permission and reasoning controls share one trigger language: a
+   capsule with a translucent plate, a chevron that rotates in place. */
+[class~='wq12jW_trigger'],
+[class~='dlU_AG_trigger'],
+[class~='mP3ANa_selector'],
+[class~='wq12jW_cell'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--dsw-alias-button-tool-bar-fill);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='wq12jW_trigger']:hover,
+[class~='dlU_AG_trigger']:hover,
+[class~='mP3ANa_selector']:hover,
+[class~='wq12jW_cell']:hover {
+  background-color: var(--dsw-alias-button-tool-bar-hover);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='wq12jW_triggerLabel'],
+[class~='wq12jW_cellLabel'] {
+  font-weight: 500;
+  letter-spacing: -0.002em;
+}
+
+[class~='wq12jW_triggerEffort'] {
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* The chevron rotates on open rather than swapping glyphs — one object, two
+   states. */
+[class~='wq12jW_chevron'],
+[class~='dlU_AG_chevron'],
+[class~='mP3ANa_chevron'] {
+  transition: transform var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='wq12jW_chevronOpen'],
+[class~='dlU_AG_chevronOpen'] {
+  transform: rotate(180deg);
+}
+
+/* ---- Reasoning effort slider ------------------------------------------ */
+[class~='wq12jW_triggerEffort']::after {
+  content: '';
+  display: inline-block;
+  width: 3px;
+}
+
+/* ---- Attachments ------------------------------------------------------ */
+[class~='RlGAzG_accessory'],
+[class~='RlGAzG_grow'] {
+  border-radius: var(--lg-r-md);
+}
+
+/* ---- Queue dock (messages waiting behind a running turn) --------------- */
+[class~='v1kfCW_panel'],
+[class~='v1kfCW_dock'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-1);
+  backdrop-filter: blur(20px) saturate(175%);
+  -webkit-backdrop-filter: blur(20px) saturate(175%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-1);
+}
+
+[class~='v1kfCW_pendingRow'],
+[class~='v1kfCW_row'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='v1kfCW_pendingRow']:hover,
+[class~='v1kfCW_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='v1kfCW_count'] {
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--lg-r-pill);
+  padding: 0 6px;
+  background-color: var(--lg-accent-soft);
+  color: var(--lg-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---- Todo panel ------------------------------------------------------- */
+[class~='aSus8q_root'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='aSus8q_item'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='aSus8q_progress'] {
+  border-radius: var(--lg-r-pill);
+  overflow: hidden;
+}
+
+/* ---- Enter-behaviour row ----------------------------------------------
+   This row is a LABEL with a button inside it; the row itself is not a target.
+   Painting a hover plate on it advertised an affordance that does not exist, and
+   because the row spans the full content width the plate ran edge to edge and
+   collided with the scrollbar and the panel's rounded corner. Rows that are not
+   clickable do not highlight. */
+[class~='mP3ANa_row'] {
+  border-radius: var(--lg-r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class~='RlGAzG_card']:focus-within {
+    transform: none;
+  }
+  [class~='RlGAzG_primary']:active:not(:disabled) {
+    transform: none;
+  }
+}

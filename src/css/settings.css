@@ -1,0 +1,1367 @@
+/* ==========================================================================
+   Liquid Glass · settings & full pages
+   --------------------------------------------------------------------------
+   Everything that is a PAGE rather than a floating layer: the settings tabs,
+   the plugin manager, the market, usage, jobs, schedules, goals, skills,
+   subagents, trajectory.
+
+   These pages are opaque. They are read for minutes at a time, so the material
+   language stops at the sheet that hosts them — inside, the design is the
+   Apple settings idiom: grouped inset cards, hairline separators, a single
+   accent for state, and generous vertical rhythm.
+   ========================================================================== */
+
+/* ---- The shared page idiom --------------------------------------------
+   A page is a scrolling column with a fixed max measure. Sections are grouped
+   cards on the sunken floor, not floating panels.
+
+   `box-sizing: border-box` is load-bearing, not tidying. The shipped section
+   rule is `width: 100%` and the element is content-box, so any horizontal
+   padding this rule adds makes the border box WIDER than its scroller. The
+   overflow then resolves `margin-inline: auto` to a negative value and pushes
+   the right edge of every row out of the panel — visible as content running
+   into the panel's edge with a scrollbar at the bottom of the settings sheet.
+
+   The settings scroller already insets its children by 24px
+   (`wCInkW_options { padding: 0 24px 24px }`), so the section repeats only the
+   VERTICAL rhythm. Adding the same 24px again here would double the left inset
+   while the right one stayed clipped — the asymmetry is the tell. */
+[class~='S0jZwq_page'] {
+  box-sizing: border-box;
+  max-width: 780px;
+  margin-inline: auto;
+  padding: 20px 24px 48px;
+}
+
+/* The plugin manager is a browsing page, not a settings page: its body is a
+   two-column grid of cards. At the settings measure (780px) each card was
+   ~350px inside a 1144px column, so the page read as a narrow ribbon floating
+   in empty space. A card grid earns width the way text does not. */
+[class~='fO69Vq_page'] {
+  box-sizing: border-box;
+  max-width: 1000px;
+  margin-inline: auto;
+  /* The shipped page reserves 28px of top padding on its head instead of on
+     itself, so the page adds none — otherwise the title drops 20px for no
+     reason. */
+  padding: 0 clamp(24px, 3vw, 40px) 48px;
+}
+
+[class~='fO69Vq_page'] > * {
+  max-width: 100%;
+}
+
+[class~='wCInkW_panel'] [class~='zZnCHW_section'] {
+  box-sizing: border-box;
+  max-width: 780px;
+  margin-inline: auto;
+  padding: 20px 0 48px;
+}
+
+/* Every section the settings sheet can host, whatever package owns it: a
+   section is a block in a 24px-inset column, never a box that overflows it. */
+[class~='wCInkW_options'] > * {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+[class~='fO69Vq_pageHead'],
+[class~='fO69Vq_pageHeading'] {
+  gap: 6px;
+}
+
+[class~='fO69Vq_pageTitle'] {
+  font-size: 21px;
+  font-weight: 660;
+  letter-spacing: -0.022em;
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='fO69Vq_pageIntro'] {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-tertiary);
+  max-width: 62ch;
+}
+
+/* ---- Tabs -------------------------------------------------------------
+   Two different tab idioms live in settings, and they need different shapes:
+
+   `amjGKq_tab` (plugin settings) is an UNDERLINE tab — a text button over a
+   hairline with a 2px active bar drawn by the shipped `::after`. It becomes a
+   segmented pill instead, so the bar is removed and the plate does the work.
+
+   `fO69Vq_pageTabList` (plugin manager) is a real tablist whose children carry
+   no class of their own, so they are addressed structurally. */
+[class~='amjGKq_tabs'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  /* Hug the two tabs instead of stretching: a segmented control spanning a
+     600px panel with 120px of content reads as an empty bar, not a control.
+     `fit-content` is needed because the parent is a stretching flex column. */
+  width: fit-content;
+  padding: 2px;
+  border-bottom: 0;
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0.5px 0 var(--lg-edge-bottom);
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+[class~='amjGKq_tab'] {
+  border-radius: calc(var(--lg-r-md) - 2px);
+  padding: 5px 13px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    color var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* The shipped active bar is a bottom-edge rule belonging to the underline
+   idiom. In a segmented control it reads as a stray tick under one pill.
+   It is emitted by `.amjGKq_tab[data-active=true]:after` and by
+   `.amjGKq_tab:focus-visible:after`, i.e. specificity 0-2-1, so a bare
+   `::after` reset (0-1-1) loses. Both source selectors are matched here. */
+[class~='amjGKq_tab'][data-active='true']::after,
+[class~='amjGKq_tab']:focus-visible::after {
+  content: none;
+}
+
+[class~='amjGKq_tab']:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='amjGKq_tab'][data-active='true'] {
+  background-color: var(--lg-surface-raised);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 560;
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 1px 2px rgba(16, 22, 40, 0.07);
+}
+
+[class~='fO69Vq_pageTabList'] {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0.5px 0 var(--lg-edge-bottom);
+}
+
+[class~='fO69Vq_pageTabList'] > * {
+  border: 0;
+  border-radius: calc(var(--lg-r-md) - 2px);
+  background-color: transparent;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    color var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='fO69Vq_pageTabList'] > *[data-active='true'] {
+  background-color: var(--lg-surface-raised);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 560;
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 1px 2px rgba(16, 22, 40, 0.07);
+}
+
+/* ---- Grouped card lists ----------------------------------------------
+   The core Apple settings shape: one rounded container per group, rows inside
+   it separated by a hairline that stops short of the leading edge.
+
+   `amjGKq_section` is deliberately NOT in this list. It is the PAGE section
+   that owns the title, the intro, the tabs and the panel — a card around all of
+   that nests a card inside a card AND, because the shipped section carries no
+   padding, drags the title into the top-left corner where `overflow: hidden`
+   plus an 18px radius shaves the first glyph. A page is not a card; only the
+   groups inside it are.
+
+   `RotMhW_group` is not one either: its body is a two-column GRID OF CARDS, so
+   a surface here would be a card holding cards. Its header row is styled on its
+   own below. */
+[class~='fO69Vq_group'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow:
+    inset 0 0 0 0.5px var(--lg-hairline),
+    0 1px 2px rgba(16, 22, 40, 0.04);
+  overflow: hidden;
+  margin-bottom: 18px;
+  /* A card must hold its contents off its own edge. The shipped cards bleed
+     themselves by -8px (`fO69Vq_card { margin: 0 -8px }`) so that their hover
+     plate reaches the page edge — correct on a bare page, wrong inside a card,
+     where it drove the plugin icon flush against the border. The group owns the
+     inset now, and the cards stop bleeding. */
+  padding: 10px 12px 6px;
+}
+
+[class~='fO69Vq_cards'] > [class~='fO69Vq_card'] {
+  margin-inline: 0;
+}
+
+[class~='amjGKq_section'],
+[class~='RotMhW_group'] {
+  box-sizing: border-box;
+  max-width: 100%;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+/* The settings scroller pads its sides but not its top (`wCInkW_options
+   { padding: 0 24px 24px }`), because each page section is expected to bring
+   its own leading space. `zZnCHW_section` does; this one does not, so the
+   heading started flush under the header rule. */
+[class~='amjGKq_section'] {
+  padding: 18px 0 40px;
+  margin-bottom: 0;
+}
+
+[class~='RotMhW_group'] {
+  gap: 10px;
+}
+
+/* The inventory group header is a section header, not a row inside a card: it
+   names what the grid below it is. It therefore sits on the page floor with the
+   same 12/640/uppercase voice as every other group label. */
+[class~='RotMhW_groupTitleRow'] {
+  padding: 0 2px;
+  min-height: 30px;
+}
+
+[class~='fO69Vq_groupHead'],
+[class~='fO69Vq_sectionHead'] {
+  padding: 14px 16px 8px;
+}
+
+[class~='fO69Vq_groupTitle'],
+[class~='RotMhW_groupTitle'],
+[class~='fO69Vq_sectionTitle'] {
+  font-size: 12px;
+  font-weight: 640;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* The page heading is a heading, not a group label: it names the whole pane, so
+   it keeps sentence case at reading size. Uppercasing it made the settings page
+   announce itself in the same voice as a list subhead. */
+[class~='amjGKq_heading'] {
+  font-size: 17px;
+  font-weight: 640;
+  letter-spacing: -0.016em;
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='fO69Vq_groupInfo'],
+[class~='RotMhW_hint'] {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--dsw-alias-label-caption);
+}
+
+[class~='amjGKq_intro'] {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--dsw-alias-label-tertiary);
+  max-width: 62ch;
+}
+
+/* ---- Rows ------------------------------------------------------------ */
+[class~='fO69Vq_row'],
+[class~='RotMhW_card'],
+[class~='amjGKq_cards'] > * {
+  border-radius: var(--lg-r-md);
+  background-color: transparent;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='fO69Vq_row']:hover,
+[class~='RotMhW_card']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='fO69Vq_row']:active {
+  transform: scale(0.995);
+}
+
+[class~='fO69Vq_rowMain'],
+[class~='RotMhW_cardMainRow'] {
+  gap: 12px;
+  padding: 11px 14px;
+  min-height: 52px;
+}
+
+[class~='fO69Vq_rowModule'],
+[class~='RotMhW_cardTitle'],
+[class~='fO69Vq_cardTitle'],
+[class~='fO69Vq_detailName'] {
+  font-size: 14px;
+  font-weight: 560;
+  letter-spacing: -0.006em;
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='fO69Vq_rowId'],
+[class~='RotMhW_cardDescription'],
+[class~='fO69Vq_cardDesc'],
+[class~='fO69Vq_rowLine'] {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='fO69Vq_rowId'] {
+  font-family: var(--ds-font-family-code);
+  font-size: 11.5px;
+  letter-spacing: 0;
+}
+
+/* Plugin icon tile: a rounded square with a soft inner light. */
+[class~='fO69Vq_cardIcon'],
+[class~='RotMhW_cardIdentity'],
+[class~='fO69Vq_iconWrap'] {
+  border-radius: var(--lg-r-md);
+  border: 0.5px solid var(--lg-hairline);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0.5px 0 var(--lg-edge-top);
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* Status tags: pills, toned, never outlined. */
+[class~='fO69Vq_statusTag'],
+[class~='RotMhW_status'],
+[class~='fO69Vq_versionTag'] {
+  border-radius: var(--lg-r-pill);
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: 0.01em;
+  background-color: var(--lg-glass-tint);
+  color: var(--dsw-alias-label-tertiary);
+  border: none;
+}
+
+[class~='fO69Vq_statusTag']:has([class~='fO69Vq_status']),
+[class~='RotMhW_statusWithDot'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+[class~='fO69Vq_status'],
+[class~='RotMhW_phaseDot'] {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--dsw-alias-state-success-primary);
+}
+
+[class~='fO69Vq_rowFailure'] [class~='fO69Vq_status'],
+[class~='fO69Vq_failure'] {
+  color: var(--dsw-alias-state-error-primary);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);
+}
+
+[class~='fO69Vq_rowFailure'] [class~='fO69Vq_status'] {
+  background-color: var(--dsw-alias-state-error-primary);
+}
+
+/* ---- Buttons ---------------------------------------------------------
+   Two kinds only: a filled accent for the one primary action, and a quiet
+   bordered button for everything else. */
+/* The add control is a SPLIT button: `addPrimary` is the left half and
+   `addMore` the right, laid out by `addGroup` as a single inline-flex row with
+   no gap. The app squares the facing corners so the two halves read as one
+   capsule, and a `border-radius` SHORTHAND here would round them back out and
+   open a notch between the halves — so the radius must be written as longhands
+   that keep the facing side at 0. The two halves are styled together so the
+   fill, height and hover transition can never drift apart. */
+[class~='fO69Vq_addPrimary'],
+[class~='fO69Vq_addMore'],
+[class~='fO69Vq_installFooter'] button:last-child {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-accent);
+  color: #fff;
+  border: none;
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.35),
+    0 1px 2px rgba(16, 22, 40, 0.16);
+  font-weight: 560;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='fO69Vq_addPrimary'] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+[class~='fO69Vq_addMore'] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 0.5px solid color-mix(in srgb, #fff 26%, transparent);
+}
+
+[class~='fO69Vq_addPrimary']:hover,
+[class~='fO69Vq_addMore']:hover {
+  background-color: var(--lg-accent-strong);
+}
+
+[class~='fO69Vq_addPrimary']:active,
+[class~='fO69Vq_addMore']:active {
+  transform: scale(0.97);
+}
+
+[class~='fO69Vq_addButton'],
+[class~='fO69Vq_iconButton'],
+[class~='fO69Vq_footAction'],
+[class~='fO69Vq_infoButton'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--dsw-alias-button-elevated-fill);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='fO69Vq_addButton']:hover,
+[class~='fO69Vq_iconButton']:hover,
+[class~='fO69Vq_footAction']:hover,
+[class~='fO69Vq_infoButton']:hover {
+  background-color: var(--dsw-alias-button-floating-hover);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='fO69Vq_dangerButton'],
+[class~='fO69Vq_deleteButton'] {
+  border-radius: var(--lg-r-md);
+  color: var(--dsw-alias-state-error-primary);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-error-primary) 26%, transparent);
+}
+
+[class~='fO69Vq_dangerButton']:hover,
+[class~='fO69Vq_deleteButton']:hover {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 16%, transparent);
+}
+
+/* ---- Install wizard --------------------------------------------------
+   A stepped panel: the step indicator is the only place colour is used. */
+[class~='fO69Vq_wizard'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='fO69Vq_wizardTitle'] {
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.012em;
+}
+
+[class~='fO69Vq_wizardSub'] {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12.5px;
+}
+
+[class~='fO69Vq_installField'],
+[class~='fO69Vq_registryCustomField'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
+  border: none;
+  transition: box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='fO69Vq_installField']:focus-within,
+[class~='fO69Vq_registryCustomField']:focus-within {
+  box-shadow:
+    inset 0 1px 2px rgba(16, 22, 40, 0.05),
+    0 0 0 3px var(--lg-accent-ring);
+}
+
+[class~='fO69Vq_inputError'],
+[class~='fO69Vq_installSafety'] {
+  border-radius: var(--lg-r-sm);
+  font-size: 12.5px;
+}
+
+[class~='fO69Vq_inputError'] {
+  color: var(--dsw-alias-state-error-primary);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
+  padding: 6px 10px;
+}
+
+[class~='fO69Vq_installSafety'] {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 10%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 26%, transparent);
+  padding: 8px 12px;
+}
+
+/* ---- Empty / skeleton states ----------------------------------------- */
+[class~='fO69Vq_empty'],
+[class~='d99neW_empty'],
+[class~='RotMhW_hint'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  color: var(--dsw-alias-label-tertiary);
+  padding: 32px 24px;
+  text-align: center;
+  font-size: 13px;
+}
+
+[class~='fO69Vq_skeletonBar'],
+[class~='RotMhW_skeletonBar'],
+[class~='d99neW_skeletonBar'],
+[class~='d99neW_skeletonFill'] {
+  border-radius: var(--lg-r-xs);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent) 45%,
+    transparent 90%
+  );
+  background-size: 160% 100%;
+  background-repeat: no-repeat;
+  animation: lg-shimmer 1.6s var(--lg-ease-in-out) infinite;
+}
+
+/* ---- Toggles ---------------------------------------------------------
+   `RotMhW_switcher` is the one shipped control in this family: a 36px chip
+   that opens a menu, so it reads as a pill. The app styles its own toggles,
+   and this skin adds nothing to them.
+
+   There is deliberately NO generic `[role='switch']` rule here, because the
+   role lands on the element that RECEIVES THE CLICK, never on the track.
+   The one shipped switch proves it: TrajectoryToolbar renders
+   `button.QnvEwG_control[role=switch]` (88x20) with the track in a child
+   span, `QnvEwG_controlTrack` (20x10, radius 5px, already styled by the app).
+   dsh-zhipu-plan goes further and puts the role on `.dzp-backendRow`, a
+   530x70 full-width ROW. A generic rule therefore paints a control the size
+   of its whole row as a capsule: accent fill swallows the label, and a 999px
+   radius on a row-sized box is the box/edge collision the HIG forbids.
+   Tracks are styled where the app or the plugin puts them; this sheet does
+   not guess at a plugin's internal shape. */
+[class~='RotMhW_switcher'] {
+  border-radius: var(--lg-r-pill);
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out);
+}
+
+/* ---- Market --------------------------------------------------------- */
+[class~='d99neW_card'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition:
+    box-shadow var(--lg-t-base) var(--lg-ease-out),
+    transform var(--lg-t-base) var(--lg-ease-out);
+}
+
+[class~='d99neW_card']:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 0.5px var(--lg-hairline),
+    0 6px 18px -6px rgba(16, 22, 40, 0.16);
+}
+
+[class~='d99neW_marketName'] {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+}
+
+[class~='d99neW_description'],
+[class~='d99neW_muted'],
+[class~='d99neW_meta'] {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='d99neW_tags'] > *,
+[class~='d99neW_tags'] {
+  border-radius: var(--lg-r-pill);
+  padding: 1px 8px;
+  font-size: 11px;
+  background-color: var(--lg-glass-tint);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='d99neW_categories'] button,
+[class~='d99neW_toolbar'] button {
+  border-radius: var(--lg-r-pill);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='d99neW_categories'] button:hover,
+[class~='d99neW_toolbar'] button:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- Stat pills -------------------------------------------------------
+   Two tertiary readouts on the composer's bottom edge (turns/steps/speed and
+   tokens/cache-hit). They used to carry a sunken plate plus a hairline, which
+   at 22px tall turned them into two small BUTTONS competing with the send
+   button — the composer had three raised controls in a row and only one of
+   them actually sends.
+
+   Apple's treatment for tertiary chrome is no surface at rest: the affordance
+   is the icon, the tint appears under the pointer. That also removes two
+   rectangles from a row the user is trying to read as a sentence. */
+[class~='iq1doa_pill'],
+[class~='Rd79tq_trigger'],
+[class~='_2WTFBq_trigger'] {
+  border-radius: var(--lg-r-pill);
+  background-color: transparent;
+  box-shadow: none;
+  border: none;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='iq1doa_pill']:hover,
+[class~='iq1doa_pill'][aria-expanded='true'],
+[class~='Rd79tq_trigger']:hover,
+[class~='Rd79tq_trigger'][aria-expanded='true'],
+[class~='_2WTFBq_trigger']:hover,
+[class~='_2WTFBq_trigger'][aria-expanded='true'] {
+  background-color: var(--lg-hairline);
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* The separator between a pill's two readings is punctuation, not structure. */
+[class~='iq1doa_sep'] {
+  color: var(--dsw-alias-separator-primary);
+  opacity: 0.7;
+}
+
+/* ---- Stat popovers (session stats + token usage) ----------------------
+   The two dialogs those pills open. They ARE floating layers over a scrolling
+   transcript, so they earn the same glass as every other popover in the skin.
+
+   What they did not have was a typographic hierarchy: the shipped panel sets
+   one 12px/18px size for the title, for all four labels and for all four
+   values, so a reader faces eight lines of equal weight and has to read every
+   one of them to find the total. The rule applied here is that the TOTAL is
+   the headline — it arrives in Xt1eiG_titleValue on the usage dialog and in
+   _2WTFBq_figures on the context meter. Where a dialog has no total (the
+   activity one), its title stays a plain label rather than being inflated to
+   fill the role. */
+[class~='Xt1eiG_panel'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    var(--lg-shadow-3);
+  border: none;
+  padding: 14px 16px 15px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='Xt1eiG_title'] {
+  align-items: baseline;
+  margin-bottom: 9px;
+  font-size: 12px;
+  font-weight: 590;
+  letter-spacing: 0.01em;
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='Xt1eiG_titleLabel'] {
+  gap: 7px;
+  font-weight: 590;
+}
+
+[class~='Xt1eiG_titleLabel'] svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.6;
+  translate: 0 1px;
+}
+
+[class~='Xt1eiG_titleValue'] {
+  font-size: 14px;
+  font-weight: 590;
+  letter-spacing: -0.01em;
+  color: var(--dsw-alias-label-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A divider is a property of a relationship, so this one stays — but the
+   shipped rule is a flat 0.5px border that reads as a table rule. Fading it at
+   both ends turns it back into a separation between two groups. */
+[class~='Xt1eiG_titleRule'] {
+  border-top: none;
+  height: 1px;
+  margin-bottom: 8px;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--lg-hairline-strong) 18%,
+    var(--lg-hairline-strong) 82%,
+    transparent
+  );
+}
+
+[class~='Xt1eiG_details'] {
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+  gap: 7px 18px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+[class~='Xt1eiG_details'] dt {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+[class~='Xt1eiG_details'] dd {
+  color: var(--dsw-alias-label-primary);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+}
+
+/* A route is an identifier, not prose: provider/model reads better in mono, and
+   must not be re-flowed mid-token by a narrow value column. */
+[class~='Xt1eiG_route'] {
+  font-family: var(--dsw-font-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+[class~='Xt1eiG_reasoning'] {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+/* ---- Context meter --------------------------------------------------- */
+[class~='_2WTFBq_root'] {
+  border-radius: var(--lg-r-pill);
+}
+
+[class~='_2WTFBq_panel'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    var(--lg-shadow-3);
+  border: none;
+  padding: 13px 14px 14px;
+  font-size: 12px;
+  line-height: 19px;
+}
+
+[class~='_2WTFBq_header'] {
+  align-items: baseline;
+  gap: 8px;
+}
+
+[class~='_2WTFBq_headline'] {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+[class~='_2WTFBq_percent'] {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 590;
+  font-variant-numeric: tabular-nums;
+}
+
+[class~='_2WTFBq_figures'] {
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 590;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* A meter is a measured quantity, so its track is a groove rather than a plate:
+   inset shadow, no border, and segments that keep a hairline of track between
+   them instead of butting together. */
+[class~='_2WTFBq_bar'] {
+  height: 5px;
+  margin: 9px 0 11px;
+  gap: 1px;
+  border-radius: var(--lg-r-pill);
+  background-color: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+  box-shadow: inset 0 0.5px 0 color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);
+  overflow: hidden;
+}
+
+[class~='_2WTFBq_segment'] {
+  border-radius: 1.5px;
+  min-width: 2px;
+  height: 100%;
+  transition: flex-grow var(--lg-t-slow) var(--lg-ease-out);
+}
+
+[class~='_2WTFBq_swatch'] {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  margin-right: 7px;
+  translate: 0 -1px;
+}
+
+[class~='_2WTFBq_rows'] {
+  margin: 8px 0 0;
+}
+
+[class~='_2WTFBq_row'] {
+  padding: 3px 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+[class~='_2WTFBq_track'] {
+  stroke: color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  stroke-width: 2px;
+}
+
+[class~='_2WTFBq_fill'] {
+  stroke: var(--lg-accent);
+  stroke-width: 2px;
+}
+
+/* ---- Jobs / schedules / goals ---------------------------------------
+   Schedules and goals are lists of CARDS, so each row is a plate. The
+   background-jobs popover is not: it is a HIG grouped list, where the row is
+   the group member and the section header is the grouping. A plate on every
+   row there re-draws the group once per row and leaves the reader counting
+   boxes instead of scanning commands — the user called this out directly
+   ("请不要在每个列表选项都增加一层灰色背景"). So the two idioms are now
+   authored separately and must not be merged again. */
+[class~='q7hbua_row'],
+[class~='QSKnSa_row'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='q7hbua_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='q7hbua_nextRunRelative'] {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* The popover shell. It is a floating layer over the transcript, so it is the
+   one thing here that earns glass. `foD-wG_menu` is the MenuSurface; the
+   `panel` is the expanded output drawer inside a row, which must NOT repeat
+   the shell material — it sits on the shell, and glass-on-glass muddies. */
+[class~='foD-wG_menu'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    inset 0 0 0 0.5px var(--lg-hairline),
+    var(--lg-shadow-3);
+  border: none;
+  overflow: hidden;
+}
+
+/* The list body owns the inset, once, so every row shares one alignment and
+   no row can reach the shell's rounded edge. */
+[class~='foD-wG_menuBody'] {
+  padding: 6px;
+  gap: 0;
+}
+
+/* Section header = the grouping. It is a label, not a row: no fill, no rule
+   under it (the shipped `border-top` on every header drew a line through the
+   list at each section boundary). */
+[class~='foD-wG_sectionHeader'] {
+  margin: 8px 2px 2px;
+  padding: 2px 6px 4px;
+  border-top: none;
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: 0.01em;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='foD-wG_sectionHeader']:first-child {
+  margin-top: 2px;
+}
+
+[class~='foD-wG_sectionToggle'],
+[class~='foD-wG_sectionClear'] {
+  border-radius: var(--lg-r-xs);
+  font-weight: 500;
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='foD-wG_sectionToggle']:hover,
+[class~='foD-wG_sectionClear']:hover {
+  background-color: var(--lg-hairline);
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* A row is a MEMBER of the group: transparent at rest, and it stays
+   transparent when it is the live one. The instruction here was explicit —
+   「请不要在每个列表选项都增加一层灰色背景」 — and a plate on the live row is
+   still a plate on a list option. The running row is told apart the way a HIG
+   list tells any row apart: a state-coloured dot and brighter text. That is
+   also the only distinction that survives a screenshot being read at a glance,
+   because the reader scans for "which line is different", not "which line is
+   boxed". */
+[class~='foD-wG_rowLine'],
+[class~='foD-wG_rowLineLive'] {
+  border-radius: var(--lg-r-sm);
+  background-color: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+[class~='foD-wG_row'] {
+  border-radius: var(--lg-r-sm);
+  min-height: 30px;
+  padding: 5px 6px;
+  gap: 7px;
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='foD-wG_row']:hover,
+[class~='foD-wG_row']:focus-visible {
+  background-color: var(--lg-hairline);
+}
+
+/* Hover is the one transient fill a flat list is allowed, and the live row gets
+   the same one as its siblings — it is not a special surface, it is a row that
+   happens to be running. */
+
+[class~='foD-wG_rowSettled'] {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* `primary` is the TEXT COLUMN of a live row, not a control. The shipped class
+   name reads like a button, and painting it with the accent filled the whole
+   command line with saturated colour. */
+[class~='foD-wG_primary'] {
+  background-color: transparent;
+  color: inherit;
+  border-radius: 0;
+  gap: 0;
+}
+
+[class~='foD-wG_label'] {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='foD-wG_rowSettled'] [class~='foD-wG_label'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* The running row's command is tinted, which is the one state signal a flat
+   list can carry without inventing a surface. A colour on text is not a plate;
+   it costs no pixels and it survives at any list length. */
+[class~='foD-wG_rowLineLive'] [class~='foD-wG_label'] {
+  color: var(--lg-accent);
+}
+
+[class~='foD-wG_status'] {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+  max-width: 46%;
+}
+
+[class~='foD-wG_duration'],
+[class~='foD-wG_count'] {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* The kind chip ("bash" / "pwsh") is metadata, so it is an outline and not a
+   second filled plate competing with the row. */
+[class~='foD-wG_kind'] {
+  border-radius: var(--lg-r-xs);
+  background-color: transparent;
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline-strong);
+  color: var(--dsw-alias-label-tertiary);
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 15px;
+  letter-spacing: 0.01em;
+}
+
+[class~='foD-wG_rowLineLive'] [class~='foD-wG_kind'] {
+  background-color: transparent;
+}
+
+/* The state indicator is the ui-primitives StateDot, and it renders TWO
+   different things:
+     state === 'ongoing' -> an SVG spinner (`_spinner_1i3xo_37`, 14px)
+     otherwise           -> a span (`_dot_1i3xo_2`, 10px) whose visible circle
+                            is its `::after` at inset 20%
+   Both get their size from an INLINE style, so a width/height rule here is
+   dead on arrival — inline wins over any stylesheet. All this needs to do is
+   stop the flex row from shrinking it, which the shipped rule already says;
+   restating it keeps the row honest if the shipped one ever changes. */
+[class~='foD-wG_rowDot'],
+[class~='foD-wG_triggerDot'] {
+  flex: none;
+  border-radius: var(--lg-r-pill);
+}
+
+/* Chevron and stop are icon affordances on a row, so they are quiet by
+   default and gain their rim on hover — a permanent bordered square beside
+   every row is chrome the reader has to filter out. */
+[class~='foD-wG_chevronBox'],
+[class~='foD-wG_stop'] {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--lg-r-xs);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--dsw-alias-label-tertiary);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='foD-wG_row']:hover [class~='foD-wG_chevronBox'],
+[class~='foD-wG_chevronBox']:hover {
+  background-color: var(--lg-hairline);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='foD-wG_stop']:hover,
+[class~='foD-wG_stop']:focus-visible {
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* Arming a stop is a destructive confirmation, so it stops being an icon and
+   becomes a labelled button — the one place here that may carry a fill. */
+[class~='foD-wG_stopArmed'],
+[class~='foD-wG_stopArmed']:hover,
+[class~='foD-wG_stopArmed']:focus-visible {
+  width: auto;
+  padding: 0 7px;
+  border-radius: var(--lg-r-xs);
+  background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-error-primary) 42%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+[class~='foD-wG_stopLabel'] {
+  font-size: 11px;
+  font-weight: 560;
+}
+
+/* The output drawer sits inside the shell: it is a reading surface, so it is
+   opaque enough to read terminal output on and carries no blur of its own. */
+[class~='foD-wG_panel'] {
+  margin: 2px 6px 8px;
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='foD-wG_notice'] {
+  margin: 0 8px 6px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+/* The trigger is a chip in the conversation toolbar, so it takes the same
+   raised treatment as its neighbours instead of a bare text run. */
+[class~='foD-wG_trigger'] {
+  border-radius: var(--lg-r-pill);
+  padding: 2px 8px 2px 6px;
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  color: var(--dsw-alias-label-secondary);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='foD-wG_trigger']:hover,
+[class~='foD-wG_trigger'][aria-expanded='true'] {
+  background-color: var(--lg-surface-sunken);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='nJdiTq_bar'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-1);
+  backdrop-filter: blur(20px) saturate(175%);
+  -webkit-backdrop-filter: blur(20px) saturate(175%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-1);
+}
+
+[class~='nJdiTq_goalGlyph'] {
+  color: var(--lg-accent);
+}
+
+[class~='nJdiTq_label'] {
+  font-weight: 560;
+  letter-spacing: -0.004em;
+}
+
+/* ---- Skills / subagents --------------------------------------------- */
+[class~='Xpfrra_card'],
+[class~='pbObnW_section'],
+[class~='oXE0lW_root'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='Xpfrra_summary'],
+[class~='Xpfrra_row'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Xpfrra_summary']:hover,
+[class~='Xpfrra_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='Xpfrra_instructionsCard'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--dsw-alias-markdown-code-block);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
+}
+
+[class~='oXE0lW_metricDuration'],
+[class~='oXE0lW_metricToken'] {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ---- Deliverables --------------------------------------------------- */
+[class~='flL80G_cardPreview'],
+[class~='kuvljq_card'],
+[class~='jmg6Sq_summary'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='kuvljq_row'],
+[class~='flL80G_file'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='kuvljq_row']:hover,
+[class~='flL80G_file']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='kuvljq_added'],
+[class~='LFNH1G_added'] {
+  color: var(--dsw-alias-state-success-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+[class~='kuvljq_deleted'],
+[class~='LFNH1G_deleted'] {
+  color: var(--dsw-alias-state-error-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Plan review / questions --------------------------------------- */
+[class~='P2izSq_card'],
+[class~='P2izSq_frame'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='P2izSq_title'] {
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.014em;
+}
+
+[class~='P2izSq_actions'] button,
+[class~='mAtvLq_footerActions'] button {
+  border-radius: var(--lg-r-md);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='mAtvLq_card'],
+[class~='mAtvLq_frame'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='mAtvLq_option'],
+[class~='mAtvLq_customRow'] {
+  border-radius: var(--lg-r-md);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='mAtvLq_option']:hover,
+[class~='mAtvLq_customRow']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='mAtvLq_customRowActive'] {
+  background-color: var(--lg-accent-soft);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 34%, transparent);
+}
+
+[class~='mAtvLq_checkboxChecked'] {
+  color: var(--lg-accent);
+}
+
+[class~='mAtvLq_eyebrow'] {
+  font-size: 11px;
+  font-weight: 620;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-caption);
+}
+
+/* ---- Trajectory ----------------------------------------------------- */
+[class~='QnvEwG_root'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='QnvEwG_searchInput'],
+[class~='QnvEwG_control'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+/* The plugin inventory search is an icon + an inner <input>, not a styled box,
+   so the field itself carries the material and the wrapper stays a positioning
+   context for the leading glyph. */
+[class~='RotMhW_search'] input {
+  border: 0;
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='RotMhW_search'] input:focus-visible {
+  outline: none;
+  background-color: var(--lg-surface-raised);
+  box-shadow:
+    inset 0 0 0 0.5px var(--lg-accent-ring),
+    0 0 0 3px color-mix(in srgb, var(--lg-accent) 16%, transparent);
+}
+
+[class~='QnvEwG_toggle'] {
+  border-radius: var(--lg-r-pill);
+}
+
+[class~='haSm5q_message']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='ZNyiNW_span'] {
+  border-radius: var(--lg-r-xs);
+  transition: filter var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='ZNyiNW_span']:hover {
+  filter: brightness(1.15);
+}
+
+[class~='ZNyiNW_hoverLine'] {
+  background-color: var(--lg-accent);
+}
+
+[class~='ZNyiNW_turnBoundary'] {
+  background-color: var(--lg-hairline);
+}
+
+/* ---- Workflow run --------------------------------------------------- */
+[class~='_2Oss8W_root'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+[class~='_2Oss8W_phaseHeader'],
+[class~='_2Oss8W_runHeader'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='_2Oss8W_phaseHeader']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='_2Oss8W_memberRow'] {
+  border-radius: var(--lg-r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class~='d99neW_card']:hover,
+  [class~='fO69Vq_row']:active {
+    transform: none;
+  }
+  [class~='fO69Vq_skeletonBar'],
+  [class~='RotMhW_skeletonBar'],
+  [class~='d99neW_skeletonBar'] {
+    animation: none;
+  }
+}

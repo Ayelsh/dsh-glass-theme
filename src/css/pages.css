@@ -1,0 +1,1107 @@
+/* =======================================================================
+   pages.css — the surfaces that are their own page rather than part of the
+   three-column shell.
+
+   Everything here inherits the token layer (tokens.css), so this sheet only
+   has to answer "what shape does this surface have", never "what colour is
+   it". The rule throughout: a page is a READING surface (opaque, quiet, no
+   blur behind text); a control or a floating layer is GLASS. Getting that
+   split wrong is what makes an app look like it was wrapped in plastic.
+   ======================================================================= */
+
+/* ---- Appearance cubes (settings > general > appearance) ----------------
+   Three swatches that preview a theme. They are the one place in the app
+   where a control is legitimately an image, so the chrome around them stays
+   almost invisible: a hairline that only gains weight on selection. */
+[class~='v01cdW_group'] {
+  gap: 10px;
+}
+
+[class~='v01cdW_title'] {
+  font: var(--dsw-font-xs-strong-13);
+  letter-spacing: 0.01em;
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='v01cdW_cubeRow'] {
+  gap: 8px;
+}
+
+[class~='v01cdW_themeCube'] {
+  border-radius: var(--lg-r-md);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0.5px 0 var(--lg-edge-bottom);
+  transition:
+    border-color var(--lg-t-fast) var(--lg-ease-out),
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='v01cdW_themeCube']:hover:not([class~='v01cdW_selected']) {
+  border-color: var(--lg-hairline-strong);
+}
+
+/* Selection is a ring, not a fill: the swatch's own colours must not be
+   tinted by the selection state or the preview lies. */
+[class~='v01cdW_selected'] {
+  border-color: var(--lg-accent);
+  background-color: var(--lg-accent-soft);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-bottom),
+    0 0 0 2px var(--lg-accent-ring);
+}
+
+[class~='v01cdW_themeCube']:active {
+  transform: scale(0.985);
+}
+
+/* ---- Font size row ----------------------------------------------------
+   A stepper: minus, value, plus. The value is tabular so the row does not
+   shift when it changes between 13 and 14. */
+[class~='_0Fr0Ha_row'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='_0Fr0Ha_title'] {
+  font: var(--dsw-font-s-strong-14);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='_0Fr0Ha_desc'] {
+  font: var(--dsw-font-xxs-12);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='_0Fr0Ha_stepper'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_0Fr0Ha_value'] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 560;
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='_0Fr0Ha_unit'] {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='_0Fr0Ha_arrow'] {
+  border-radius: var(--lg-r-xs);
+  color: var(--dsw-alias-label-secondary);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    opacity var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='_0Fr0Ha_arrow']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* The arrows are revealed on hover of the stepper. On a touch screen there
+   is no hover, so they must be visible unconditionally. */
+@media (hover: none) {
+  [class~='_0Fr0Ha_arrows'] {
+    opacity: 1;
+  }
+}
+
+/* ---- Language row ----------------------------------------------------- */
+[class~='Hefa_q_row'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='Hefa_q_title'] {
+  font: var(--dsw-font-s-strong-14);
+}
+
+[class~='Hefa_q_selector'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='Hefa_q_chevron'] {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---- Agent presets ----------------------------------------------------
+   Cards in a responsive grid. The active one is not "selected" in the sense
+   of a list selection — it is the preset the next session will run — so it
+   gets an accent hairline plus a faint accent wash rather than a filled
+   plate, which would compete with the model chips inside the composer. */
+[class~='KZf9OG_section'] {
+  gap: 14px;
+}
+
+[class~='KZf9OG_intro'] {
+  font: var(--dsw-font-xs-13);
+  color: var(--dsw-alias-label-secondary);
+  max-width: 62ch;
+}
+
+[class~='KZf9OG_groupHead'] {
+  font: var(--dsw-font-xxxs-strong-11);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='KZf9OG_cards'] {
+  gap: 10px;
+}
+
+[class~='KZf9OG_card'] {
+  border-radius: var(--lg-r-lg);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-raised);
+  box-shadow: 0 1px 2px rgba(16, 22, 40, 0.04);
+  transition:
+    border-color var(--lg-t-fast) var(--lg-ease-out),
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='KZf9OG_card']:hover:not([class~='KZf9OG_cardActive']) {
+  border-color: var(--lg-hairline-strong);
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='KZf9OG_cardActive'] {
+  border-color: color-mix(in srgb, var(--lg-accent) 55%, transparent);
+  background-color: var(--lg-accent-soft);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-bottom),
+    0 0 0 1px color-mix(in srgb, var(--lg-accent) 22%, transparent);
+}
+
+[class~='KZf9OG_cardName'] {
+  font: var(--dsw-font-s-strong-14);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='KZf9OG_cardId'] {
+  font-family: var(--dsw-font-mono);
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='KZf9OG_cardDesc'] {
+  font: var(--dsw-font-xxs-12);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='KZf9OG_cardFoot'] {
+  border-top-color: var(--lg-hairline);
+}
+
+[class~='KZf9OG_brokenBadge'] {
+  border-radius: var(--lg-r-xs);
+  background-color: var(--dsw-alias-state-error-tertiary);
+  color: var(--dsw-alias-state-error-primary);
+  font: var(--dsw-font-xxxs-strong-11);
+}
+
+[class~='KZf9OG_viewerCode'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='KZf9OG_dialog'] {
+  border-radius: var(--lg-r-panel);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+/* ---- Model providers --------------------------------------------------
+   A list of rows where each row is a provider. The row itself is the card,
+   so the radius is one step smaller than the settings cards around it —
+   a row is not a container, it is an item in one. */
+[class~='_3nPmjq_section'] {
+  gap: 12px;
+}
+
+[class~='_3nPmjq_rowCard'] {
+  border-radius: var(--lg-r-lg);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-raised);
+  box-shadow: 0 1px 2px rgba(16, 22, 40, 0.04);
+  padding: 12px 16px;
+}
+
+[class~='_3nPmjq_rowCard']:hover {
+  border-color: var(--lg-hairline-strong);
+}
+
+[class~='_3nPmjq_rowName'] {
+  font: var(--dsw-font-s-strong-14);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='_3nPmjq_rowTag'] {
+  border-radius: var(--lg-r-xs);
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-glass-tint);
+  color: var(--dsw-alias-label-secondary);
+  font: var(--dsw-font-xxxs-11);
+}
+
+[class~='_3nPmjq_credentialDot'] {
+  border-radius: var(--lg-r-pill);
+}
+
+[class~='_3nPmjq_credentialDotConfigured'] {
+  background-color: var(--dsw-alias-state-success-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 16%, transparent);
+}
+
+[class~='_3nPmjq_credentialDotMissing'] {
+  background-color: var(--dsw-alias-state-warn-primary);
+}
+
+[class~='_3nPmjq_editor'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_3nPmjq_addCard'],
+[class~='_3nPmjq_setupCard'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_3nPmjq_input'],
+[class~='_3nPmjq_keyInput'],
+[class~='_3nPmjq_selectInput'] {
+  border-radius: var(--lg-r-sm);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-sunken);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='_3nPmjq_input']:focus,
+[class~='_3nPmjq_keyInput']:focus,
+[class~='_3nPmjq_selectInput']:focus {
+  border-color: var(--lg-accent);
+  box-shadow: 0 0 0 3px var(--lg-accent-ring);
+}
+
+[class~='_3nPmjq_primaryButton'],
+[class~='_3nPmjq_secondaryButton'],
+[class~='_3nPmjq_addButton'] {
+  border-radius: var(--lg-r-sm);
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='_3nPmjq_primaryButton'] {
+  background-color: var(--lg-accent);
+  color: #fff;
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.32);
+}
+
+[class~='_3nPmjq_secondaryButton'],
+[class~='_3nPmjq_addButton'] {
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='_3nPmjq_secondaryButton']:hover,
+[class~='_3nPmjq_addButton']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='_3nPmjq_dangerButton'] {
+  border-radius: var(--lg-r-sm);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+[class~='_3nPmjq_dangerButton']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover-danger);
+}
+
+[class~='_3nPmjq_iconButton'] {
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='_3nPmjq_candidateList'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  padding: 4px;
+}
+
+[class~='_3nPmjq_candidate'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='_3nPmjq_modelCatalog'] {
+  border-top-color: var(--lg-hairline);
+}
+
+[class~='_3nPmjq_modelRow'] {
+  gap: 8px;
+}
+
+/* ---- Account ----------------------------------------------------------
+   Balance and identity. The balance figure is the only large number on the
+   page, so it carries the display weight and everything else recedes. */
+[class~='_8RVnMG_card'],
+[class~='_8RVnMG_balanceCard'] {
+  border-radius: var(--lg-r-lg);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-raised);
+  box-shadow: 0 1px 2px rgba(16, 22, 40, 0.04);
+}
+
+[class~='_8RVnMG_balanceCard'] {
+  background-image: var(--lg-surface-light-1), var(--lg-surface-light-2);
+}
+
+[class~='_8RVnMG_amount'] {
+  font: var(--dsw-font-xl-24);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+[class~='_8RVnMG_avatar'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_8RVnMG_divider'] {
+  border-top-color: var(--lg-hairline);
+}
+
+/* `primary` and `linkButton` are two independent single-class selectors that
+   the app applies to the SAME element: an `<a>` carrying both classes is a
+   filled accent button. Ordered naively, whichever block comes later wins the
+   `color` declaration, and the link colour (accent) then lands on top of the
+   accent FILL — blue text on blue, invisible. The compound selector below pins
+   the filled variant to white-on-accent regardless of source order. */
+[class~='_8RVnMG_primary'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-accent);
+  color: #fff;
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.35),
+    0 1px 2px rgba(16, 22, 40, 0.16);
+}
+
+[class~='_8RVnMG_linkButton'][class~='_8RVnMG_primary'],
+[class~='_8RVnMG_secondary'][class~='_8RVnMG_primary'] {
+  color: #fff;
+}
+
+[class~='_8RVnMG_linkButton'][class~='_8RVnMG_primary']:hover,
+[class~='_8RVnMG_secondary'][class~='_8RVnMG_primary']:hover {
+  background-color: var(--lg-accent-strong);
+}
+
+[class~='_8RVnMG_secondary'],
+[class~='_8RVnMG_linkButton'] {
+  border-radius: var(--lg-r-sm);
+  color: var(--lg-accent);
+}
+
+[class~='_8RVnMG_secondary']:hover,
+[class~='_8RVnMG_linkButton']:hover {
+  background-color: var(--lg-accent-soft);
+}
+
+[class~='uKWioa_dialog'] {
+  border-radius: var(--lg-r-panel);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+[class~='uKWioa_primaryButton'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-accent);
+  color: #fff;
+}
+
+[class~='uKWioa_secondaryButton'],
+[class~='uKWioa_close'] {
+  border-radius: var(--lg-r-sm);
+}
+
+/* ---- Approval ---------------------------------------------------------
+   The one card in the transcript that must interrupt. It keeps the warn
+   border — that is the app's safety language, not decoration — but the
+   strip becomes a soft tint instead of a saturated band, so the command
+   below it stays the loudest thing on the card. */
+[class~='j_8BDW_card'] {
+  border-radius: var(--lg-r-lg);
+  border-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 42%, transparent);
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--lg-shadow-2);
+}
+
+[class~='j_8BDW_strip'] {
+  background-color: var(--dsw-alias-state-warn-tertiary);
+  color: var(--dsw-alias-state-warn-primary);
+  font: var(--dsw-font-xs-13);
+}
+
+[class~='j_8BDW_headline'] {
+  font: var(--dsw-font-s-strong-14);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='j_8BDW_command'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  font-family: var(--ds-font-family-code);
+}
+
+[class~='j_8BDW_actionRow'] {
+  gap: 8px;
+}
+
+[class~='j_8BDW_reject'] {
+  border-radius: var(--lg-r-sm);
+}
+
+/* ---- Plan preview ----------------------------------------------------- */
+[class~='KuQXFq_card'] {
+  border-radius: var(--lg-r-md);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-raised);
+}
+
+[class~='KuQXFq_cardTitle'] {
+  font: var(--dsw-font-s-strong-14);
+}
+
+[class~='KuQXFq_cardDescription'] {
+  font: var(--dsw-font-xxs-12);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='KuQXFq_document'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_0D_3ea_chip'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+  font: var(--dsw-font-xxxs-strong-11);
+}
+
+/* ---- Schedules / tasks ------------------------------------------------
+   A two-pane page: list on the left, detail on the right. Both panes are
+   reading surfaces, so neither gets a blur; the split is a hairline. */
+[class~='S0jZwq_page'] {
+  background-color: transparent;
+}
+
+[class~='S0jZwq_pageHeading'] {
+  font: var(--dsw-font-l-20);
+  letter-spacing: -0.01em;
+}
+
+/* The divider is a property of the SPLIT, not of the list, so it is gated on
+   `hasDetails` — the class the page root only carries when a detail pane is
+   actually rendered. Ungated, the line drew down the right edge of an
+   otherwise empty page with nothing on the other side of it. */
+[class~='S0jZwq_hasDetails'] > [class~='S0jZwq_listPane'] {
+  border-inline-end: 1px solid var(--lg-hairline);
+}
+
+/* Task rows are separated by a 2px gap in the shipped stylesheet, which reads
+   as loose text on a page rather than as a list of objects. Grouping them onto
+   one raised surface is the iOS grouped-list idiom: the card is the container,
+   the rows are its cells, and the hairline between them is what says "these are
+   peers". Without the container each row is a floating sentence. */
+[class~='S0jZwq_listRows'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-surface-raised);
+  box-shadow:
+    inset 0 0 0 0.5px var(--lg-hairline),
+    0 1px 2px rgba(16, 22, 40, 0.04);
+  padding: 6px;
+  gap: 0;
+  overflow: hidden;
+}
+
+[class~='S0jZwq_listRows'] > * + * {
+  border-top: 0.5px solid var(--lg-hairline);
+}
+
+[class~='S0jZwq_row'] {
+  border-radius: var(--lg-r-md);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='S0jZwq_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='S0jZwq_selectedRow'] {
+  background-color: var(--lg-accent-soft);
+  box-shadow: inset 2px 0 0 var(--lg-accent);
+}
+
+[class~='S0jZwq_rowTitle'] {
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='S0jZwq_ruleCard'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+/* The task page has TWO tab idioms, and they are different objects:
+   `filterTab` is a pill row (a filter, applied instantly); `detailTab` is an
+   underline row inside a header bar (navigation between panes). Treating
+   them as one control is what makes the page look unresolved. */
+[class~='S0jZwq_filterTabs'] {
+  gap: 6px;
+}
+
+[class~='S0jZwq_filterTab'] {
+  border-radius: var(--lg-r-pill);
+  height: 28px;
+  color: var(--dsw-alias-label-secondary);
+  font: var(--dsw-font-xs-13);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='S0jZwq_filterTab']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='S0jZwq_filterTabActive'] {
+  background-color: var(--lg-accent-soft);
+  color: var(--lg-accent);
+  font-weight: 560;
+}
+
+[class~='S0jZwq_detailTabsBar'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='S0jZwq_detailTab'] {
+  color: var(--dsw-alias-label-tertiary);
+  transition: color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='S0jZwq_detailTab']:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='S0jZwq_detailTab'][aria-selected='true'] {
+  color: var(--lg-accent);
+}
+
+[class~='S0jZwq_detailTab'][aria-selected='true']::after {
+  background-color: var(--lg-accent);
+  border-radius: var(--lg-r-pill);
+}
+
+[class~='q7hbua_row'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='q7hbua_title'] {
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='q7hbua_rowOverdue'] {
+  box-shadow: inset 2px 0 0 var(--dsw-alias-state-warn-primary);
+}
+
+[class~='QSKnSa_card'] {
+  border-radius: var(--lg-r-md);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-raised);
+}
+
+[class~='QSKnSa_title'] {
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='CVUQCW_panel'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+[class~='LOs-Za_cell'] {
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='LOs-Za_selected'] {
+  background-color: var(--lg-accent);
+  color: #fff;
+}
+
+[class~='_DSe8a_option'] {
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='_DSe8a_selected'] {
+  background-color: var(--lg-accent-soft);
+  color: var(--lg-accent);
+}
+
+[class~='_3tUStW_root'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(28px) saturate(185%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+[class~='_3tUStW_item'] {
+  border-radius: var(--lg-r-xs);
+}
+
+/* ---- Trajectory -------------------------------------------------------
+   The table is a dense instrument. It stays flat and monospaced; the only
+   material in it is the details drawer, which floats over the table. */
+[class~='haSm5q_table'] {
+  font-family: var(--ds-font-family-code);
+}
+
+[class~='haSm5q_tablePane'] {
+  background-color: transparent;
+}
+
+[class~='haSm5q_eventHeader'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='haSm5q_kindTag'] {
+  border-radius: var(--lg-r-xs);
+  font: var(--dsw-font-xxxs-strong-11);
+}
+
+[class~='haSm5q_details'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(185%);
+  -webkit-backdrop-filter: blur(30px) saturate(185%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+[class~='haSm5q_detailTabs'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  padding: 2px;
+}
+
+[class~='haSm5q_detailTab'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='haSm5q_detailTabActive'] {
+  background-color: var(--lg-surface-raised);
+  box-shadow: 0 1px 2px rgba(16, 22, 40, 0.08);
+}
+
+[class~='haSm5q_sourceBlock'],
+[class~='haSm5q_programPanel'],
+[class~='haSm5q_jsonPayload'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='ZNyiNW_root'] {
+  background-color: transparent;
+}
+
+[class~='ZNyiNW_track'] {
+  background-color: var(--lg-hairline);
+  border-radius: var(--lg-r-pill);
+}
+
+[class~='ZNyiNW_selection'] {
+  background-color: color-mix(in srgb, var(--lg-accent) 22%, transparent);
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='QnvEwG_root'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='QnvEwG_searchInput'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='QnvEwG_action'] {
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='QnvEwG_control'] {
+  border-radius: var(--lg-r-pill);
+}
+
+/* ---- Shortcuts reference ---------------------------------------------
+   A searchable table of key bindings. Keys are physical objects here: a
+   key cap is a small raised plate, not a coloured tag. */
+[class~='_3Y3Nma_dialog'] {
+  border-radius: var(--lg-r-panel);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+[class~='_3Y3Nma_searchField'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_3Y3Nma_group'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='_3Y3Nma_row'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='_3Y3Nma_row']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='_3Y3Nma_keyBadge'],
+[class~='_3Y3Nma_fixedKeyBadge'],
+[class~='_3Y3Nma_binding'] {
+  border-radius: var(--lg-r-xs);
+  background-color: var(--lg-surface-raised);
+  box-shadow:
+    inset 0 -1px 0 rgba(16, 22, 40, 0.10),
+    inset 0 0.5px 0 var(--lg-edge-top),
+    0 1px 1px rgba(16, 22, 40, 0.06);
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--ds-font-family-code);
+}
+
+[class~='_3Y3Nma_invalid'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* ---- Cordis panel ----------------------------------------------------- */
+[class~='zf92ZW_panel'] {
+  border-radius: var(--lg-r-lg);
+  background-color: transparent;
+}
+
+[class~='zf92ZW_header'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='zf92ZW_row'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='zf92ZW_rowName'] {
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='zf92ZW_rowId'] {
+  font-family: var(--dsw-font-mono);
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+[class~='zf92ZW_badge'] {
+  border-radius: var(--lg-r-pill);
+}
+
+[class~='zf92ZW_actionButton'] {
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='_3jVEXG_card'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='_3jVEXG_row'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='p_wyXq_card'],
+[class~='p_wyXq_sourceCard'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='p_wyXq_sourceCode'],
+[class~='p_wyXq_bodyWrap'] {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+}
+
+/* ---- Skill rows ------------------------------------------------------- */
+[class~='Xpfrra_card'] {
+  border-radius: var(--lg-r-md);
+  border-width: 1px;
+  border-color: var(--lg-hairline);
+  background-color: var(--lg-surface-raised);
+}
+
+[class~='Xpfrra_row'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='Xpfrra_summary'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='Xpfrra_title'] {
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='Xpfrra_instructionsCard'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='Xpfrra_instructionsHeader'] {
+  border-bottom-color: var(--lg-hairline);
+}
+
+[class~='Xpfrra_separator'] {
+  border-top-color: var(--lg-hairline);
+}
+
+/* ---- Jobs panel -------------------------------------------------------
+   Authored in settings.css alongside the schedules/goals lists, because the
+   two are the same subject and must be read together to stay distinct. This
+   sheet deliberately carries nothing for `foD-wG_*`: a second, weaker set of
+   rules for the same classes is how the row plates came back the first time. */
+
+/* ---- Goal bar ---------------------------------------------------------
+   Sits in the composer dock and states the session objective. It is chrome
+   over content, so it is glass, and it is quiet until hovered because the
+   objective is reference, not a call to action. */
+[class~='nJdiTq_bar'],
+[class~='nJdiTq_dock'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+[class~='nJdiTq_objective'] {
+  font: var(--dsw-font-xxs-12);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[class~='nJdiTq_iconBtn'] {
+  border-radius: var(--lg-r-xs);
+}
+
+[class~='-ja1rG_bubble'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+}
+
+/* ---- Terminal guide / session log / model label ----------------------- */
+[class~='zpy3TW_entry'],
+[class~='zpy3TW_trigger'] {
+  border-radius: var(--lg-r-sm);
+}
+
+[class~='zpy3TW_entry']:hover,
+[class~='zpy3TW_trigger']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='zpy3TW_menu'] {
+  border-radius: var(--lg-r-md);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(28px) saturate(185%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  box-shadow: var(--lg-shadow-3);
+}
+
+[class~='zpy3TW_shortcut'] {
+  border-radius: var(--lg-r-xs);
+  background-color: var(--lg-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
+}
+
+/* The session-log upload row is one row in a list of rows, not a card. Giving it
+   a raised surface made a 564px plate inside a 564px column: a box as wide as the
+   thing that contains it stops saying "this is a group" and starts colliding with
+   the column edge and the scrollbar. It keeps the same hairline divider as its
+   neighbours instead, and the toggle carries the row's weight. */
+[class~='PUqB7a_row'] {
+  border-bottom: 0.5px solid var(--lg-hairline);
+}
+
+[class~='PUqB7a_title'] {
+  font: var(--dsw-font-xs-strong-13);
+}
+
+[class~='dO-SVa_label'] {
+  font: var(--dsw-font-xxs-12);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---- Foreign pages ----------------------------------------------------
+   Third-party plugins can claim the `main` slot and render their own page.
+   Those pages ship plain HTML with no class names at all, so nothing in the
+   host's design system reaches them: a save button arrives as a 23px sliver
+   with its label wrapped onto two lines. The skin is the only layer that can
+   give them the app's control language, so it does — scoped to the main slot
+   and to controls that carry no class, which is precisely the set the host
+   never styles.
+
+   Deliberately minimal: type, spacing, radius, and a press state. A foreign
+   page keeps its own layout; it only stops looking like a different product. */
+[data-slot='main'] button:not([class]) {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--lg-hairline);
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-glass-tint);
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-xs-strong-13);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    border-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[data-slot='main'] button:not([class]):hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--lg-hairline-strong);
+}
+
+[data-slot='main'] button:not([class]):active {
+  background-color: var(--dsw-alias-interactive-bg-active);
+}
+
+[data-slot='main'] input:not([class]),
+[data-slot='main'] select:not([class]),
+[data-slot='main'] textarea:not([class]) {
+  box-sizing: border-box;
+  border: 1px solid var(--lg-hairline);
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-surface-sunken);
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-xs-13);
+  padding: 4px 10px;
+}
+
+[data-slot='main'] input:not([class]):focus,
+[data-slot='main'] select:not([class]):focus,
+[data-slot='main'] textarea:not([class]):focus {
+  border-color: var(--lg-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--lg-accent-ring);
+}
+
+/* A foreign page's own headings and body copy join the app's scale instead of
+   inheriting the browser's 16px/1.5 default.
+
+   Every text rule below excludes anything inside the markdown renderer. That
+   renderer emits unclassed `<p>`, `<h1>`, `<table>` and `<a>` too, and those
+   already have a typographic ladder driven by `--dsh-content-font-size`; a
+   foreign-page rule reaching them would silently override the user's font-size
+   setting. Controls are safe to style unconditionally because markdown never
+   contains them. */
+[data-slot='main'] h1:not([class]):not([class*='_markdown_'] *) {
+  font: var(--dsw-font-xl-24);
+  letter-spacing: -0.01em;
+}
+
+[data-slot='main'] h2:not([class]):not([class*='_markdown_'] *) {
+  font: var(--dsw-font-l-20);
+  letter-spacing: -0.005em;
+}
+
+[data-slot='main'] h3:not([class]):not([class*='_markdown_'] *) {
+  font: var(--dsw-font-m-18);
+}
+
+[data-slot='main'] label:not([class]):not([class*='_markdown_'] *),
+[data-slot='main'] p:not([class]):not([class*='_markdown_'] *) {
+  font: var(--dsw-font-s-14);
+  color: var(--dsw-alias-label-secondary);
+}
+
+[data-slot='main'] a:not([class]):not([class*='_markdown_'] *) {
+  color: var(--lg-accent);
+  text-decoration: none;
+}
+
+[data-slot='main'] a:not([class]):not([class*='_markdown_'] *):hover {
+  text-decoration: underline;
+}
+
+[data-slot='main'] table:not([class]):not([class*='_markdown_'] *) {
+  border-collapse: collapse;
+  font: var(--dsw-font-xs-13);
+}
+
+[data-slot='main'] th:not([class]):not([class*='_markdown_'] *),
+[data-slot='main'] td:not([class]):not([class*='_markdown_'] *) {
+  border-bottom: 1px solid var(--lg-hairline);
+  padding: 6px 10px;
+  text-align: start;
+}
+
+[data-slot='main'] th:not([class]):not([class*='_markdown_'] *) {
+  font: var(--dsw-font-xxs-strong-12);
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---- One motion floor for this sheet ---------------------------------
+   These pages are dense; the only motion worth paying for is the press. */
+@media (prefers-reduced-motion: reduce) {
+  [class~='v01cdW_themeCube']:active,
+  [class~='KZf9OG_card']:active {
+    transform: none;
+  }
+}

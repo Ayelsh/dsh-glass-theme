@@ -1,0 +1,446 @@
+/* ==========================================================================
+   Liquid Glass · overlays
+   --------------------------------------------------------------------------
+   Menus, popovers, dialogs, sheets, toasts.
+
+   Everything in this file is a FLOATING layer, which is exactly the category
+   glass is for. The rules follow one ladder:
+
+     menus / popovers / tooltips   L2  — they appear next to a control and must
+                                        read as lifted off the page
+     sheets / settings / dialogs   L3  — they take over, so legibility wins
+     toasts                        L2  — transient, they float above everything
+
+   Nothing here is glass-on-glass: a popover opened inside a dialog still paints
+   its own L2 fill over the dialog's L3 fill, which is a fill, not a blur, so the
+   stack never exceeds two backdrop layers.
+   ========================================================================== */
+
+/* The material primitive every menu, popover and select shares.
+
+   `_surface_ri079_*` is the anchor host and carries `isolation: isolate`.
+   `_material_ri079_*` is an absolutely-positioned fill layer behind the content
+   (z-index:-1, inset:0) carrying the shipped fill AND the shipped blur.
+
+   Those two facts cancel each other out. `isolation: isolate` makes the surface
+   its own backdrop root, so a z-index:-1 child inside it has NOTHING behind it
+   to sample — the material's `backdrop-filter` is a no-op, and all that is left
+   is a 76%-opaque fill. Over a lit hero or a glass composer that reads as a
+   smudge with the page ghosting through it, not as frosted glass.
+
+   The fix is to split the two jobs back apart, one element each:
+     the SURFACE carries the blur  (it is not isolated from the page, so its
+                                    backdrop is the real content behind it)
+     the MATERIAL carries the fill (exactly one fill, so the two do not stack
+                                    into an over-dark slab)
+   The fill is also raised well above the shipped 76%: a popover is opaque
+   enough that whatever it covers never shows through as text. Vibrancy is a
+   property of the EDGE and the blur, not of letting the page read through. */
+[class*='_material_ri079'] {
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+/* The darwin backing plate exists to keep macOS vibrancy from showing through a
+   menu. With our own material painted on top it is redundant, and it is opaque,
+   so it would defeat the blur on the platform that has the most to gain. */
+[class*='_backing_ri079'] {
+  display: none;
+}
+
+/* ---- Menu surface ------------------------------------------------------ */
+[class~='Z9Jnlq_menu'],
+[class~='wq12jW_menu'],
+[class*='dsh-menu-skeleton'],
+[class~='Z9Jnlq_viewport'],
+[class~='Z9Jnlq_menu'][class*='_surface_ri079'] {
+  border-radius: var(--lg-r-lg);
+  /* The fill lives on `_material_ri079`; a second one here would double it. */
+  background-color: transparent;
+  backdrop-filter: blur(28px) saturate(185%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-3);
+  border: none;
+  padding: 5px;
+  /* The scroll fade at the bottom of a menu must fade to the menu's own fill,
+     not to a flat colour, or it reads as a seam. */
+  --lg-menu-fade: var(--dsw-menu-surface-fill);
+}
+
+[class~='Z9Jnlq_menu']::after {
+  background-image: linear-gradient(to bottom, transparent, var(--lg-menu-fade));
+  border-end-start-radius: var(--lg-r-lg);
+  border-end-end-radius: var(--lg-r-lg);
+}
+
+/* Menu items: rounded rows, hover plate, and a check that slides in. */
+[class~='Z9Jnlq_item'],
+[class~='wq12jW_option'],
+[class~='wq12jW_cell'] {
+  border-radius: var(--lg-r-md);
+  min-height: 32px;
+  padding: 5px 9px;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Z9Jnlq_item']:hover,
+[class~='wq12jW_option']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* Active item: accent plate. This is the menu equivalent of the travelling
+   selection pill — the pointer moves, the plate follows it. */
+[class~='Z9Jnlq_item'][class~='Z9Jnlq_active'],
+[class~='wq12jW_option'][class~='wq12jW_optionActive'],
+[class~='wq12jW_option'][class~='wq12jW_selected'] {
+  background-color: var(--lg-accent-soft);
+  color: var(--dsw-alias-label-primary);
+}
+
+[class~='wq12jW_check'] {
+  color: var(--lg-accent);
+  transition:
+    opacity var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-base) var(--lg-ease-spring);
+}
+
+[class~='wq12jW_option']:not([class~='wq12jW_selected']) [class~='wq12jW_check'] {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+[class~='Z9Jnlq_groupTitle'],
+[class~='Z9Jnlq_sectionTitle'] {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-caption);
+  padding: 8px 9px 4px;
+}
+
+[class~='Z9Jnlq_itemName'],
+[class~='wq12jW_modelName'] {
+  font-weight: 500;
+  letter-spacing: -0.002em;
+}
+
+[class~='Z9Jnlq_itemDescription'],
+[class~='wq12jW_optionCopy'],
+[class~='wq12jW_status'],
+[class~='wq12jW_warning'] {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+[class~='wq12jW_warning'] {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+/* Menu search field: sunken, so it reads as an input inside the floating card. */
+[class~='wq12jW_search'],
+[class~='wq12jW_searchRow'] {
+  border-radius: var(--lg-r-md);
+  background-color: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);
+  box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
+}
+
+[class~='wq12jW_searchRow']:focus-within {
+  box-shadow:
+    inset 0 1px 2px rgba(16, 22, 40, 0.05),
+    0 0 0 3px var(--lg-accent-ring);
+}
+
+[class~='wq12jW_searchClear'] {
+  border-radius: var(--lg-r-pill);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='wq12jW_searchClear']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover-solid);
+}
+
+/* Breadcrumb drill-down inside the menu. */
+[class~='Z9Jnlq_crumb'] {
+  border-radius: var(--lg-r-sm);
+  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='Z9Jnlq_crumb']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='Z9Jnlq_crumbCurrent'] {
+  font-weight: 560;
+}
+
+/* ---- Settings / sheet --------------------------------------------------
+   The largest glass surface in the app. It is L3 because it replaces the page
+   while open, and every pixel of text on it must stay readable. */
+[class~='wCInkW_mask'] {
+  background-color: color-mix(in srgb, var(--lg-ambient-floor) 55%, transparent);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+}
+
+[class~='wCInkW_panel'] {
+  border-radius: var(--lg-r-panel);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-3);
+  /* The panel scales in from 0.96 with a slight upward travel — materialising,
+     not fading. */
+  transform-origin: 50% 40%;
+  animation: lg-materialize var(--lg-t-slow) var(--lg-ease-spring) both;
+}
+
+@keyframes lg-materialize {
+  from {
+    opacity: 0;
+    transform: scale(0.965) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[class~='wCInkW_nav'] {
+  background-color: transparent;
+  border-inline-end: 0.5px solid var(--lg-hairline);
+  padding-top: 18px;
+  gap: 14px;
+}
+
+[class~='wCInkW_navTitle'] {
+  font-size: 17px;
+  font-weight: 640;
+  letter-spacing: -0.016em;
+  padding-inline: 14px;
+}
+
+[class~='wCInkW_navCell'] {
+  border-radius: var(--lg-r-md);
+  height: 36px;
+  padding: 7px 12px;
+  font-weight: 450;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='wCInkW_navCell']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='wCInkW_navCell'][class~='wCInkW_active'] {
+  /* Same HIG rule as the sidebar: a source list shows selection by filling the
+     row and inverting its label, not by tinting it. */
+  background-color: var(--lg-selection-fill);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.22);
+  color: var(--lg-selection-label);
+  font-weight: 560;
+}
+
+[class~='wCInkW_navCell'][class~='wCInkW_active']:hover {
+  background-color: var(--lg-selection-fill-hover);
+}
+
+[class~='wCInkW_navCell'][class~='wCInkW_active'] [class~='wCInkW_navIcon'] {
+  color: var(--lg-selection-label);
+}
+
+[class~='wCInkW_header'] {
+  height: 52px;
+  padding: 16px 12px 6px 18px;
+}
+
+[class~='wCInkW_close'] {
+  border-radius: var(--lg-r-sm);
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+[class~='wCInkW_close']:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+[class~='wCInkW_close']:active {
+  transform: scale(0.9);
+}
+
+[class~='wCInkW_panel'] [class~='wCInkW_content'] {
+  /* The content column used to paint its own 72% floor on top of the panel's
+     material. Two stacked rectangles with no gap between them means the inner one
+     ends exactly where the panel's rounded corner begins — a straight edge cutting
+     across a 30px radius, and a fill that stops dead against the scrollbar.
+     The panel already IS the surface: at 78% fill plus a 34px blur, text over it
+     is fully legible. So the content adds nothing and the panel stays one object. */
+  background-color: transparent;
+}
+
+/* ---- Generic dialog ---------------------------------------------------
+   Feedback, sign-in, host prompts, directory pickers: all use the same base. */
+[class~='FDoH3G_dialog'],
+[class~='uKWioa_dialog'],
+[class~='tDn_6q_dialog'],
+[class~='Fv-y6W_dialog'],
+[class~='Fv-y6W_createDialog'],
+[class~='Yf9_hG_dialog'],
+[class~='d99neW_dialog'],
+[class~='KZf9OG_dialog'],
+[class~='XPF3fq_mask'] > * {
+  border-radius: var(--lg-r-panel);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-3);
+  border: none;
+  animation: lg-materialize var(--lg-t-base) var(--lg-ease-out) both;
+}
+
+[class~='uKWioa_header'],
+[class~='Fv-y6W_header'],
+[class~='d99neW_dialogBody'],
+[class~='Yf9_hG_body'] {
+  padding-inline: 20px;
+}
+
+[class~='uKWioa_title'],
+[class~='Fv-y6W_title'],
+[class~='Yf9_hG_title'],
+[class~='d99neW_detailTitle'] {
+  font-size: 17px;
+  font-weight: 640;
+  letter-spacing: -0.016em;
+}
+
+[class~='Fv-y6W_footerBar'],
+[class~='uKWioa_actions'] {
+  border-top: 0.5px solid var(--lg-hairline);
+  padding-top: 12px;
+}
+
+/* ---- Toasts ------------------------------------------------------------
+   A toast is a capsule that floats above the app. It must never block the
+   composer, so it enters from the bottom with travel, not from the top.
+
+   `_toast_l6cvn_*` is the real toast element; the `_toastSuccess` /
+   `_toastError` classes that look related belong to the shortcuts settings
+   rows and only set a text colour, so they are not part of this rule. */
+[class*='_toast_l6cvn'] {
+  border-radius: var(--lg-r-pill);
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(24px) saturate(185%);
+  -webkit-backdrop-filter: blur(24px) saturate(185%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-2);
+  border: none;
+  animation: lg-toast-in var(--lg-t-slow) var(--lg-ease-spring) both;
+}
+
+@keyframes lg-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[class*='_toast_l6cvn'] [class*='_icon_l6cvn'] {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+[class*='_toast_l6cvn'] [class*='_success_l6cvn'] {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+/* ---- Tooltips ----------------------------------------------------------
+   A tooltip is a one-line label, so it gets a tight inset and a small radius.
+   The turn rail's hover PREVIEW also carries role="tooltip" (it is described
+   by aria-describedby), but it is a two-line reading card that brings its own
+   material in conversation.css. Without the exclusion this block reached
+   across sheets and cropped it to a 9px radius with a 4px inset. */
+[role='tooltip']:not([class~='xpvNua_preview']) {
+  border-radius: var(--lg-r-sm);
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--dsw-alias-label-primary);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-2);
+  border: none;
+  font-size: 12px;
+  padding: 4px 9px;
+  letter-spacing: -0.002em;
+}
+
+/* ---- Approval / plan review ------------------------------------------
+   These interrupt, so they get the modal material and a wider measure. */
+[class~='LqhxcW_card'],
+[class~='UWr8ca_panelButton'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(30px) saturate(185%);
+  -webkit-backdrop-filter: blur(30px) saturate(185%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-2);
+  border: none;
+}
+
+/* ---- Drop overlay (file drag) ----------------------------------------- */
+[class~='XPF3fq_mask'] {
+  background-color: color-mix(in srgb, var(--lg-accent) 10%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+[class~='XPF3fq_title'] {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--lg-accent);
+}
+
+/* ---- Command palette / popup select ---------------------------------- */
+[class~='EhuiKa_viewport'],
+[class~='EhuiKa_card'] {
+  border-radius: var(--lg-r-lg);
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(28px) saturate(185%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    var(--lg-shadow-3);
+  border: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class~='wCInkW_panel'],
+  [class~='FDoH3G_dialog'],
+  [class~='uKWioa_dialog'],
+  [class*='_toast_l6cvn'] {
+    animation: none;
+  }
+}

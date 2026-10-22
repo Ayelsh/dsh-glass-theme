@@ -1,0 +1,226 @@
+/* ==========================================================================
+   Liquid Glass · base
+   --------------------------------------------------------------------------
+   The lit environment itself: the app frame, the ambient field behind it, the
+   type ramp, focus, and the shared primitives (`.lg-glass`, scrollbars) that
+   per-surface sheets build on.
+
+   Rule that keeps the whole design honest: glass is for FLOATING layers only.
+   Content that scrolls stays on an opaque surface. This file owns the floor;
+   the surface sheets own what floats above it.
+   ========================================================================== */
+
+/* ---- The frame ---------------------------------------------------------- */
+/* The shipped frame paints --dsw-alias-bg-base flat. Repaint it as the ambient
+   field. Because the field is on the frame, every backdrop-filter above it
+   samples a moving gradient rather than a constant colour.
+
+   Selectors here name the exact AppFrame hash rather than a `_frame` substring:
+   a dozen unrelated modules also end in `_frame` (the turn navigator, the image
+   preview, the trajectory frame), and a substring rule would restack all of
+   them. */
+[class~='BynINW_frame'] {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+}
+
+html body {
+  background-color: var(--lg-ambient-floor);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* The light field. One fixed pseudo-element on the app root, below every
+   surface, so it never participates in scrolling or reflow. */
+html body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--lg-ambient-1), var(--lg-ambient-2), var(--lg-ambient-3);
+  background-color: var(--lg-ambient-floor);
+  /* Sits under the grid, so panels above it can blur it. */
+  contain: strict;
+}
+
+/* ---- Typography ---------------------------------------------------------
+   Apple's ramp is size-specific: larger text tightens, smaller text opens up.
+   The shipped tokens already carry a size ladder; these rules only adjust the
+   tracking/leading relationship at the extremes, where the difference shows. */
+[class*='_markdown'],
+[class*='_assistantContent'],
+[class*='_bubble'] {
+  letter-spacing: -0.006em;
+}
+
+h1,
+[class*='_markdown'] h1 {
+  letter-spacing: -0.022em;
+}
+[class*='_markdown'] h2 {
+  letter-spacing: -0.018em;
+}
+[class*='_markdown'] h3 {
+  letter-spacing: -0.012em;
+}
+
+/* Small chrome text opens up slightly so it stays legible at 11–12px. */
+[class*='_caption'],
+[class*='_meta'],
+[class*='_hint'],
+[class*='_groupTitle'],
+[class*='_sectionTitle'] {
+  letter-spacing: 0.004em;
+}
+
+/* Tabular figures wherever a number is live — counters, timers, token stats. */
+[class*='_count'],
+[class*='_stat'],
+[class*='_metric'],
+[class*='_usage'],
+[class*='_usage'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Shared material primitives ---------------------------------------- */
+
+/* L1 — chrome. Blur + saturate, lit top rim, contact shadow. */
+.lg-glass-1 {
+  background-color: var(--lg-glass-1);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-1);
+}
+
+/* L2 — floating panels, popovers, the composer. */
+.lg-glass-2 {
+  background-color: var(--lg-glass-2);
+  backdrop-filter: blur(28px) saturate(185%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-2);
+}
+
+/* L3 — sheets and modals, where legibility outranks transparency. */
+.lg-glass-3 {
+  background-color: var(--lg-glass-3);
+  backdrop-filter: blur(34px) saturate(190%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    var(--lg-shadow-3);
+}
+
+/* Reduced transparency: the same surfaces, promoted to opaque. The blur is
+   removed rather than merely hidden so it costs nothing. */
+@media (prefers-reduced-transparency: reduce) {
+  .lg-glass-1,
+  .lg-glass-2,
+  .lg-glass-3 {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--lg-glass-solid);
+  }
+}
+
+/* ---- Focus -------------------------------------------------------------
+   A single ring language for the whole app, with two deliberate constraints.
+
+   It is drawn with `outline`, not `box-shadow`. A shadow ring REPLACES the
+   element's own shadow, so every focused control would lose its material —
+   the settings nav plate, the composer card, the glass buttons all flatten
+   the moment they take focus. An outline composites on top instead, and
+   Chromium follows the border radius with it.
+
+   And it is gated on the last input modality (see src/client.js). Dialogs
+   here autofocus their first control, which Chromium counts as `:focus-visible`
+   even when the user opened the dialog with a pointer — so an ungated rule
+   paints a ring nobody asked for on every settings page. Keyboard navigation
+   still gets the ring, on the frame the key is released. */
+html[data-lg-input='keyboard']
+  :where(button, a, input, textarea, select, [role='button'], [role='tab'], [tabindex]):focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: 2px;
+}
+
+/* ---- Scrollbars --------------------------------------------------------
+   The shipped scrollbar is already the right object: 5px, always visible, a
+   rounded thumb inset by `background-clip: content-box`, and a per-surface
+   `--dsh-scrollbar-thumb` binding so a thumb inside a card is quieter than one
+   on the page. An earlier revision of this skin replaced it with a 10px overlay
+   thumb that only appeared on hover — which made the one piece of chrome the
+   app had already got right worse. This block therefore only re-states the
+   shipped geometry, so the skin's colour tokens reach it; it deliberately does
+   not change width, visibility or track. */
+/* NOTE the absence of a `scrollbar-color` declaration here. It looks harmless —
+   it is the standard way to tint a scrollbar — but setting it switches Chromium
+   onto the STANDARD scrollbar path, where `::-webkit-scrollbar { width }` is
+   ignored and the scroller falls back to the platform's 15px bar. The app sizes
+   its scrollers around a 5px bar (`--dsh-session-list-scrollbar-width: 5px`, and
+   `padding-right: calc(edge-inset - 5px - 2px)` in the session list), so a 15px
+   bar silently eats 10px of the content box on one side only — every list then
+   reads as having a wider right inset than left. Colour therefore comes from the
+   tokens the app already binds (`--dsw-alias-scrollbar-bg-l1`), which this skin
+   re-keys, and the geometry below is the shipped geometry restated. */
+::-webkit-scrollbar {
+  width: var(--dsh-scrollbar-width, 5px);
+  height: var(--dsh-scrollbar-width, 5px);
+}
+::-webkit-scrollbar-track {
+  margin-block: var(--dsh-scrollbar-track-margin, 0px);
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: var(--dsh-scrollbar-thumb-border, 0px) solid transparent;
+  border-radius: 999px;
+  background-color: var(--dsh-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l1));
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--dsh-scrollbar-thumb-hover, var(--dsw-alias-scrollbar-hover-l1));
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Engines without `::-webkit-scrollbar` (Firefox) need the standard properties,
+   and there the app's own stylesheet already supplies them under exactly this
+   guard, so the skin only has to keep the tint. */
+@supports not selector(::-webkit-scrollbar) {
+  body,
+  body * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--dsh-scrollbar-thumb) transparent;
+  }
+}
+
+/* ---- Selection --------------------------------------------------------- */
+::selection {
+  background-color: var(--lg-accent-soft);
+  color: inherit;
+}
+
+/* ---- Motion floor ------------------------------------------------------
+   Reduced motion keeps every state change and removes only travel. Transitions
+   collapse to a cross-fade so nothing snaps without feedback. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+    transition-property: color, background-color, border-color, box-shadow, opacity !important;
+    scroll-behavior: auto !important;
+  }
+}

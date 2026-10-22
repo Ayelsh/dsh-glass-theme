@@ -1,0 +1,6 @@
+# Liquid Glass skin bundle patch.
+# Inserts the skin's web row into the composed roster. The row name is a bare
+# package specifier, resolved against the profile's hoisted node_modules.
+- insert:
+    - id: ui-skin-glass-theme
+      name: 'dsh-glass-theme'
