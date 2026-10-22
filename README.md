@@ -54,6 +54,12 @@ app's own.
 
 `lib/` is committed, so a clone is ready to load — installing needs no build step.
 
+The [releases page](https://github.com/Ayelsh/dsh-glass-theme/releases) carries
+the same build as a prebuilt tarball,
+[`dsh-glass-theme.tgz`](https://github.com/Ayelsh/dsh-glass-theme/releases/latest/download/dsh-glass-theme.tgz).
+Its name is version-free on purpose, so that URL keeps resolving across
+releases; storefronts serve it instead of a build-from-source command.
+
 1. Copy the package into your profile's `node_modules`:
 
    ```sh
