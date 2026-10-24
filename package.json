@@ -1,6 +1,6 @@
 {
   "name": "dsh-glass-theme",
-  "version": "0.1.0",
+  "version": "0.3.5",
   "private": true,
   "description": "Apple Liquid Glass material system for the DeepSeek Harness Web UI. A pure-CSS skin that redraws every surface: floating glass chrome over an ambient light field.",
   "license": "MIT",
@@ -35,6 +35,7 @@
   "files": [
     "lib",
     "locale",
+    "docs",
     "cordis.patch.yml",
     "skin.json"
   ],

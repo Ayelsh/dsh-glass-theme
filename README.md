@@ -22,8 +22,9 @@ app's own.
   ~250 `--dsw-*` custom properties on `body` (and `body[data-ds-dark-theme]`),
   which makes every page the skin has never heard of inherit the redesign. It
   also defines 11 properties the shipped build consumes but never defines.
-- **Redraws every surface** across 15 sheets: shell, sidebar, conversation,
-  composer, overlays, model, picker, stats, settings, pages, widgets, motion.
+- **Redraws every surface** across 16 sheets: shell, sidebar, conversation,
+  composer, overlays, model, picker, stats, settings, pages, workspace,
+  widgets, motion.
 - **Replaces the composer's model picker.** `src/picker.js` mounts its own React
   card into `conversation.input.model` and hides the host trigger: grouped
   providers, a one-line description per model, the reseller price ratio as a
@@ -43,12 +44,27 @@ app's own.
   glass; a second card would be glass on glass) — with a capacity meter, glyph
   tiles, staggered entrance, and etched grain that answers
   `prefers-reduced-transparency`.
+- **Adds the 工作空间 workbench** (`src/workspace.js`, sidebar entry `lg-workspace`): a
+  whole page answering "what needs me today" across [tapd-ai-cli][tapd] and
+  [wecom-cli][wecom] — my TAPD bugs by severity, stories/tasks, WeCom todos,
+  an attention list (high severity or overdue), WeCom doc search, in-row
+  workflow transitions and owner reassignment, and "start a session here"
+  (pick a directory → create workspace → start session). All CLI execution
+  goes through the package's own fenced host routes (`/ws/status`, `/ws/run`,
+  `/ws/install`: loopback + same-origin fence, subcommand whitelist, `spawn`
+  without a shell, timeouts and output caps); a missing CLI degrades to
+  clearly-marked demo data with a one-click managed install (`npm i -g
+  @wecom/cli`, or a checksum-verified GitHub download into `~/.dsh/bin` for
+  tapd). See [docs/WORKSPACE.md](docs/WORKSPACE.md).
 - **Answers the accessibility questions**: `prefers-reduced-transparency`,
   `prefers-contrast`, `prefers-reduced-motion`, `hover: none`, and keyboard-only
   focus rings (gated on input modality, so a pointer user never sees one).
 - **Styles foreign pages.** Third-party plugins render unclassed HTML into the
   `main` slot; those controls get the app's type and control scale too, without
   reaching into markdown output.
+
+[tapd]: https://github.com/studyzy/tapd-ai-cli
+[wecom]: https://github.com/WecomTeam/wecom-cli
 
 ## Install
 
@@ -82,17 +98,19 @@ the folder and the bundle entry restores the stock interface exactly.
 ## Layout
 
 ```
-src/css/               the 15 stylesheets, in cascade order
+src/css/               the 16 stylesheets, in cascade order
 src/client.js          mounts the sheets, tracks modality, wires the layers
 src/catalog.js         the model catalogue: providers, families, descriptions, pricing
 src/picker.js          the ported model picker (React, mounted into the model slot)
 src/stats.js           the merged context/usage panel
 src/settings-section.js the skin's settings page
-src/host/              the host half: routes, peak-rate catalogue, usage ledger
+src/workspace.js       the 工作空间 workbench page (tapd + wecom-cli)
+src/host/              the host half: routes, peak-rate catalogue, usage ledger, workspace CLI executor
 lib/client.js          build output (generated)
 lib/host/              build output of src/host (generated)
 vendor/                the reference package's data files and assets (MIT, see LICENSE-reference.txt)
 tools/                 build + verification tooling
+docs/                  feature documents (WORKSPACE.md)
 ```
 
 ## Build and verify
@@ -104,6 +122,9 @@ node tools/build.mjs        # inlines src/css/*.css into lib/client.js, copies t
 node tools/smoke.mjs        # evaluates the bundle against a stubbed DOM
 node tools/assert-built.mjs # the authored rules actually survived into lib/client.js
 node tools/host-check.mjs   # the host half registers its routes without throwing
+node tools/ws-check.mjs     # the workspace CLI routes: fence, whitelist, probe, caps (mock server)
+node tools/ws-render.mjs    # source render smoke test, including explicit open-case handlers
+node tools/ws-package-check.mjs dsh-glass-theme-0.2.3.tgz # published bundle regression
 ```
 
 Live probes (each needs the GUI running; they mint their own auth cookie):
@@ -118,6 +139,7 @@ node tools/chk-chip.mjs                 # the peak/off-peak chip's state and cou
 node tools/meter.mjs --shot G:/tmp/m    # the context meter panel
 node tools/stats-dom.mjs --theme light  # the two stat dialogs
 node tools/rail.mjs --scan              # the turn rail's hover previews
+node tools/wsselect-probe.mjs           # the native <select> computes an opaque background (popup rows stay readable)
 ```
 
 `verify.mjs` is the important one. A skin is nothing but selectors, so a wrong
@@ -241,3 +263,55 @@ both the rules that must exist and the ones that must not.
    `ctx.get('modelDirectories').directoryFor(session).store.getSnapshot()`. The
    picker already read it the second way, which is why the composer showed six
    providers while the settings page showed none.
+20. **A native `<select>` popup is painted from the control, not the page.** Write
+   the options, style the rows, and click it. Chrome fills the open list with the
+   `<select>`'s own background and copies a transparent one verbatim — no themed
+   fallback (`internal_popup_menu.cc`) — so a control whose background token does
+   not resolve opens a white list of dark-theme text: every option present and
+   unreadable. `color-scheme: dark` does not help; it only reaches the controls
+   the browser draws itself (checkboxes, scrollbars, date pickers). The two rules
+   that do are an opaque `background-color` on the select and an explicit
+   `option { background-color; color }`, which the popup honours per row. A
+   screenshot of the closed control proves nothing here — 0.3.1 shipped a
+   dropdown whose options only became invisible after the click.
+21. **A child process gets a closed stdin, always.** `spawn` defaults to a pipe
+   for stdin that nobody writes and nobody ends. Any CLI command that reads it
+   (`tapd bug update`, `story update`) blocks forever, so the 25 s timeout kills
+   it and the UI reports `退出码 1` with empty stdout, empty stderr — a failure
+   with no evidence. Measured on tapd 1.0.0: 0.5 s with `stdio: ["ignore", …]`,
+   never returns with the default pipe. Reading commands hide the bug because
+   they never touch stdin; only writes hand the user a blank error.
+22. **A `<button>` with an empty `onClick` is a lie, and a helper outside the
+   component cannot close over its state.** The four focus cards were real
+   buttons, styled with hover, wired to nothing — the panel looked broken without
+   saying so. The first fix referenced `setTab` from a helper defined outside the
+   component, so every click threw `ReferenceError: setTab is not defined` and the
+   page sat still: an exception is not a no-op, but it reads like one. Pass the
+   setter in, and give the render test the same source-level assertion that the
+   click path you just wrote is the one in the file.
+23. **Display normalisation must not reach the write path.** TAPD stores multiple
+   owners as `甲;乙`, and the mapped `owner` was tidied to `甲, 乙` for the row
+   meta. The 转派 dialog prefilled that tidied string and sent it back unchanged,
+   so one click turned two owners into a single owner literally named `甲, 乙`
+   (verified on bug `1145368483001012673`, then restored). Keep the raw value
+   beside the display value, prefill with the raw one, and convert separators only
+   when the user actually typed them.
+
+24. **A control that lives only inside a transient banner disappears with the
+   banner.** The TAPD project `<select>` lived in the login banner, and the banner
+   folded itself away exactly when a project was configured — so the control that
+   changes projects vanished at the moment a project first existed. Instruments
+   the user needs repeatedly belong in permanent chrome (the toolbar switcher),
+   not in a surface that exists to ask for something once. Check the empty state
+   and the filled state separately: a banner is allowed to be absent, a switch is
+   not.
+25. **Glass is a material for instruments, not for lists.** The pane is opaque
+   and scrolls; one static ambient light field sits behind it (`.lgws-ambient`,
+   blurred radial gradients, `aria-hidden`); the toolbar pill, project menu,
+   count cards and dialogs float over that field with `backdrop-filter: blur()
+   saturate()` plus a translucent fill, a 0.5px top specular and a 0.5px hairline.
+   Rows, inputs and search fields stay opaque: frosting dense text costs
+   legibility and buys nothing. Concentric radii (`inner = outer − padding`),
+   press feedback 0 ms in and eased out, and real answers for
+   `prefers-reduced-transparency`, `prefers-contrast` and `prefers-reduced-motion`
+   — a sheet that ignores them is a screenshot, not an interface.

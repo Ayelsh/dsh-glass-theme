@@ -30,32 +30,6 @@
  * Built by tools/build.mjs, which inlines src/css/*.css into `sheets` and
  * src/catalog.js into `catalog`. Edit the sources, never lib/client.js.
  */
-/* ---- temporary diagnostic beacon (remove after the dead-glass hunt) ---- */
-var __lgDiag = function (stage, data) {
-	try {
-		var payload = JSON.stringify({ stage: stage, at: Date.now(), data: data || {} });
-		if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-			navigator.sendBeacon('/dsh-glass-theme/diag', payload);
-			return;
-		}
-		fetch('/dsh-glass-theme/diag', { method: 'POST', body: payload, keepalive: true }).catch(function () {});
-	} catch (error) { /* diagnostics must never throw */ }
-};
-try {
-	__lgDiag('script', {
-		href: String(location.href).slice(0, 120),
-		mlMode: (window.__ModuleLoader__ || {}).mode,
-		sheetsNow: document.querySelectorAll('style[data-plugin-css]').length
-	});
-} catch (error) { /* beacon only */ }
-try {
-	window.addEventListener('error', function (event) {
-		__lgDiag('window-error', { message: String(event.message).slice(0, 200), where: String(event.filename || '').slice(-60), line: event.lineno });
-	});
-	window.addEventListener('unhandledrejection', function (event) {
-		__lgDiag('unhandled-rejection', { reason: String(event.reason).slice(0, 200) });
-	});
-} catch (error) { /* beacon only */ }
 
 window.__ModuleLoader__.load({
 	id: 'dsh-glass-theme',
@@ -79,12 +53,13 @@ window.__ModuleLoader__.load({
 		/** @type {Function} — inlined from src/settings-section.js at build time. */
 		const createSettingsSection = /*__SETTINGS_SECTION__*/null;
 
+		/** @type {Function} — inlined from src/workspace.js at build time. */
+		const createWorkspace = /*__WORKSPACE__*/null;
+
 		/** Build stamp, inlined at build time. */
 		const built = /*__BUILT__*/"";
 
 		const PACKAGE = 'dsh-glass-theme';
-
-		__lgDiag('factory', {});
 
 		/* ================================================================== *
 		 * Stylesheet mounting
@@ -99,25 +74,115 @@ window.__ModuleLoader__.load({
 		 * everywhere.
 		 */
 		const mount = () => {
-			const tags = [];
-			const head = document.head ?? document.documentElement;
-			for (const sheet of sheets) {
-				if (document.querySelector(`style[data-plugin-css="${sheet.id}"]`) !== null) continue;
-				const tag = document.createElement('style');
-				tag.dataset.plugin = PACKAGE;
-				tag.dataset.pluginCss = sheet.id;
-				tag.textContent = sheet.css;
-				head.appendChild(tag);
-				tags.push(tag);
-			}
+			let raising = false;
+
+			/**
+			 * Put every sheet in the document and move it to the end of <head>.
+			 *
+			 * Appending once at boot is not enough. Three things take the skin back
+			 * out from under us, all of them silent:
+			 *
+			 *   - the shell owns every `style[data-plugin-css]` tag and rebuilds its
+			 *     set when the plugin list settles, which drops tags it never
+			 *     registered (ours);
+			 *   - its own CSS modules are injected as their client modules load, so
+			 *     a later tag at equal specificity beats ours (only a handful of the
+			 *     skin's rules carry `!important`);
+			 *   - a hot reload disposes this effect, and the next mount used to skip
+			 *     sheets whose tag it could still see — a tag the old disposer then
+			 *     removed, leaving nothing behind.
+			 *
+			 * So the mount is idempotent and re-entrant: existing tags are reused and
+			 * re-appended, missing ones are rebuilt from `sheets`.
+			 */
 			const raise = () => {
-				for (const tag of tags) if (tag.isConnected) document.head.appendChild(tag);
+				if (raising) return;
+				const head = document.head ?? document.documentElement ?? null;
+				if (head === null || typeof document.createElement !== 'function') return;
+				raising = true;
+				try {
+					for (const sheet of sheets) {
+						let tag = document.querySelector(`style[data-plugin-css="${sheet.id}"]`);
+						if (tag === null || tag === undefined) {
+							tag = document.createElement('style');
+							tag.dataset.plugin = PACKAGE;
+							tag.dataset.pluginCss = sheet.id;
+							tag.textContent = sheet.css;
+						}
+						// Append-or-move: the skin is always the last cascade layer.
+						head.appendChild(tag);
+					}
+				} finally {
+					raising = false;
+				}
 			};
+
 			raise();
 			// The shell installs the theme layer during boot; re-raise once the
 			// first paint settles so the skin always lands on top of it.
 			if (typeof requestAnimationFrame === 'function') requestAnimationFrame(raise);
-			return tags;
+
+			const stops = [];
+
+			// Another stylesheet arriving is the normal case, not an error: wait for
+			// the batch to finish (rAF) and only then take the last slot back.
+			if (typeof MutationObserver === 'function' && document.head !== null && document.head !== undefined) {
+				let queued = false;
+				const flush = () => {
+					queued = false;
+					raise();
+				};
+				const observer = new MutationObserver((records) => {
+					if (raising || queued) return;
+					let relevant = false;
+					for (const record of records) {
+						for (const node of record.addedNodes ?? []) {
+							const name = node === null || node === undefined ? '' : node.nodeName;
+							if (name === 'STYLE' || name === 'LINK') {
+								relevant = true;
+								break;
+							}
+						}
+						if (relevant) break;
+					}
+					if (!relevant) return;
+					queued = true;
+					if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
+					else if (typeof setTimeout === 'function') setTimeout(flush, 0);
+					else flush();
+				});
+				observer.observe(document.head, { childList: true });
+				stops.push(() => observer.disconnect());
+			}
+
+			// Removal cannot be observed as an addition, and a shell rebuild that
+			// replaces <head> wholesale fires nothing we can hook. A cheap poll is
+			// the backstop; it exits as soon as the document is gone.
+			if (typeof setInterval === 'function' && typeof document.querySelectorAll === 'function') {
+				const timer = setInterval(() => {
+					try {
+						if (document.visibilityState === 'hidden') return;
+						const live = document.querySelectorAll(`style[data-plugin="${PACKAGE}"]`).length;
+						const last = document.head === null || document.head === undefined ? null : document.head.lastElementChild;
+						const ours = last !== null && last !== undefined && last.dataset !== undefined && last.dataset.plugin === PACKAGE;
+						if (live < sheets.length || !ours) raise();
+					} catch (error) {
+						/* the document went away mid-poll */
+					}
+				}, 750);
+				stops.push(() => clearInterval(timer));
+			}
+
+			return () => {
+				for (const stop of stops) {
+					try {
+						stop();
+					} catch (error) {
+						/* already stopped */
+					}
+				}
+				for (const tag of document.querySelectorAll(`style[data-plugin="${PACKAGE}"]`)) tag.remove();
+			};
 		};
 
 		/** Mark the document so the skin's own rules can key on being active. */
@@ -807,6 +872,81 @@ window.__ModuleLoader__.load({
 		 * Lifecycle
 		 * ================================================================== */
 
+		/* ================================================================== *
+		 * Diagnostics
+		 *
+		 * A skin that fails to land looks exactly like a skin that never ran, and
+		 * the renderer offers no way to ask which. One snapshot is posted to the
+		 * host after mount — and once more when boot has settled — and written to
+		 * a single JSON file under the OS temp directory. Counts, ids and computed
+		 * colors only: no conversation content ever leaves the page.
+		 * ================================================================== */
+
+		const DIAG_PATH = '/dsh-glass-theme/ws/diag';
+
+		const snapshot = () => {
+			const out = {
+				built,
+				sheets: sheets.length,
+				mounted: null,
+				headStyles: null,
+				lastOurs: null,
+				theme: {
+					html: document.documentElement === null || document.documentElement === undefined ? null : document.documentElement.getAttribute('data-dsh-glass-theme') !== null,
+					body: document.body === null || document.body === undefined ? null : document.body.hasAttribute('data-dsh-glass-theme'),
+					dark: document.body === null || document.body === undefined ? null : document.body.hasAttribute('data-ds-dark-theme'),
+				},
+				computed: null,
+				viewport: null,
+			};
+			try {
+				if (typeof document.querySelectorAll === 'function') {
+					out.mounted = document.querySelectorAll(`style[data-plugin="${PACKAGE}"]`).length;
+					out.headStyles = document.querySelectorAll('style').length;
+				}
+				const last = document.head === null || document.head === undefined ? null : document.head.lastElementChild;
+				out.lastOurs = last !== null && last !== undefined && last.dataset !== undefined ? last.dataset.plugin === PACKAGE : null;
+			} catch (error) {
+				/* a stub document */
+			}
+			try {
+				if (typeof getComputedStyle === 'function' && document.body !== null) {
+					const body = getComputedStyle(document.body);
+					const before = getComputedStyle(document.body, '::before');
+					out.computed = {
+						background: body.backgroundColor,
+						image: String(body.backgroundImage ?? '').slice(0, 120),
+						before: String(before.backgroundImage ?? '').slice(0, 120),
+						filter: String(before.backdropFilter ?? before.webkitBackdropFilter ?? '').slice(0, 60),
+					};
+				}
+				out.viewport = `${String(window.innerWidth)}x${String(window.innerHeight)}`;
+			} catch (error) {
+				/* older engines */
+			}
+			return out;
+		};
+
+		const report = () => {
+			if (typeof fetch !== 'function') return;
+			const send = () => {
+				try {
+					void fetch(DIAG_PATH, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify(snapshot()),
+						keepalive: true,
+					}).catch(() => {});
+				} catch (error) {
+					/* the host is gone */
+				}
+			};
+			send();
+			// Second snapshot once the plugins and the theme layer have all landed;
+			// the first one can be written before the shell's own CSS arrives.
+			if (typeof setTimeout === 'function') setTimeout(send, 3000);
+		};
+
 		const clear = () => {
 			document.documentElement.removeAttribute('data-dsh-glass-theme');
 			document.documentElement.removeAttribute('data-dsh-glass-theme-built');
@@ -822,12 +962,6 @@ window.__ModuleLoader__.load({
 			} catch (error) {
 				console.error('dsh-glass-theme: could not mark the document', error);
 			}
-			try {
-				__lgDiag('applied', {
-					htmlAttr: document.documentElement.getAttribute('data-dsh-glass-theme'),
-					bodyAttr: document.body.getAttribute('data-dsh-glass-theme')
-				});
-			} catch (error) { /* beacon only */ }
 
 			try {
 				ctx.effect(() => trackModality());
@@ -983,30 +1117,44 @@ window.__ModuleLoader__.load({
 				console.error('dsh-glass-theme: could not install the settings section', error);
 			}
 
+			/* The 工作空间 workbench: a whole page (sidebar entry + main
+			   panel), registered the same way the host's own WSL page is —
+			   the `sidebar.panellist` icon and the `main` slot share one id,
+			   and the shell owns navigation. Like the settings section above,
+			   it lives in its own effect so a registration failure cannot
+			   take the skin down with it. */
+			try {
+				ctx.effect(() => {
+					let done = null;
+					try {
+						done = createWorkspace(require, ctx, catalog).register();
+					} catch (error) {
+						console.error('dsh-glass-theme: could not register the workspace panel', error);
+					}
+					return () => {
+						try {
+							if (typeof done === 'function') done();
+						} catch (error) {
+							/* already disposed */
+						}
+					};
+				});
+			} catch (error) {
+				console.error('dsh-glass-theme: could not install the workspace panel', error);
+			}
+
 			try {
 				// ctx.effect gives the disposer a defined lifetime: the sheets leave
 				// with the plugin, including on hot reload.
 				ctx.effect(() => {
-					const tags = mount();
-					try {
-						__lgDiag('sheets', {
-							count: tags.length,
-							ids: tags.map((tag) => String(tag.getAttribute('data-plugin-css')).slice(-40))
-						});
-					} catch (error) { /* beacon only */ }
-					setTimeout(() => {
-						try {
-							__lgDiag('settled', {
-								mlMode: (window.__ModuleLoader__ || {}).mode,
-								htmlAttr: document.documentElement.getAttribute('data-dsh-glass-theme'),
-								bodyAttr: document.body.getAttribute('data-dsh-glass-theme'),
-								glassSheets: document.querySelectorAll('style[data-plugin="dsh-glass-theme"]').length,
-								allSheets: document.querySelectorAll('style[data-plugin-css]').length
-							});
-						} catch (error) { /* beacon only */ }
-					}, 5000);
+					const unmount = mount();
+					report();
 					return () => {
-						for (const tag of tags) tag.remove();
+						try {
+							unmount();
+						} catch (error) {
+							/* already torn down */
+						}
 						clear();
 					};
 				});

@@ -132,7 +132,11 @@ var PREFS = {
   chatSend: { type: "boolean", default: true },
   chatReveal: { type: "choice", values: CHAT_REVEAL_MODES, default: CHAT_REVEAL_OFF },
   caretMotion: { type: "choice", values: CARET_MOTIONS, default: CARET_MOTION_TYPING },
-  messageEnter: { type: "choice", values: MESSAGE_ENTER_MODES, default: MESSAGE_ENTER_FLIGHT }
+  messageEnter: { type: "choice", values: MESSAGE_ENTER_MODES, default: MESSAGE_ENTER_FLIGHT },
+  /** 工作空间 panel: override binary for tapd-ai-cli; empty = `tapd` from PATH. */
+  tapdCommand: { type: "text", default: "", max: 128 },
+  /** 工作空间 panel: override binary for the WeCom CLI; empty = `wecom-cli` from PATH. */
+  wecomCommand: { type: "text", default: "", max: 128 }
 };
 var PREF_DEFAULTS = Object.freeze(Object.fromEntries(
   Object.entries(PREFS).map(([key, spec]) => [key, spec.default])

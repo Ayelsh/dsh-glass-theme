@@ -35,6 +35,7 @@ const SHEETS = [
   ['settings-section', 'settings-section.css'],
   ['settings', 'settings.css'],
   ['pages', 'pages.css'],
+  ['workspace', 'workspace.css'],
   ['widgets', 'widgets.css'],
   ['motion', 'motion.css'],
 ]
@@ -101,6 +102,7 @@ const spliceFunction = (file) => {
 const pickerSource = spliceFunction('picker.js')
 const statsSource = spliceFunction('stats.js')
 const settingsSectionSource = spliceFunction('settings-section.js')
+const workspaceSource = spliceFunction('workspace.js')
 
 const literal = (value) => JSON.stringify(value, null, 0)
 
@@ -110,6 +112,7 @@ const out = template
   .replace('/*__PICKER__*/null', () => pickerSource)
   .replace('/*__STATS__*/null', () => statsSource)
   .replace('/*__SETTINGS_SECTION__*/null', () => settingsSectionSource)
+  .replace('/*__WORKSPACE__*/null', () => workspaceSource)
   .replace('/*__BUILT__*/""', () => literal(new Date().toISOString()))
 
 mkdirSync(resolve(root, 'lib'), { recursive: true })

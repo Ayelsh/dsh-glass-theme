@@ -8,3 +8,13 @@ node_modules/
 .tmp/
 .preview/
 .acl-recovery/
+
+# The tapd CLI writes ./.tapd.json into its working directory; never commit it.
+.tapd.json
+
+# Local build artifacts and dev captures: tarballs ship via GitHub releases,
+# screenshots/probe logs are throwaway.
+dsh-glass-theme-*.tgz
+out/
+.probe/
+.shot/

@@ -1,0 +1,2267 @@
+/* ====================================================================== *
+ * The workspace page
+ *
+ * An instrument panel, not a document. Three layers, in order:
+ *
+ *   1. the pane            — a solid surface (`.lgws-page`);
+ *   2. the ambient field   — one soft, static light bloom behind everything
+ *                            (`.lgws-ambient`), so glass has something to sit
+ *                            over without blurring live content;
+ *   3. the instruments     — the project pill, its menu, the count cards and
+ *                            the dialogs. Only these carry frosted material.
+ *
+ * Rows and search fields stay OPAQUE. Glass on glass turns to plastic, and
+ * frosting a scrolling list is a legibility tax paid for nothing. Corners are
+ * concentric: an inner element's radius is the outer radius minus the gap it
+ * sits in (`--lgws-r-menu` 22 → item 14 inside 8px of padding).
+ * ====================================================================== */
+
+.lgws-page {
+	/* Material, expressed once. */
+	--lgws-glass-rest: var(--lg-glass-2);
+	--lgws-glass-menu: var(--lg-glass-3);
+	--lgws-sheen: linear-gradient(157deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 46%);
+	--lgws-sheen-dark: linear-gradient(157deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 48%);
+	--lgws-r-menu: 22px;
+	--lgws-r-menu-inner: calc(var(--lgws-r-menu) - 8px);
+	--lgws-hairline-inset: inset 0 0 0 0.5px var(--lg-hairline);
+	--lgws-top-specular: inset 0 0.5px 0 var(--lg-edge-top);
+	--lgws-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+	position: relative;
+	display: block;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+	background-color: var(--lg-surface);
+	color: var(--dsw-alias-label-primary);
+}
+
+body[data-ds-dark-theme] .lgws-page {
+	--lgws-sheen: var(--lgws-sheen-dark);
+}
+
+/* Layer 2 — the light field. Static, unfocusable, never scrolls; a gradient
+ * rather than a blurred element so it cannot smear text that passes over it. */
+.lgws-ambient {
+	position: absolute;
+	inset: -18% -8%;
+	pointer-events: none;
+	z-index: 0;
+	background:
+		radial-gradient(42% 34% at 14% 4%, color-mix(in srgb, var(--lg-accent) 26%, transparent), transparent 72%),
+		radial-gradient(34% 30% at 88% 10%, color-mix(in srgb, #f0a6ff 18%, transparent), transparent 74%),
+		radial-gradient(52% 42% at 64% 98%, color-mix(in srgb, #74d2ff 16%, transparent), transparent 76%);
+	filter: blur(38px) saturate(125%);
+	opacity: 0.5;
+}
+
+body[data-ds-dark-theme] .lgws-ambient {
+	opacity: 0.42;
+	filter: blur(52px) saturate(150%);
+}
+
+/* Layer 3's canvas — the single scroll surface. */
+.lgws-scroll {
+	position: relative;
+	z-index: 1;
+	height: 100%;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 1000px;
+	margin: 0 auto;
+	padding: 26px 30px 52px;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+
+.lgws-scroll::-webkit-scrollbar {
+	width: 10px;
+}
+
+.lgws-scroll::-webkit-scrollbar-thumb {
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background-clip: content-box;
+	background-color: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+}
+
+.lgws-scrollCenter {
+	justify-content: center;
+	align-items: center;
+	padding-bottom: 26px;
+}
+
+/* ---- Header ----------------------------------------------------------- */
+
+.lgws-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.lgws-headText {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.lgws-title {
+	font: var(--dsw-font-xl-24);
+	letter-spacing: -0.022em;
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-subtitle {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-tertiary);
+	font-variant-numeric: tabular-nums;
+}
+
+.lgws-headTools {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+/* ---- Toolbar ---------------------------------------------------------- */
+
+/* The project switcher's home. A permanent row: the banner that used to own
+ * the picker folds away once a project is configured, which is exactly when
+ * the control is first wanted. */
+.lgws-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 38px;
+	flex-wrap: wrap;
+}
+
+.lgws-toolbarSpacer {
+	flex: 1 1 auto;
+}
+
+/* ---- The project switcher --------------------------------------------- */
+
+.lgws-project {
+	position: relative;
+	min-width: 0;
+}
+
+.lgws-projectButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 9px;
+	max-width: 100%;
+	min-height: 38px;
+	margin: 0;
+	padding: 6px 12px 6px 11px;
+	box-sizing: border-box;
+	border: none;
+	border-radius: var(--lg-r-pill);
+	background-color: var(--lgws-glass-rest);
+	background-image: var(--lgws-sheen);
+	color: var(--dsw-alias-label-primary);
+	text-align: left;
+	cursor: pointer;
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	backdrop-filter: blur(20px) saturate(180%);
+	box-shadow:
+		var(--lg-shadow-1),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	transition:
+		transform 180ms var(--lgws-ease),
+		box-shadow 220ms var(--lgws-ease),
+		background-color 220ms var(--lgws-ease);
+}
+
+.lgws-projectButton:hover {
+	background-color: color-mix(in srgb, var(--lgws-glass-rest) 62%, var(--lg-glass-tint));
+	box-shadow:
+		var(--lg-shadow-2),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+}
+
+/* Press is instant, release is eased: the material reacts, it does not sag. */
+.lgws-projectButton:active {
+	transform: scale(0.97);
+	transition-duration: 0ms;
+}
+
+.lgws-projectButton:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 3px var(--lg-accent-ring),
+		var(--lg-shadow-1),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+}
+
+.lgws-projectButtonOpen {
+	background-color: color-mix(in srgb, var(--lgws-glass-menu) 86%, transparent);
+}
+
+.lgws-projectGlyphSvg {
+	flex: none;
+	color: var(--lg-accent);
+}
+
+.lgws-projectText {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+.lgws-projectLabel {
+	font: var(--dsw-font-xxxs-strong-11);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-projectName {
+	font: var(--dsw-font-xs-strong-13);
+	color: var(--dsw-alias-label-primary);
+	max-width: 260px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.lgws-projectChevron {
+	flex: none;
+	font-size: 12px;
+	line-height: 1;
+	color: var(--dsw-alias-label-tertiary);
+	transition: transform 220ms var(--lgws-ease);
+}
+
+.lgws-projectChevronOpen {
+	transform: rotate(180deg);
+}
+
+/* Layer 3 material — this is the one surface that must read as glass over the
+ * ambient field: the menu is what the user is looking *through*. */
+.lgws-projectMenu {
+	position: absolute;
+	top: calc(100% + 8px);
+	left: 0;
+	z-index: 40;
+	width: 340px;
+	max-width: min(340px, calc(100vw - 64px));
+	padding: 8px;
+	box-sizing: border-box;
+	border-radius: var(--lgws-r-menu);
+	background-color: var(--lgws-glass-menu);
+	background-image: var(--lgws-sheen);
+	-webkit-backdrop-filter: blur(30px) saturate(190%);
+	backdrop-filter: blur(30px) saturate(190%);
+	box-shadow:
+		var(--lg-shadow-3),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	transform-origin: top left;
+	animation: lgws-menu-in 190ms var(--lgws-ease) both;
+}
+
+@keyframes lgws-menu-in {
+	from {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.lgws-projectMenuHead {
+	padding: 6px 8px 8px;
+	font: var(--dsw-font-xxxs-strong-11);
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-projectSearch {
+	width: 100%;
+	height: 32px;
+	margin-bottom: 6px;
+	box-sizing: border-box;
+}
+
+.lgws-projectList {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 300px;
+	padding: 0 2px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.lgws-projectItem {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 9px 10px;
+	box-sizing: border-box;
+	border: none;
+	border-radius: var(--lgws-r-menu-inner);
+	background-color: transparent;
+	color: var(--dsw-alias-label-primary);
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 140ms var(--lgws-ease);
+}
+
+.lgws-projectItem:hover {
+	background-color: var(--lg-glass-tint);
+}
+
+.lgws-projectItem:active {
+	background-color: color-mix(in srgb, var(--lg-accent) 16%, var(--lg-glass-tint));
+}
+
+.lgws-projectItem:focus-visible {
+	outline: none;
+	box-shadow: inset 0 0 0 2px var(--lg-accent-ring);
+}
+
+.lgws-projectItem:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+/* The current project is chosen, not merely hovered: accent fill, no outline. */
+.lgws-projectItemOn {
+	background-color: color-mix(in srgb, var(--lg-accent-soft) 72%, transparent);
+}
+
+.lgws-projectItemOn:hover {
+	background-color: color-mix(in srgb, var(--lg-accent-soft) 86%, transparent);
+}
+
+.lgws-projectItemName {
+	font: var(--dsw-font-xs-13);
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.lgws-projectItemId {
+	font-family: var(--dsw-font-mono);
+	font-size: 10px;
+	letter-spacing: 0.02em;
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-projectCheck {
+	font-size: 12px;
+	line-height: 1;
+	color: var(--lg-accent);
+}
+
+.lgws-projectEmpty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 20px 10px;
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-tertiary);
+	text-align: center;
+}
+
+.lgws-projectFoot {
+	margin-top: 6px;
+	padding: 8px 8px 2px;
+	border-top: 0.5px solid var(--lg-hairline);
+	font: var(--dsw-font-xxxs-11);
+	color: var(--dsw-alias-label-tertiary);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---- CLI status pills -------------------------------------------------- */
+
+.lgws-clistatus {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 26px;
+	padding: 0 10px;
+	border-radius: var(--lg-r-pill);
+	background-color: var(--lg-glass-tint);
+	box-shadow:
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	font: var(--dsw-font-xxxs-strong-11);
+	letter-spacing: 0.02em;
+	color: var(--dsw-alias-label-secondary);
+	white-space: nowrap;
+}
+
+.lgws-clidot {
+	width: 6px;
+	height: 6px;
+	flex: none;
+	border-radius: 50%;
+	background-color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-clistatusOn .lgws-clidot {
+	background-color: var(--dsw-alias-state-success-primary);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 22%, transparent);
+}
+
+.lgws-clistatusUnauth {
+	background-color: color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 44%, var(--lg-glass-tint));
+	box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 42%, transparent);
+}
+
+.lgws-clistatusUnauth .lgws-clidot {
+	background-color: var(--dsw-alias-state-warn-primary);
+	box-shadow: none;
+}
+
+.lgws-clistatusNote {
+	font: var(--dsw-font-xxxs-strong-11);
+	letter-spacing: 0.02em;
+	color: var(--dsw-alias-state-warn-primary);
+}
+
+/* ---- Refresh ----------------------------------------------------------- */
+
+.lgws-refresh {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	flex: none;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-secondary);
+	font-size: 14px;
+	line-height: 1;
+	cursor: pointer;
+	box-shadow:
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	transition:
+		transform 150ms var(--lgws-ease),
+		background-color 180ms var(--lgws-ease),
+		color 180ms var(--lgws-ease);
+}
+
+.lgws-refresh:hover:not(:disabled) {
+	background-color: color-mix(in srgb, var(--lg-glass-tint) 60%, var(--dsw-alias-interactive-bg-hover));
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-refresh:active:not(:disabled) {
+	transform: scale(0.92);
+	transition-duration: 0ms;
+}
+
+.lgws-refresh:disabled {
+	cursor: default;
+	opacity: 0.7;
+}
+
+/* ---- Demo / install banner --------------------------------------------- */
+
+.lgws-demoBanner {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 16px;
+	border-radius: var(--lg-r-lg);
+	background-color: color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 26%, var(--lg-surface-raised));
+	box-shadow:
+		var(--lgws-hairline-inset),
+		inset 2px 0 0 var(--dsw-alias-state-warn-primary);
+}
+
+.lgws-demoTitle {
+	font: var(--dsw-font-xs-strong-13);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-demoGrid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.lgws-demoCol {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 1 1 260px;
+	min-width: 0;
+	padding: 12px;
+	border-radius: var(--lg-r-md);
+	background-color: color-mix(in srgb, var(--lg-surface) 70%, transparent);
+	box-shadow: var(--lgws-hairline-inset);
+}
+
+.lgws-demoRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.lgws-demoNote {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+	line-height: 1.5;
+}
+
+.lgws-installButton {
+	height: 28px;
+	padding: 0 12px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background-color: var(--lg-accent);
+	color: #fff;
+	font: var(--dsw-font-xxxs-strong-11);
+	cursor: pointer;
+	box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.3);
+	transition:
+		filter 140ms var(--lgws-ease),
+		transform 90ms var(--lgws-ease);
+}
+
+.lgws-installButton:hover:not(:disabled) {
+	filter: brightness(1.06);
+}
+
+.lgws-installButton:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+.lgws-installButton:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.lgws-installHint {
+	font: var(--dsw-font-xxxs-11);
+	color: var(--dsw-alias-label-tertiary);
+	overflow-wrap: anywhere;
+}
+
+.lgws-installNote {
+	font: var(--dsw-font-xxxs-11);
+	color: var(--dsw-alias-label-secondary);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	max-height: 96px;
+	overflow: auto;
+}
+
+.lgws-installNoteError {
+	color: var(--dsw-alias-state-error-primary);
+}
+
+/* ---- Login banner ------------------------------------------------------ */
+
+.lgws-authBanner {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px 18px;
+	border-radius: var(--lg-r-lg);
+	background-color: color-mix(in srgb, var(--lg-accent-soft) 46%, var(--lg-surface-raised));
+	box-shadow:
+		var(--lgws-hairline-inset),
+		var(--lgws-top-specular);
+}
+
+.lgws-authTitle {
+	font: var(--dsw-font-xs-strong-13);
+	letter-spacing: -0.01em;
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-authRow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+}
+
+.lgws-authName {
+	flex: 0 0 auto;
+	min-width: 52px;
+	font: var(--dsw-font-xxs-strong-12);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-authText {
+	flex: 1 1 auto;
+	min-width: 0;
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+}
+
+.lgws-authDetail {
+	flex: 1 1 100%;
+	font: var(--dsw-font-xxxs-11);
+	color: var(--dsw-alias-label-tertiary);
+	overflow-wrap: anywhere;
+}
+
+.lgws-authFields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+/* TAPD project picker: shown only while credentials exist but no workspace id
+   does, so it sits where the credential fields would otherwise be. */
+.lgws-wsSelect {
+	flex: 0 1 auto;
+	max-width: 260px;
+	margin-top: 6px;
+	padding: 4px 8px;
+	border-radius: 8px;
+	border: 1px solid var(--dsw-alias-border-l2);
+	/* An opaque fill, not a glass one. Chrome paints the OPEN list with the
+     <select>'s own background and copies a transparent one verbatim, with no
+     themed fallback (internal_popup_menu.cc) — a transparent control opened a
+     white list of dark-theme rows, i.e. twelve projects that were invisible
+     until hovered. The option rule below is the one that actually inks the
+     rows; this keeps the frame and the closed control solid too. */
+	background-color: var(--dsw-alias-bg-layer-1);
+	color: var(--dsw-alias-label-primary);
+	font: var(--dsw-font-xxs-12);
+	cursor: pointer;
+}
+
+/* The browser draws the popup itself, so a row can only be themed through the
+   option element — which Chrome does honour (its own background and colour are
+   applied per row). Same fill as the control: one tone across the open list. */
+.lgws-wsSelect option {
+	background-color: var(--dsw-alias-bg-layer-1);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-wsSelect:disabled {
+	cursor: default;
+	opacity: 0.7;
+}
+
+.lgws-authInput {
+	flex: 0 1 220px;
+	min-width: 140px;
+	height: 30px;
+	padding: 0 10px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background-color: var(--lg-surface-sunken);
+	box-shadow: inset 0 0 0 1px var(--lg-hairline);
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-primary);
+	box-sizing: border-box;
+}
+
+.lgws-authInput::placeholder {
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-authInput:focus {
+	outline: none;
+	box-shadow:
+		inset 0 0 0 1px var(--lg-accent),
+		0 0 0 3px var(--lg-accent-ring);
+}
+
+.lgws-authButton {
+	flex: 0 0 auto;
+	height: 30px;
+	padding: 0 14px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background: var(--lg-accent);
+	box-shadow:
+		inset 0 0.5px 0 rgba(255, 255, 255, 0.32),
+		0 1px 2px var(--lg-shadow-1);
+	font: var(--dsw-font-xs-strong-13);
+	color: #fff;
+	cursor: pointer;
+	transition:
+		filter var(--lg-t-fast) var(--lg-ease-out),
+		transform 70ms var(--lg-ease-out);
+}
+
+.lgws-authButton:hover:not(:disabled) {
+	filter: brightness(1.06);
+}
+
+.lgws-authButton:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+.lgws-authButton:disabled {
+	opacity: 0.55;
+	cursor: default;
+	transform: none;
+}
+
+.lgws-authQr {
+	display: block;
+	width: 180px;
+	height: 180px;
+	padding: 8px;
+	border-radius: var(--lg-r-md);
+	background-color: #fff;
+	box-shadow:
+		inset 0 0 0 1px var(--lg-hairline),
+		0 1px 2px var(--lg-shadow-1);
+	object-fit: contain;
+	box-sizing: border-box;
+}
+
+.lgws-authHint {
+	flex: 1 1 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font: var(--dsw-font-xxxs-11);
+	color: var(--dsw-alias-label-tertiary);
+	line-height: 1.5;
+}
+
+.lgws-authHintText {
+	display: block;
+}
+
+.lgws-authHint a {
+	color: var(--lg-accent);
+	text-decoration: none;
+}
+
+.lgws-authHint a:hover {
+	text-decoration: underline;
+}
+
+/* The token page is the one thing a first-run TAPD user must reach, so it is
+ * a real button (focus ring, hover, ≥24px target) rather than a link in a
+ * sentence. */
+.lgws-authLink {
+	align-self: flex-start;
+	max-width: 100%;
+	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 24px;
+	padding: 0 10px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background-color: var(--lg-accent-soft, rgba(120, 160, 255, 0.14));
+	color: var(--lg-accent);
+	font: var(--dsw-font-xxxs-11);
+	font-weight: 510;
+	cursor: pointer;
+	transition:
+		background-color 140ms ease,
+		color 140ms ease;
+}
+
+.lgws-authLink:hover {
+	background-color: color-mix(in srgb, var(--lg-accent-soft) 70%, var(--lg-accent) 12%);
+}
+
+.lgws-authLink:active {
+	transform: scale(0.97);
+}
+
+.lgws-authNote {
+	flex: 1 1 100%;
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+	overflow-wrap: anywhere;
+}
+
+.lgws-authNoteError {
+	color: var(--dsw-alias-state-error-primary);
+}
+
+.lgws-authLog {
+	flex: 1 1 100%;
+	max-height: 120px;
+	margin: 0;
+	padding: 8px 10px;
+	overflow: auto;
+	border-radius: var(--lg-r-sm);
+	background-color: var(--lg-surface-sunken);
+	box-shadow: inset 0 0 0 1px var(--lg-hairline);
+	font-family: var(--ds-font-family-code);
+	font-size: 11px;
+	line-height: 1.5;
+	color: var(--dsw-alias-label-secondary);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	box-sizing: border-box;
+}
+
+/* Section-level "not signed in": the fetch did not fail, the CLI simply has
+ * no credentials yet. One line plus the action — never the raw CLI JSON. */
+.lgws-authInline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 14px;
+	padding: 10px 12px;
+	border-radius: var(--lg-r-md);
+	background-color: color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 30%, var(--lg-surface-raised));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 26%, var(--lg-hairline));
+}
+
+.lgws-authInlineText {
+	display: flex;
+	flex: 1 1 220px;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 8px;
+	min-width: 0;
+}
+
+.lgws-authInlineName {
+	font: var(--dsw-font-xs-strong-13);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-authInlineHint {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+}
+
+/* ---- Render-crash card (WorkspaceErrorBoundary) ----------------------- */
+
+.lgws-crashCard {
+	margin: 32px auto;
+	max-width: 640px;
+	padding: 20px 22px;
+	border-radius: var(--lg-r-lg);
+	background: var(--lg-surface-raised);
+	border: 1px solid var(--dsw-alias-state-error-primary);
+	box-shadow: 0 1px 2px rgba(16, 22, 40, 0.04);
+}
+
+.lgws-crashTitle {
+	font: var(--dsw-font-s-14);
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	color: var(--dsw-alias-state-error-primary);
+	margin-bottom: 6px;
+}
+
+.lgws-crashBody {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+	margin-bottom: 10px;
+}
+
+.lgws-crashPre {
+	font-family: var(--ds-font-family-code);
+	font-size: 11px;
+	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	padding: 10px 12px;
+	border-radius: var(--lg-r-md);
+	background: var(--lg-surface-sunken);
+	border: 1px solid var(--lg-hairline);
+	color: var(--dsw-alias-label-secondary);
+	max-height: 260px;
+	overflow: auto;
+}
+
+/* ---- Count cards ------------------------------------------------------- */
+
+/* Glass here is legitimate: the cards sit over the static ambient field, not
+ * over other glass and not over a scrolling list. */
+.lgws-focus {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+	gap: 12px;
+}
+
+.lgws-focusCard {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+	margin: 0;
+	padding: 15px 17px 16px;
+	box-sizing: border-box;
+	border: none;
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lgws-glass-rest);
+	background-image: var(--lgws-sheen);
+	-webkit-backdrop-filter: blur(18px) saturate(170%);
+	backdrop-filter: blur(18px) saturate(170%);
+	box-shadow:
+		var(--lg-shadow-1),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		transform 200ms var(--lgws-ease),
+		box-shadow 220ms var(--lgws-ease);
+}
+
+.lgws-focusCard:hover {
+	transform: translateY(-1px);
+	box-shadow:
+		var(--lg-shadow-2),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+}
+
+.lgws-focusCard:active {
+	transform: scale(0.985) translateY(0);
+	transition-duration: 0ms;
+}
+
+.lgws-focusCard:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 3px var(--lg-accent-ring),
+		var(--lg-shadow-1),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+}
+
+.lgws-focusCount {
+	font: var(--dsw-font-xl-24);
+	font-weight: 640;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-focusLabel {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+}
+
+.lgws-focus-bug .lgws-focusCount {
+	color: var(--dsw-alias-state-error-primary);
+}
+
+.lgws-focus-attention .lgws-focusCount {
+	color: var(--dsw-alias-state-warn-primary);
+}
+
+/* ---- Segmented tabs ---------------------------------------------------- */
+
+.lgws-tabs {
+	position: relative;
+	display: inline-flex;
+	align-self: flex-start;
+	align-items: center;
+	gap: 2px;
+	padding: 3px;
+	border-radius: var(--lg-r-pill);
+	background-color: var(--lg-glass-tint);
+	box-shadow:
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+}
+
+.lgws-tabPlate {
+	position: absolute;
+	top: 3px;
+	left: 0;
+	height: calc(100% - 6px);
+	border-radius: var(--lg-r-pill);
+	background-color: var(--lg-surface-raised);
+	box-shadow:
+		0 1px 2px rgba(16, 22, 40, 0.08),
+		inset 0 0.5px 0 var(--lg-edge-top),
+		inset 0 0 0 0.5px var(--lg-hairline);
+	transition:
+		transform var(--lg-t-base) var(--lg-ease-spring),
+		width var(--lg-t-base) var(--lg-ease-spring);
+	will-change: transform;
+	pointer-events: none;
+}
+
+.lgws-tab {
+	position: relative;
+	z-index: 1;
+	height: 28px;
+	padding: 0 14px;
+	border: none;
+	border-radius: var(--lg-r-pill);
+	background: transparent;
+	color: var(--dsw-alias-label-secondary);
+	font: var(--dsw-font-xxs-12);
+	cursor: pointer;
+	transition:
+		color 180ms var(--lgws-ease),
+		transform 120ms var(--lgws-ease);
+}
+
+.lgws-tab:hover {
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-tab:active {
+	transform: scale(0.97);
+	transition-duration: 0ms;
+}
+
+.lgws-tab:focus-visible {
+	outline: none;
+	box-shadow: inset 0 0 0 2px var(--lg-accent-ring);
+}
+
+.lgws-tabActive {
+	color: var(--dsw-alias-label-primary);
+	font-weight: 560;
+}
+
+/* ---- Sections and rows ------------------------------------------------- */
+
+.lgws-section {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.lgws-sectionTitle {
+	font: var(--dsw-font-s-strong-14);
+	letter-spacing: -0.012em;
+	color: var(--dsw-alias-label-primary);
+}
+
+/* Opaque by design: frosting a list of dense text costs legibility and buys
+ * nothing — the material lives on the instruments above it. */
+.lgws-rows {
+	display: flex;
+	flex-direction: column;
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lg-surface-raised);
+	box-shadow:
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	padding: 6px;
+}
+
+.lgws-rows > * + * {
+	box-shadow: inset 0 0.5px 0 var(--lg-hairline);
+}
+
+.lgws-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	border-radius: var(--lg-r-md);
+	transition: background-color 140ms var(--lgws-ease);
+	min-width: 0;
+}
+
+.lgws-row:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.lgws-rowAttention {
+	box-shadow: inset 2px 0 0 var(--dsw-alias-state-warn-primary);
+}
+
+.lgws-rowKind {
+	flex: 0 0 auto;
+}
+
+.lgws-rowMain {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.lgws-rowTitle {
+	font: var(--dsw-font-s-14);
+	color: var(--dsw-alias-label-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.lgws-rowId {
+	font-family: var(--dsw-font-mono);
+	font-size: 10px;
+	letter-spacing: 0.02em;
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-rowMeta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-tertiary);
+	font-variant-numeric: tabular-nums;
+}
+
+.lgws-rowMuted {
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-rowOverdue {
+	color: var(--dsw-alias-state-error-primary);
+	font-weight: 520;
+}
+
+.lgws-rowNote {
+	font: var(--dsw-font-xxxs-11);
+	color: var(--lg-accent);
+}
+
+.lgws-rowActions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 0 0 auto;
+	opacity: 0.72;
+	transition: opacity 160ms var(--lgws-ease);
+}
+
+.lgws-row:hover .lgws-rowActions,
+.lgws-row:focus-within .lgws-rowActions {
+	opacity: 1;
+}
+
+.lgws-rowButton {
+	height: 26px;
+	padding: 0 10px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background-color: transparent;
+	color: var(--dsw-alias-label-secondary);
+	font: var(--dsw-font-xxxs-strong-11);
+	cursor: pointer;
+	white-space: nowrap;
+	transition:
+		background-color 140ms var(--lgws-ease),
+		color 140ms var(--lgws-ease),
+		transform 90ms var(--lgws-ease);
+}
+
+.lgws-rowButton:hover {
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-rowButton:active {
+	transform: scale(0.96);
+	transition-duration: 0ms;
+}
+
+.lgws-rowButton:focus-visible {
+	outline: none;
+	box-shadow: inset 0 0 0 2px var(--lg-accent-ring);
+}
+
+/* ---- Chips ------------------------------------------------------------- */
+
+.lgws-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 19px;
+	padding: 0 7px;
+	border-radius: var(--lg-r-xs);
+	font: var(--dsw-font-xxxs-strong-11);
+	letter-spacing: 0.01em;
+	white-space: nowrap;
+	box-sizing: border-box;
+}
+
+.lgws-chip-neutral {
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-secondary);
+}
+
+.lgws-chip-accent {
+	background-color: var(--lg-accent-soft);
+	color: var(--lg-accent);
+}
+
+.lgws-chip-business {
+	background-color: color-mix(in srgb, var(--lg-accent-soft) 60%, transparent);
+	color: var(--lg-accent-strong, var(--lg-accent));
+}
+
+.lgws-chip-warn {
+	background-color: color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 55%, transparent);
+	color: var(--dsw-alias-state-warn-label, var(--dsw-alias-state-warn-primary));
+}
+
+.lgws-chip-error {
+	background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 16%, transparent);
+	color: var(--dsw-alias-state-error-primary);
+}
+
+/* ---- Inputs and buttons ------------------------------------------------ */
+
+.lgws-input {
+	height: 32px;
+	padding: 0 10px;
+	box-sizing: border-box;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background-color: var(--lg-surface-sunken);
+	box-shadow: inset 0 0 0 1px var(--lg-hairline);
+	color: var(--dsw-alias-label-primary);
+	font: var(--dsw-font-xxs-12);
+}
+
+.lgws-input::placeholder {
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-input:focus {
+	outline: none;
+	box-shadow:
+		inset 0 0 0 1px var(--lg-accent),
+		0 0 0 3px var(--lg-accent-ring);
+}
+
+.lgws-buttonPrimary {
+	height: 32px;
+	padding: 0 14px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background: var(--lg-accent);
+	color: #fff;
+	font: var(--dsw-font-xxs-strong-12);
+	cursor: pointer;
+	box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.3);
+	transition:
+		filter 140ms var(--lgws-ease),
+		transform 90ms var(--lgws-ease);
+}
+
+.lgws-buttonPrimary:hover:not(:disabled) {
+	filter: brightness(1.06);
+}
+
+.lgws-buttonPrimary:active:not(:disabled) {
+	transform: scale(0.97);
+	transition-duration: 0ms;
+}
+
+.lgws-buttonPrimary:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+
+.lgws-buttonSecondary {
+	height: 32px;
+	padding: 0 14px;
+	border: none;
+	border-radius: var(--lg-r-sm);
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-secondary);
+	font: var(--dsw-font-xxs-strong-12);
+	cursor: pointer;
+	box-shadow: var(--lgws-hairline-inset);
+	transition: background-color 140ms var(--lgws-ease);
+}
+
+.lgws-buttonSecondary:hover:not(:disabled) {
+	background-color: color-mix(in srgb, var(--lg-glass-tint) 60%, var(--dsw-alias-interactive-bg-hover));
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-buttonSecondary:disabled {
+	opacity: 0.55;
+	cursor: default;
+}
+
+.lgws-searchRow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.lgws-searchInput {
+	flex: 1 1 260px;
+	min-width: 0;
+}
+
+.lgws-mono {
+	font-family: var(--dsw-font-mono);
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+/* ---- States ------------------------------------------------------------ */
+
+.lgws-empty {
+	padding: 22px 16px;
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lg-surface-raised);
+	box-shadow: var(--lgws-hairline-inset);
+	color: var(--dsw-alias-label-tertiary);
+	font: var(--dsw-font-xxs-12);
+	text-align: center;
+}
+
+.lgws-error {
+	padding: 10px 12px;
+	border-radius: var(--lg-r-md);
+	background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, var(--lg-surface-raised));
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-error-primary) 26%, transparent);
+	color: var(--dsw-alias-state-error-primary);
+	font: var(--dsw-font-xxs-12);
+	overflow-wrap: anywhere;
+}
+
+.lgws-loading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--dsw-alias-label-secondary);
+	font: var(--dsw-font-xxs-12);
+}
+
+.lgws-spinner {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	flex: none;
+	border-radius: 50%;
+	border: 1.5px solid color-mix(in srgb, var(--dsw-alias-label-primary) 22%, transparent);
+	border-top-color: var(--lg-accent);
+	animation: lgws-spin 720ms linear infinite;
+}
+
+@keyframes lgws-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.lgws-card {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-width: 560px;
+	margin: 0 auto;
+	padding: 20px 22px;
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lg-surface-raised);
+	box-shadow:
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+}
+
+.lgws-cardTitle {
+	font: var(--dsw-font-s-strong-14);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-cardError {
+	box-shadow:
+		inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-state-error-primary) 32%, transparent),
+		var(--lgws-top-specular);
+}
+
+/* ---- Dialogs ----------------------------------------------------------- */
+
+.lgws-dialogScrim {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	background-color: rgba(8, 10, 16, 0.52);
+	-webkit-backdrop-filter: blur(6px) saturate(120%);
+	backdrop-filter: blur(6px) saturate(120%);
+	animation: lgws-fade-in 160ms var(--lgws-ease) both;
+}
+
+.lgws-dialog {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 420px;
+	max-width: 100%;
+	max-height: calc(100vh - 96px);
+	padding: 20px 22px;
+	box-sizing: border-box;
+	border-radius: var(--lg-r-xl);
+	background-color: var(--lg-glass-3);
+	background-image: var(--lgws-sheen);
+	-webkit-backdrop-filter: blur(30px) saturate(190%);
+	backdrop-filter: blur(30px) saturate(190%);
+	box-shadow:
+		var(--lg-shadow-3),
+		var(--lgws-top-specular),
+		var(--lgws-hairline-inset);
+	animation: lgws-surface-in 220ms var(--lgws-ease) both;
+	overflow: auto;
+}
+
+.lgws-dialogWide {
+	width: 520px;
+}
+
+.lgws-dialogHead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.lgws-dialogTitle {
+	font: var(--dsw-font-s-strong-14);
+	letter-spacing: -0.012em;
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-dialogClose {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	flex: none;
+	border: none;
+	border-radius: 50%;
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-secondary);
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	transition:
+		background-color 140ms var(--lgws-ease),
+		transform 90ms var(--lgws-ease);
+}
+
+.lgws-dialogClose:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-dialogClose:active {
+	transform: scale(0.92);
+}
+
+.lgws-dialogBody {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.lgws-dialogIntro {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-secondary);
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+
+.lgws-dialogNote {
+	font: var(--dsw-font-xxxs-11);
+	color: var(--dsw-alias-label-tertiary);
+}
+
+.lgws-dialogActions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/* One-tap surfaces (the status grid) still need a way out and a sentence
+ * saying what a click does — otherwise a mutating write looks like hover. */
+.lgws-dialogActionsEnd {
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 2px;
+}
+
+.lgws-dialogHint {
+	font: var(--dsw-font-xxs-12);
+	color: var(--dsw-alias-label-tertiary);
+	line-height: 1.4;
+}
+
+.lgws-statusGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+	gap: 8px;
+}
+
+.lgws-statusCell {
+	min-height: 34px;
+	padding: 6px 10px;
+	box-sizing: border-box;
+	border: none;
+	border-radius: var(--lg-r-md);
+	background-color: var(--lg-surface-sunken);
+	box-shadow: inset 0 0 0 1px var(--lg-hairline);
+	color: var(--dsw-alias-label-secondary);
+	font: var(--dsw-font-xxs-12);
+	text-align: center;
+	cursor: pointer;
+	transition:
+		background-color 140ms var(--lgws-ease),
+		color 140ms var(--lgws-ease),
+		transform 90ms var(--lgws-ease);
+}
+
+.lgws-statusCell:hover:not(:disabled) {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-statusCell:active:not(:disabled) {
+	transform: scale(0.98);
+}
+
+.lgws-statusCell:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.lgws-statusCellOn {
+	background-color: color-mix(in srgb, var(--lg-accent) 18%, transparent);
+	box-shadow: inset 0 0 0 1px var(--lg-accent);
+	color: var(--dsw-alias-label-primary);
+}
+
+@keyframes lgws-surface-in {
+	from {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes lgws-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* ---- Command console --------------------------------------------------- */
+
+.lgws-consoleCli {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 3px;
+	border-radius: var(--lg-r-pill);
+	background-color: var(--lg-glass-tint);
+	box-shadow: var(--lgws-hairline-inset);
+}
+
+.lgws-consoleCliBtn {
+	height: 26px;
+	padding: 0 12px;
+	border: none;
+	border-radius: var(--lg-r-pill);
+	background-color: transparent;
+	color: var(--dsw-alias-label-secondary);
+	font: var(--dsw-font-xxxs-strong-11);
+	cursor: pointer;
+	transition:
+		background-color 140ms var(--lgws-ease),
+		color 140ms var(--lgws-ease);
+}
+
+.lgws-consoleCliBtn:hover {
+	color: var(--dsw-alias-label-primary);
+}
+
+.lgws-consoleCliOn {
+	background-color: var(--lg-surface-raised);
+	color: var(--dsw-alias-label-primary);
+	box-shadow:
+		inset 0 0.5px 0 var(--lg-edge-top),
+		inset 0 0 0 0.5px var(--lg-hairline);
+}
+
+.lgws-consoleOut {
+	margin: 0;
+	padding: 14px 16px;
+	max-height: 420px;
+	overflow: auto;
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lg-surface-sunken);
+	box-shadow:
+		var(--lgws-hairline-inset),
+		inset 0 1px 2px rgba(8, 11, 18, 0.16);
+	font-family: var(--dsw-font-mono);
+	font-size: 11px;
+	line-height: 1.65;
+	color: var(--dsw-alias-label-secondary);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* ====================================================================== *
+ * Preferences
+ *
+ * Accessibility is part of the material, not a patch: each answer switches
+ * the real values and keeps the depth cues that still make sense.
+ * ====================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+	.lgws-projectButton,
+	.lgws-projectChevron,
+	.lgws-projectItem,
+	.lgws-focusCard,
+	.lgws-tab,
+	.lgws-tabPlate,
+	.lgws-refresh,
+	.lgws-rowButton,
+	.lgws-authButton,
+	.lgws-buttonPrimary,
+	.lgws-buttonSecondary,
+	.lgws-statusCell {
+		transition: none;
+	}
+
+	.lgws-focusCard:hover,
+	.lgws-focusCard:active,
+	.lgws-projectButton:active,
+	.lgws-tab:active,
+	.lgws-refresh:active,
+	.lgws-dialogClose:active,
+	.lgws-buttonPrimary:active,
+	.lgws-authButton:active {
+		transform: none;
+	}
+
+	.lgws-projectMenu,
+	.lgws-dialog,
+	.lgws-dialogScrim {
+		animation: none;
+	}
+
+	.lgws-spinner {
+		animation-duration: 1.6s;
+	}
+}
+
+/* Reduced transparency: solid surfaces, no blur, no light field. The layering
+ * survives through hairlines and shadows, which is what still communicates
+ * depth without translucency. */
+@media (prefers-reduced-transparency: reduce) {
+	.lgws-ambient {
+		display: none;
+	}
+
+	.lgws-projectButton,
+	.lgws-focusCard,
+	.lgws-projectMenu,
+	.lgws-dialog {
+		background-color: var(--lg-glass-solid);
+		background-image: none;
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+
+	.lgws-dialogScrim {
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+		background-color: rgba(8, 10, 16, 0.72);
+	}
+
+	.lgws-page {
+		background-color: var(--lg-surface);
+	}
+}
+
+/* More contrast: real borders, opaque fills, nothing dependent on a 0.5px
+ * hairline that may vanish on a low-DPI display. */
+@media (prefers-contrast: more) {
+	.lgws-projectButton,
+	.lgws-focusCard,
+	.lgws-projectMenu,
+	.lgws-dialog,
+	.lgws-rows,
+	.lgws-empty,
+	.lgws-card {
+		background-color: var(--lg-surface-raised);
+		background-image: none;
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+		box-shadow: inset 0 0 0 1.5px var(--lg-hairline-strong);
+	}
+
+	.lgws-tabPlate {
+		box-shadow: inset 0 0 0 1.5px var(--lg-hairline-strong);
+	}
+
+	.lgws-subtitle,
+	.lgws-projectLabel,
+	.lgws-projectFoot,
+	.lgws-rowMeta,
+	.lgws-rowId,
+	.lgws-projectItemId,
+	.lgws-dialogNote {
+		color: var(--dsw-alias-label-secondary);
+	}
+}
+
+/* ================================================================ *
+ * Workspace shell — the prototype's spatial model, shipped
+ * ----------------------------------------------------------------
+ * Rail of project spaces, one reading plane, and an in-page
+ * inspector that replaces "open in a browser". Class names are
+ * `lgwsp-*` so they cannot collide with the `lgws-*` panel rules
+ * above (dialogs, auth rows and the boot states still use those).
+ * ================================================================ */
+
+
+    /* ------------------------------------------------------------------
+       Standalone workspace prototype
+       The shipped token and workspace sheets provide the material vocabulary.
+       The rules below only compose the workspace shell, its responsive split,
+       and the in-page inspector used by this prototype.
+       ------------------------------------------------------------------ */
+    button { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible {
+      outline: 3px solid var(--lg-accent-ring);
+      outline-offset: 2px;
+    }
+
+    .lgwsp-workspace-page {
+      --workspace-gap: 18px;
+      position: relative;
+      height: 100%;
+      min-height: 560px;
+      max-width: none;
+      margin: 0;
+      padding: 18px;
+      isolation: isolate;
+      overflow: hidden;
+      background: var(--lg-ambient-floor);
+    }
+    .lgwsp-workspace-page::before,
+    .lgwsp-workspace-page::after {
+      position: absolute;
+      z-index: -1;
+      display: block;
+      content: "";
+      pointer-events: none;
+      filter: blur(22px) saturate(125%);
+    }
+    .lgwsp-workspace-page::before {
+      inset: -15% 46% 45% -14%;
+      background: var(--lg-ambient-1);
+      opacity: .92;
+    }
+    .lgwsp-workspace-page::after {
+      inset: 42% -12% -18% 38%;
+      background: var(--lg-ambient-2), var(--lg-ambient-3);
+      opacity: .78;
+    }
+    .lgwsp-workspace-shell {
+      position: relative;
+      display: grid;
+      grid-template-columns: 228px minmax(0, 1fr) 0px;
+      gap: var(--workspace-gap);
+      height: 100%;
+      min-height: 0;
+      transition: grid-template-columns 380ms var(--lg-ease-spring), gap 380ms var(--lg-ease-spring);
+    }
+    .lgwsp-workspace-shell.lgwsp-has-inspector {
+      grid-template-columns: 228px minmax(0, 1fr) minmax(338px, 416px);
+    }
+
+    /* Rail: a quiet structural surface. It is glass chrome, never the reading
+       surface, and disappears on narrow screens where the toolbar is enough. */
+    .lgwsp-space-rail,
+    .lgwsp-workspace-main,
+    .lgwsp-inspector {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border-radius: var(--lg-r-panel);
+      box-shadow: var(--lg-shadow-3), inset 0 .5px 0 var(--lg-edge-top), inset 0 -.5px 0 var(--lg-edge-bottom);
+    }
+    .lgwsp-space-rail {
+      display: flex;
+      flex-direction: column;
+      padding: 18px 12px 14px;
+      background: var(--lg-glass-3);
+      -webkit-backdrop-filter: blur(34px) saturate(190%);
+      backdrop-filter: blur(34px) saturate(190%);
+    }
+    .lgwsp-rail-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 2px 8px 20px;
+    }
+    .lgwsp-rail-mark {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      place-items: center;
+      border-radius: 11px;
+      background: linear-gradient(135deg, var(--lg-accent), #8e75ff);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 720;
+      letter-spacing: -.04em;
+      box-shadow: 0 7px 14px color-mix(in srgb, var(--lg-accent) 25%, transparent), inset 0 .5px 0 rgba(255,255,255,.45);
+    }
+    .lgwsp-rail-brand-text { min-width: 0; }
+    .lgwsp-rail-brand-title { font-size: 14px; font-weight: 650; letter-spacing: -.015em; }
+    .lgwsp-rail-brand-subtitle { margin-top: 2px; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+    .lgwsp-rail-kicker {
+      padding: 0 8px 8px;
+      color: var(--dsw-alias-label-tertiary);
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .lgwsp-space-list { display: flex; flex-direction: column; gap: 4px; }
+    .lgwsp-space-option {
+      position: relative;
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      min-height: 52px;
+      padding: 7px 9px;
+      border: 0;
+      border-radius: var(--lg-r-md);
+      background: transparent;
+      color: var(--dsw-alias-label-primary);
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 160ms var(--lg-ease-out), transform 100ms var(--lg-ease-out);
+    }
+    .lgwsp-space-option:hover { background: var(--lg-glass-tint); }
+    .lgwsp-space-option:active { transform: scale(.98); transition-duration: 0ms; }
+    .lgwsp-space-option.lgwsp-is-active {
+      background: var(--lg-accent-soft);
+      box-shadow: inset 2px 0 0 var(--lg-accent), inset 0 .5px 0 var(--lg-edge-top);
+    }
+    .lgwsp-space-avatar {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--space-color) 16%, var(--lg-glass-tint));
+      color: var(--space-color);
+      font-size: 10px;
+      font-weight: 720;
+      letter-spacing: .02em;
+      box-shadow: inset 0 0 0 .5px color-mix(in srgb, var(--space-color) 24%, transparent);
+    }
+    .lgwsp-space-option-copy { min-width: 0; }
+    .lgwsp-space-option-name { display: block; overflow: hidden; font-size: 12px; font-weight: 590; text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-space-option-meta { display: block; margin-top: 3px; overflow: hidden; color: var(--dsw-alias-label-tertiary); font-family: var(--dsw-font-mono); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-space-option-count { align-self: start; min-width: 20px; padding: 2px 5px; border-radius: 999px; background: var(--lg-glass-tint); color: var(--dsw-alias-label-tertiary); font-size: 10px; text-align: center; }
+    .lgwsp-rail-divider { height: .5px; margin: 16px 8px; background: var(--lg-hairline); }
+    .lgwsp-rail-nav { display: flex; flex-direction: column; gap: 3px; }
+    .lgwsp-rail-nav button {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: var(--lg-r-sm);
+      background: transparent;
+      color: var(--dsw-alias-label-secondary);
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: background-color 140ms var(--lg-ease-out), color 140ms var(--lg-ease-out);
+    }
+    .lgwsp-rail-nav button:hover { background: var(--lg-glass-tint); color: var(--dsw-alias-label-primary); }
+    .lgwsp-rail-nav button.lgwsp-is-active { background: color-mix(in srgb, var(--lg-accent-soft) 76%, transparent); color: var(--lg-accent); font-weight: 620; }
+    .lgwsp-rail-nav-icon { width: 16px; color: currentColor; font-size: 14px; text-align: center; }
+    .lgwsp-rail-foot { margin-top: auto; padding: 12px 8px 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; line-height: 1.55; }
+
+    /* Main reading plane */
+    .lgwsp-workspace-main {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--lg-surface);
+      box-shadow: var(--lg-shadow-3), inset 0 .5px 0 var(--lg-edge-top);
+    }
+    .lgwsp-main-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+    .lgwsp-main-scroll::-webkit-scrollbar, .lgwsp-inspector-scroll::-webkit-scrollbar { width: 10px; }
+    .lgwsp-main-scroll::-webkit-scrollbar-thumb, .lgwsp-inspector-scroll::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background-clip: content-box; background: color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent); }
+    .lgwsp-main-inner { max-width: 1080px; margin: 0 auto; padding: 28px 32px 60px; }
+    .lgwsp-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .lgwsp-eyebrow { display: flex; align-items: center; gap: 7px; color: var(--lg-accent); font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    .lgwsp-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px var(--lg-accent-soft); }
+    .lgwsp-title { margin: 8px 0 0; font-size: clamp(23px, 3vw, 31px); font-weight: 680; letter-spacing: -.034em; line-height: 1.1; }
+    .lgwsp-subtitle { margin: 8px 0 0; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 1.55; }
+    .lgwsp-top-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+    .lgwsp-icon-button, .lgwsp-secondary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      border: 0;
+      border-radius: var(--lg-r-pill);
+      background: var(--lg-glass-tint);
+      color: var(--dsw-alias-label-secondary);
+      cursor: pointer;
+      box-shadow: inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline);
+      transition: transform 110ms var(--lg-ease-out), background-color 140ms var(--lg-ease-out), color 140ms var(--lg-ease-out);
+    }
+    .lgwsp-icon-button { width: 32px; padding: 0; font-size: 15px; }
+    .lgwsp-secondary-button { gap: 6px; padding: 0 12px; font-size: 11px; font-weight: 600; }
+    .lgwsp-icon-button:hover, .lgwsp-secondary-button:hover { background: var(--lg-glass-2); color: var(--dsw-alias-label-primary); }
+    .lgwsp-icon-button:active, .lgwsp-secondary-button:active { transform: scale(.94); transition-duration: 0ms; }
+    .lgwsp-icon-button.lgwsp-is-lgwsp-spinning { animation: lgwsp-spin .68s linear infinite; }
+    @keyframes lgwsp-spin { to { transform: rotate(360deg); } }
+
+    .lgwsp-toolbar { display: flex; align-items: center; gap: 9px; margin-top: 25px; flex-wrap: wrap; }
+    .lgwsp-project-control { position: relative; }
+    .lgwsp-project-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 42px;
+      max-width: min(360px, 100%);
+      padding: 5px 12px 5px 7px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--lg-glass-2);
+      color: var(--dsw-alias-label-primary);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: var(--lg-shadow-1), inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      transition: transform 120ms var(--lg-ease-out), background-color 150ms var(--lg-ease-out), box-shadow 180ms var(--lg-ease-out);
+    }
+    .lgwsp-project-trigger:hover { background: var(--lg-glass-3); box-shadow: var(--lg-shadow-2), inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-project-trigger:active { transform: scale(.975); transition-duration: 0ms; }
+    .lgwsp-project-trigger.lgwsp-is-open { box-shadow: var(--lg-shadow-2), 0 0 0 3px var(--lg-accent-ring), inset 0 .5px 0 var(--lg-edge-top); }
+    .lgwsp-project-glyph { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--project-color) 16%, var(--lg-glass-tint)); color: var(--project-color); font-size: 10px; font-weight: 720; }
+    .lgwsp-project-copy { min-width: 0; }
+    .lgwsp-project-label { display: block; color: var(--dsw-alias-label-tertiary); font-size: 9px; font-weight: 700; letter-spacing: .09em; line-height: 1; text-transform: uppercase; }
+    .lgwsp-project-name { display: block; max-width: 250px; margin-top: 4px; overflow: hidden; font-size: 13px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-project-id { margin-left: 3px; color: var(--dsw-alias-label-tertiary); font-family: var(--dsw-font-mono); font-size: 10px; font-weight: 450; }
+    .lgwsp-project-chevron { margin-left: 4px; color: var(--dsw-alias-label-tertiary); font-size: 12px; transition: transform 220ms var(--lg-ease-spring); }
+    .lgwsp-project-trigger.lgwsp-is-open .lgwsp-project-chevron { transform: rotate(180deg); }
+    .lgwsp-project-menu {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 9px);
+      left: 0;
+      width: min(356px, calc(100vw - 48px));
+      padding: 9px;
+      border-radius: 22px;
+      background: var(--lg-glass-3);
+      box-shadow: var(--lg-shadow-3), inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline);
+      -webkit-backdrop-filter: blur(32px) saturate(190%);
+      backdrop-filter: blur(32px) saturate(190%);
+      transform-origin: top left;
+      animation: lgwsp-pop-in 190ms var(--lg-ease-out) both;
+    }
+    @keyframes lgwsp-pop-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+    .lgwsp-menu-heading { display: flex; align-items: baseline; justify-content: space-between; padding: 5px 8px 9px; }
+    .lgwsp-menu-heading strong { font-size: 12px; font-weight: 650; }
+    .lgwsp-menu-heading span { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+    .lgwsp-menu-search { width: 100%; height: 34px; padding: 0 11px; border: 0; border-radius: 10px; background: var(--lg-surface-sunken); color: var(--dsw-alias-label-primary); box-shadow: inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-menu-options { display: grid; gap: 3px; max-height: 260px; margin-top: 7px; overflow-y: auto; }
+    .lgwsp-menu-option { display: grid; grid-template-columns: 29px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 47px; padding: 7px 9px; border: 0; border-radius: 13px; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; cursor: pointer; }
+    .lgwsp-menu-option:hover { background: var(--lg-glass-tint); }
+    .lgwsp-menu-option.lgwsp-is-current { background: var(--lg-accent-soft); }
+    .lgwsp-menu-option:active { transform: scale(.985); }
+    .lgwsp-menu-option .lgwsp-space-avatar { width: 29px; height: 29px; border-radius: 9px; }
+    .lgwsp-menu-option-copy { min-width: 0; }
+    .lgwsp-menu-option-name { display: block; overflow: hidden; font-size: 12px; font-weight: 580; text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-menu-option-meta { display: block; margin-top: 2px; color: var(--dsw-alias-label-tertiary); font-family: var(--dsw-font-mono); font-size: 10px; }
+    .lgwsp-menu-check { color: var(--lg-accent); font-size: 14px; }
+    .lgwsp-menu-empty { padding: 24px 8px; color: var(--dsw-alias-label-tertiary); font-size: 12px; text-align: center; }
+    .lgwsp-status-pills { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+    .lgwsp-status-pill { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 27px; padding: 0 9px; border-radius: 999px; background: var(--lg-glass-tint); color: var(--dsw-alias-label-secondary); font-size: 10px; font-weight: 620; box-shadow: inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 18%, transparent); }
+
+    .lgwsp-focus-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 25px; }
+    .lgwsp-focus-card { position: relative; min-height: 104px; padding: 14px 15px; border: 0; border-radius: var(--lg-r-lg); background: var(--lg-surface-raised); color: var(--dsw-alias-label-primary); text-align: left; cursor: pointer; box-shadow: inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); transition: transform 150ms var(--lg-ease-out), background-color 150ms var(--lg-ease-out), box-shadow 150ms var(--lg-ease-out); }
+    .lgwsp-focus-card:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--lg-accent-soft) 22%, var(--lg-surface-raised)); box-shadow: var(--lg-shadow-1), inset 0 .5px 0 var(--lg-edge-top); }
+    .lgwsp-focus-card:active { transform: scale(.98); transition-duration: 0ms; }
+    .lgwsp-focus-card-label { display: flex; align-items: center; gap: 7px; color: var(--dsw-alias-label-secondary); font-size: 11px; font-weight: 580; }
+    .lgwsp-focus-card-icon { color: var(--card-color); font-size: 14px; }
+    .lgwsp-focus-card-number { margin-top: 13px; font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 700; letter-spacing: -.04em; }
+    .lgwsp-focus-card-note { position: absolute; right: 14px; bottom: 14px; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+
+    .lgwsp-section-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 27px; }
+    .lgwsp-segmented { position: relative; display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: var(--lg-glass-tint); box-shadow: inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); overflow-x: auto; scrollbar-width: none; }
+    .lgwsp-segmented::-webkit-scrollbar { display: none; }
+    .lgwsp-segmented-plate { position: absolute; top: 3px; left: 0; height: calc(100% - 6px); border-radius: 999px; background: var(--lg-surface-raised); box-shadow: 0 1px 3px rgba(16,22,40,.1), inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); transition: transform 380ms var(--lg-ease-spring), width 380ms var(--lg-ease-spring); pointer-events: none; }
+    .lgwsp-segment { position: relative; z-index: 1; height: 29px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 11px; white-space: nowrap; cursor: pointer; transition: color 150ms var(--lg-ease-out), transform 100ms var(--lg-ease-out); }
+    .lgwsp-segment:hover { color: var(--dsw-alias-label-primary); }
+    .lgwsp-segment:active { transform: scale(.96); transition-duration: 0ms; }
+    .lgwsp-segment.lgwsp-is-active { color: var(--dsw-alias-label-primary); font-weight: 650; }
+    .lgwsp-list-tools { display: flex; align-items: center; gap: 7px; }
+    .lgwsp-list-search { width: min(220px, 28vw); height: 32px; padding: 0 11px; border: 0; border-radius: 999px; background: var(--lg-surface-sunken); color: var(--dsw-alias-label-primary); box-shadow: inset 0 0 0 .5px var(--lg-hairline); font-size: 11px; }
+    .lgwsp-list-count { color: var(--dsw-alias-label-tertiary); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .lgwsp-list-section { margin-top: 17px; }
+    .lgwsp-list-section + .lgwsp-list-section { margin-top: 22px; }
+    .lgwsp-list-section-title { display: flex; align-items: center; gap: 8px; margin: 0 0 9px; color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 650; letter-spacing: -.012em; }
+    .lgwsp-list-section-title small { color: var(--dsw-alias-label-tertiary); font-size: 10px; font-weight: 450; }
+    .lgwsp-item-list { display: grid; gap: 1px; padding: 6px; border-radius: var(--lg-r-lg); background: var(--lg-surface-raised); box-shadow: inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-item-row { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 11px; min-width: 0; min-height: 74px; padding: 9px 10px; border-radius: var(--lg-r-md); background: transparent; transition: background-color 140ms var(--lg-ease-out), transform 140ms var(--lg-ease-out); }
+    .lgwsp-item-row + .lgwsp-item-row { border-top: .5px solid var(--lg-hairline); }
+    .lgwsp-item-row:hover, .lgwsp-item-row.lgwsp-is-selected { background: var(--dsw-alias-interactive-bg-hover); }
+    .lgwsp-item-row.lgwsp-is-attention { box-shadow: inset 2px 0 0 var(--dsw-alias-state-warn-primary); }
+    .lgwsp-item-row.lgwsp-is-selected { background: var(--lg-accent-soft); }
+    .lgwsp-item-primary { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; grid-column: 1 / 3; gap: 11px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .lgwsp-item-symbol { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: var(--item-bg); color: var(--item-color); font-size: 11px; font-weight: 720; }
+    .lgwsp-item-copy { min-width: 0; }
+    .lgwsp-item-title { display: block; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 590; text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-item-meta { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 5px; overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: 10px; white-space: nowrap; }
+    .lgwsp-item-id { color: var(--dsw-alias-label-tertiary); font-family: var(--dsw-font-mono); font-size: 10px; }
+    .lgwsp-item-meta-sep { color: var(--dsw-alias-label-caption); }
+    .lgwsp-item-chip { display: inline-flex; align-items: center; min-height: 18px; padding: 0 6px; border-radius: 6px; background: var(--chip-bg); color: var(--chip-color); font-size: 10px; font-weight: 620; }
+    .lgwsp-item-due { color: var(--dsw-alias-label-tertiary); font-variant-numeric: tabular-nums; }
+    .lgwsp-item-due.lgwsp-is-overdue { color: var(--dsw-alias-state-error-primary); font-weight: 620; }
+    .lgwsp-item-side { display: flex; align-items: center; justify-content: flex-end; gap: 8px; grid-column: 3; }
+    .lgwsp-item-owner { color: var(--dsw-alias-label-tertiary); font-size: 10px; white-space: nowrap; }
+    .lgwsp-row-open { min-height: 27px; padding: 0 9px; border: 0; border-radius: var(--lg-r-sm); background: transparent; color: var(--lg-accent); font-size: 10px; font-weight: 620; cursor: pointer; white-space: nowrap; opacity: .78; transition: background-color 140ms var(--lg-ease-out), opacity 140ms var(--lg-ease-out), transform 100ms var(--lg-ease-out); }
+    .lgwsp-item-row:hover .lgwsp-row-open, .lgwsp-item-row:focus-within .lgwsp-row-open, .lgwsp-row-open:hover { opacity: 1; background: var(--lg-accent-soft); }
+    .lgwsp-row-open:active { transform: scale(.96); transition-duration: 0ms; }
+    .lgwsp-empty-state { padding: 28px 16px; border-radius: var(--lg-r-lg); background: var(--lg-surface-raised); color: var(--dsw-alias-label-tertiary); font-size: 12px; text-align: center; box-shadow: inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-section-note { margin: 7px 4px 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+
+    /* Details inspector: on desktop this is a third split column. It is a
+       page-in-page preview, never an external navigation or window.lgwsp-open. */
+    .lgwsp-inspector {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: var(--lg-glass-3);
+      -webkit-backdrop-filter: blur(30px) saturate(190%);
+      backdrop-filter: blur(30px) saturate(190%);
+      opacity: 0;
+      transform: translateX(18px) scale(.985);
+      pointer-events: none;
+      transition: opacity 220ms var(--lg-ease-out), transform 380ms var(--lg-ease-spring);
+    }
+    .lgwsp-workspace-shell.lgwsp-has-inspector .lgwsp-inspector { opacity: 1; transform: none; pointer-events: auto; }
+    .lgwsp-inspector-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 65px; padding: 16px 17px 12px; border-bottom: .5px solid var(--lg-hairline); }
+    .lgwsp-inspector-kicker { color: var(--lg-accent); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .lgwsp-inspector-title { display: -webkit-box; max-width: 270px; margin-top: 5px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 650; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+    .lgwsp-inspector-close { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border: 0; border-radius: 50%; background: var(--lg-glass-tint); color: var(--dsw-alias-label-secondary); cursor: pointer; font-size: 15px; box-shadow: inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-inspector-close:hover { background: var(--lg-glass-2); color: var(--dsw-alias-label-primary); }
+    .lgwsp-inspector-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+    .lgwsp-inspector-inner { padding: 16px 17px 30px; }
+    .lgwsp-embedded-frame { overflow: hidden; border-radius: var(--lg-r-lg); background: var(--lg-surface); box-shadow: inset 0 0 0 .5px var(--lg-hairline), var(--lg-shadow-1); }
+    .lgwsp-frame-toolbar { display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 10px; border-bottom: .5px solid var(--lg-hairline); background: var(--lg-surface-sunken); color: var(--dsw-alias-label-tertiary); font-size: 9px; }
+    .lgwsp-frame-dots { display: flex; gap: 4px; }
+    .lgwsp-frame-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--lg-hairline-strong); }
+    .lgwsp-frame-address { overflow: hidden; flex: 1; padding: 4px 8px; border-radius: 6px; background: var(--lg-glass-tint); font-family: var(--dsw-font-mono); text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-frame-content { padding: 17px; }
+    .lgwsp-detail-type { display: inline-flex; align-items: center; gap: 6px; color: var(--item-color); font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+    .lgwsp-detail-type-mark { display: grid; width: 21px; height: 21px; place-items: center; border-radius: 7px; background: var(--item-bg); font-size: 9px; }
+    .lgwsp-detail-title { margin: 11px 0 0; color: var(--dsw-alias-label-primary); font-size: 18px; font-weight: 680; letter-spacing: -.024em; line-height: 1.25; }
+    .lgwsp-detail-id { margin-top: 5px; color: var(--dsw-alias-label-tertiary); font-family: var(--dsw-font-mono); font-size: 10px; }
+    .lgwsp-detail-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 15px; }
+    .lgwsp-detail-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 7px; background: var(--lg-glass-tint); color: var(--dsw-alias-label-secondary); font-size: 10px; font-weight: 580; }
+    .lgwsp-detail-chip.lgwsp-is-accent { background: var(--item-bg); color: var(--item-color); }
+    .lgwsp-detail-divider { height: .5px; margin: 18px 0; background: var(--lg-hairline); }
+    .lgwsp-detail-label { margin: 0 0 7px; color: var(--dsw-alias-label-tertiary); font-size: 10px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+    .lgwsp-detail-description { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 1.7; }
+    .lgwsp-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .lgwsp-detail-field { min-width: 0; padding: 10px; border-radius: var(--lg-r-md); background: var(--lg-surface-sunken); }
+    .lgwsp-detail-field-label { color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+    .lgwsp-detail-field-value { margin-top: 5px; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 12px; font-weight: 590; text-overflow: ellipsis; white-space: nowrap; }
+    .lgwsp-detail-field-value.lgwsp-mono { font-family: var(--dsw-font-mono); font-size: 10px; }
+    .lgwsp-activity { display: grid; gap: 10px; }
+    .lgwsp-activity-row { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 9px; color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 1.5; }
+    .lgwsp-activity-dot { width: 7px; height: 7px; margin-top: 4px; border: 2px solid var(--lg-accent); border-radius: 50%; }
+    .lgwsp-activity-time { display: block; margin-top: 2px; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+    .lgwsp-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .lgwsp-detail-action { min-height: 32px; padding: 0 12px; white-space: nowrap; border: 0; border-radius: var(--lg-r-sm); background: var(--lg-accent); color: #fff; font-size: 11px; font-weight: 620; cursor: pointer; box-shadow: inset 0 .5px 0 rgba(255,255,255,.3); }
+    .lgwsp-detail-action.lgwsp-secondary { background: var(--lg-glass-tint); color: var(--dsw-alias-label-secondary); box-shadow: inset 0 0 0 .5px var(--lg-hairline); }
+    .lgwsp-detail-action:active { transform: scale(.97); }
+    .lgwsp-inspector-scrim { display: none; }
+    .lgwsp-toast { position: fixed; z-index: 100; right: 26px; bottom: 24px; padding: 10px 14px; border-radius: 12px; background: var(--lg-glass-3); color: var(--dsw-alias-label-primary); font-size: 11px; box-shadow: var(--lg-shadow-3), inset 0 .5px 0 var(--lg-edge-top); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); animation: lgwsp-toast-in 220ms var(--lg-ease-out) both; }
+    @keyframes lgwsp-toast-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+
+    /* ---- 缺陷列表同步 --------------------------------------------------
+       刷新是列表自己的动作，所以控件就放在列表标题行里；顶栏那枚 ↻ 是同一
+       个动作的快捷入口。同步期间用与真实行等高的骨架占位，结果到达时列表
+       不跳。 */
+    .lgwsp-sync-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 0 9px; }
+    .lgwsp-sync-copy { min-width: 0; }
+    .lgwsp-sync-meta { margin: 4px 0 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .lgwsp-sync-button { display: inline-flex; align-items: center; gap: 6px; height: 31px; padding: 0 11px; flex: none; border: 0; border-radius: var(--lg-r-sm); background: var(--lg-glass-tint); color: var(--dsw-alias-label-secondary); font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: inset 0 .5px 0 var(--lg-edge-top), inset 0 0 0 .5px var(--lg-hairline); transition: background-color 140ms var(--lg-ease-out), color 140ms var(--lg-ease-out), transform 100ms var(--lg-ease-out); }
+    .lgwsp-sync-button:hover:not(:disabled) { background: var(--lg-glass-2); color: var(--dsw-alias-label-primary); }
+    .lgwsp-sync-button:active:not(:disabled) { transform: scale(.97); transition-duration: 0ms; }
+    .lgwsp-sync-button:disabled { cursor: default; opacity: .72; }
+    .lgwsp-sync-spinner { width: 11px; height: 11px; flex: none; border: 1.5px solid color-mix(in srgb, currentColor 26%, transparent); border-top-color: currentColor; border-radius: 50%; animation: lgwsp-sync-spin .7s linear infinite; }
+    @keyframes lgwsp-sync-spin { to { transform: rotate(360deg); } }
+    .lgwsp-item-list[aria-busy="true"] { cursor: progress; }
+    .lgwsp-is-skeleton { gap: 0; }
+    .lgwsp-skeleton-row { grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; }
+    .lgwsp-skeleton-chip { width: 58px; height: 18px; border-radius: 999px; background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); animation: lgwsp-skeleton-pulse 1.4s ease-in-out infinite; }
+    .lgwsp-skeleton-avatar { width: 30px; height: 30px; border-radius: 10px; background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); animation: lgwsp-skeleton-pulse 1.4s ease-in-out infinite; }
+    .lgwsp-skeleton-copy { display: grid; gap: 7px; min-width: 0; }
+    .lgwsp-skeleton-line { display: block; height: 9px; border-radius: 5px; background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent); animation: lgwsp-skeleton-pulse 1.4s ease-in-out infinite; }
+    .lgwsp-skeleton-line.lgwsp-is-title { width: min(64%, 460px); }
+    .lgwsp-skeleton-line.lgwsp-is-meta { width: min(26%, 180px); height: 8px; animation-delay: 90ms; }
+    @keyframes lgwsp-skeleton-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    .lgwsp-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+    body[data-ds-dark-theme] .lgwsp-workspace-main { box-shadow: var(--lg-shadow-3), inset 0 .5px 0 var(--lg-edge-top); }
+    body[data-ds-dark-theme] .lgwsp-focus-card:hover { background: color-mix(in srgb, var(--lg-accent-soft) 30%, var(--lg-surface-raised)); }
+    body[data-ds-dark-theme] .lgwsp-status-dot { box-shadow: 0 0 0 3px rgba(53, 211, 153, .13); }
+
+    /* The app sidebar + the project rail already take ~470px, so a third split
+       column only makes sense on a genuinely wide window. Under that the
+       inspector floats: the workbench keeps its measure and the detail arrives
+       as a page-in-page sheet. */
+    @media (min-width: 901px) and (max-width: 1559px) {
+      .lgwsp-workspace-shell.lgwsp-has-inspector { grid-template-columns: 228px minmax(0, 1fr) 0px; }
+      .lgwsp-workspace-shell.lgwsp-has-inspector .lgwsp-inspector {
+        position: absolute;
+        z-index: 7;
+        inset-block: 0;
+        right: 0;
+        width: min(420px, 82%);
+        border-radius: var(--lg-r-panel);
+        box-shadow: var(--lg-shadow-3), -18px 0 54px rgba(16, 22, 40, .16), inset 0 .5px 0 var(--lg-edge-top);
+      }
+      .lgwsp-workspace-shell.lgwsp-has-inspector .lgwsp-inspector-scrim {
+        position: absolute;
+        z-index: 6;
+        inset: 0;
+        display: block;
+        border: 0;
+        background: rgba(11, 14, 22, .12);
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .lgwsp-workspace-shell.lgwsp-has-inspector { grid-template-columns: 198px minmax(0, 1fr) minmax(320px, 370px); }
+      .lgwsp-space-rail { padding-inline: 8px; }
+      .lgwsp-main-inner { padding-inline: 25px; }
+    }
+    @media (max-width: 900px) {
+      .lgwsp-workspace-page { height: auto; min-height: 100dvh; padding: 0; overflow: visible; }
+      .lgwsp-workspace-shell, .lgwsp-workspace-shell.lgwsp-has-inspector { display: block; height: auto; min-height: 100dvh; }
+      .lgwsp-space-rail { display: none; }
+      .lgwsp-workspace-main { min-height: 100dvh; border-radius: 0; overflow: visible; box-shadow: none; }
+      .lgwsp-main-scroll { overflow: visible; }
+      .lgwsp-main-inner { padding: 24px 20px 46vh; }
+      .lgwsp-inspector {
+        position: fixed;
+        z-index: 60;
+        inset: auto 0 0;
+        height: min(88dvh, 760px);
+        max-height: 88dvh;
+        border-radius: 26px 26px 0 0;
+        opacity: 1;
+        transform: translateY(105%);
+        pointer-events: none;
+        transition: transform 380ms var(--lg-ease-spring);
+      }
+      .lgwsp-workspace-shell.lgwsp-has-inspector .lgwsp-inspector { transform: translateY(0); pointer-events: auto; }
+      .lgwsp-inspector-scrim { position: fixed; z-index: 50; inset: 0; display: block; border: 0; background: rgba(11, 14, 22, .25); opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
+      .lgwsp-workspace-shell.lgwsp-has-inspector .lgwsp-inspector-scrim { opacity: 1; pointer-events: auto; }
+      .lgwsp-inspector-head { min-height: 61px; padding-inline: 18px; }
+      .lgwsp-focus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .lgwsp-main-inner { padding: 21px 15px 48vh; }
+      .lgwsp-topbar { display: block; }
+      .lgwsp-top-actions { justify-content: flex-start; margin-top: 15px; }
+      .lgwsp-toolbar { margin-top: 21px; }
+      .lgwsp-status-pills { width: 100%; margin-left: 0; }
+      .lgwsp-project-trigger { width: 100%; max-width: none; }
+      .lgwsp-project-name { max-width: none; }
+      .lgwsp-section-bar { display: block; }
+      .lgwsp-list-tools { justify-content: space-between; margin-top: 10px; }
+      .lgwsp-list-search { width: min(220px, 70vw); }
+      /* The row keeps its three-part structure on phones: the open affordance
+         is the only sign the row is a button, so it stays; the owner is the
+         part that goes. */
+      .lgwsp-item-row { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 9px; }
+      .lgwsp-item-primary { grid-template-columns: 28px minmax(0, 1fr); gap: 9px; }
+      .lgwsp-item-owner { display: none; }
+      .lgwsp-row-open { padding-inline: 6px; font-size: 10px; }
+      .lgwsp-item-symbol { width: 28px; height: 28px; }
+      .lgwsp-segmented { max-width: 100%; width: 100%; }
+      .lgwsp-segment { flex: 1 0 auto; padding-inline: 12px; }
+      .lgwsp-detail-title { font-size: 17px; }
+      .lgwsp-toast { right: 15px; bottom: 15px; left: 15px; text-align: center; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+      .lgwsp-focus-card:hover { transform: none; }
+      .lgwsp-inspector { transform: none !important; }
+      .lgwsp-workspace-shell.lgwsp-has-inspector .lgwsp-inspector { transform: none !important; }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .lgwsp-space-rail, .lgwsp-project-trigger, .lgwsp-project-menu, .lgwsp-inspector, .lgwsp-toast { background: var(--lg-glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+      .lgwsp-workspace-page::before, .lgwsp-workspace-page::after { display: none; }
+    }
+    @media (prefers-contrast: more) {
+      .lgwsp-space-rail, .lgwsp-workspace-main, .lgwsp-inspector, .lgwsp-item-list, .lgwsp-focus-card, .lgwsp-project-trigger, .lgwsp-project-menu { box-shadow: inset 0 0 0 1.5px var(--lg-hairline-strong); }
+      .lgwsp-item-title, .lgwsp-detail-title, .lgwsp-title { color: var(--dsw-alias-label-primary); }
+    }
+  
