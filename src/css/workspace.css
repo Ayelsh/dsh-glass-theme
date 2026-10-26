@@ -2122,6 +2122,28 @@ body[data-ds-dark-theme] .lgws-ambient {
     .lgwsp-detail-divider { height: .5px; margin: 18px 0; background: var(--lg-hairline); }
     .lgwsp-detail-label { margin: 0 0 7px; color: var(--dsw-alias-label-tertiary); font-size: 10px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
     .lgwsp-detail-description { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 1.7; }
+    /* 描述正文是一小块 TAPD 排版：段落、标题、表格、列表、代码，图片圆角
+       并限制在栏宽内。字号沿用 12px 的阅读尺寸，层级靠间距与字重区分。 */
+    .lgwsp-detail-rich { overflow-wrap: anywhere; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 1.7; }
+    .lgwsp-detail-rich p { margin: 0 0 8px; }
+    .lgwsp-detail-rich > :last-child { margin-bottom: 0; }
+    .lgwsp-detail-rich h1, .lgwsp-detail-rich h2 { margin: 16px 0 6px; color: var(--dsw-alias-label-primary); font-size: 14px; font-weight: 680; line-height: 1.35; }
+    .lgwsp-detail-rich h3, .lgwsp-detail-rich h4, .lgwsp-detail-rich h5, .lgwsp-detail-rich h6 { margin: 14px 0 6px; color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 650; line-height: 1.4; }
+    .lgwsp-detail-rich ul, .lgwsp-detail-rich ol { margin: 0 0 8px; padding-left: 18px; }
+    .lgwsp-detail-rich li { margin: 2px 0; }
+    .lgwsp-detail-rich a { color: var(--lg-accent); text-decoration: none; cursor: pointer; }
+    .lgwsp-detail-rich a:hover { text-decoration: underline; }
+    .lgwsp-detail-rich img { display: block; max-width: 100%; height: auto; margin: 8px 0; border-radius: 10px; background: var(--lg-surface-sunken); box-shadow: inset 0 0 0 .5px var(--lg-hairline); cursor: zoom-in; }
+    .lgwsp-detail-rich table { width: 100%; margin: 8px 0; border-collapse: collapse; font-size: 11px; }
+    .lgwsp-detail-rich th, .lgwsp-detail-rich td { padding: 5px 8px; border: .5px solid var(--lg-hairline-strong); text-align: left; vertical-align: top; }
+    .lgwsp-detail-rich th { background: var(--lg-surface-sunken); color: var(--dsw-alias-label-primary); font-weight: 620; }
+    .lgwsp-detail-rich blockquote { margin: 8px 0; padding: 6px 12px; border-left: 2px solid var(--lg-hairline-strong); color: var(--dsw-alias-label-tertiary); }
+    .lgwsp-detail-rich pre { overflow: auto; margin: 8px 0; padding: 9px 11px; border-radius: 8px; background: var(--lg-surface-sunken); font-family: var(--dsw-font-mono); font-size: 10px; line-height: 1.6; }
+    .lgwsp-detail-rich code { font-family: var(--dsw-font-mono); font-size: 10px; }
+    .lgwsp-detail-rich pre code { font-size: inherit; }
+    .lgwsp-detail-rich hr { height: .5px; margin: 12px 0; border: 0; background: var(--lg-hairline); }
+    .lgwsp-rich-broken-img { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+    .lgwsp-rich-broken-img:hover { color: var(--lg-accent); }
     .lgwsp-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
     .lgwsp-detail-field { min-width: 0; padding: 10px; border-radius: var(--lg-r-md); background: var(--lg-surface-sunken); }
     .lgwsp-detail-field-label { color: var(--dsw-alias-label-tertiary); font-size: 10px; }

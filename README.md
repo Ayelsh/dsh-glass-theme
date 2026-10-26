@@ -124,6 +124,7 @@ node tools/assert-built.mjs # the authored rules actually survived into lib/clie
 node tools/host-check.mjs   # the host half registers its routes without throwing
 node tools/ws-check.mjs     # the workspace CLI routes: fence, whitelist, probe, caps (mock server)
 node tools/ws-render.mjs    # source render smoke test, including explicit open-case handlers
+node tools/ws-rich-check.mjs # the detail panel's rich description: sanitizer, markdown, show unwrap
 node tools/ws-package-check.mjs dsh-glass-theme-0.2.3.tgz # published bundle regression
 ```
 

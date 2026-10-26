@@ -83,7 +83,12 @@ const required = [
 	['lgwsp-space-rail', 'the project rail'],
 	['data-sync-bugs', 'the refresh hook'],
 	['lgwsp-inspector', 'the in-page detail'],
-	['const plainText', 'the HTML-to-text reader'],
+	/* 0.3.6: the detail body renders sanitized rich HTML (images, tables,
+	 * markdown) instead of the old text-only reader, and the inspector
+	 * backfills the full record with `tapd <kind> show <id>`. */
+	['const descriptionToRichHtml', 'the rich description renderer'],
+	['sanitizeRichHtml', 'the HTML sanitizer'],
+	["'show'", 'the tapd detail backfill command'],
 ]
 const missing = required.filter(([needle]) => !clientSource.includes(needle))
 let failures = 0

@@ -788,23 +788,286 @@ function createWorkspace(require, ctx, catalog) {
 		doc: { short: 'DOC', label: '企微文档', color: '#8b6cd8', bg: 'rgba(139, 108, 216, 0.12)' },
 	};
 
-	/* TAPD returns HTML bodies (paragraphs, image tags, entities). The embedded
-	 * panel is a reading surface, not a browser: show the words, drop the tags. */
-	const plainText = (value) => {
-		const text = String(value ?? '');
+	/* TAPD 的描述有两种来源：网页编辑器写出的富文本 HTML，以及 tapd-ai-cli
+	 * 在输出层转换出的 markdown（图片是 `![图](url)`）。详情面板是应用内的
+	 * 阅读面，两种形态都收敛成同一小组安全 HTML：白名单标签、白名单属性、
+	 * 绝对化的图片/链接地址。脚本与事件属性永远进不来。 */
+	const escapeHtml = (value) =>
+		String(value ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+
+	/* TAPD 页面引用资源既有协议相对（`//img.tapd.cn/…`）也有站内相对
+	 * （`/images/…`）。面板运行在应用自己的 origin 上，两者都必须钉到
+	 * https 才能加载。 */
+	const absolutizeUrl = (value) => {
+		const url = String(value ?? '').trim();
+		if (url === '') return '';
+		if (/^(https?:|data:image\/|mailto:)/i.test(url)) return url;
+		if (url.startsWith('//')) return `https:${url}`;
+		if (url.startsWith('/')) return `https://www.tapd.cn${url}`;
+		return url;
+	};
+
+	const RICH_VOID_TAGS = new Set(['br', 'hr', 'img']);
+	/* 这些标签的*内容*是代码或元数据（`<script>` 的正文不是散文），连文带
+	 * 内容一起丢；其余未知的标签只摘掉标签本身，文字保留。 */
+	const RICH_DROP_WITH_CONTENT = new Set(['script', 'style', 'iframe', 'object', 'embed', 'noscript', 'svg', 'math', 'head', 'title', 'meta', 'link', 'base', 'template']);
+	const RICH_KEEP_TAGS = new Set([
+		'p', 'br', 'hr', 'div', 'span', 'section', 'article', 'figure', 'figcaption',
+		'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'del', 'sub', 'sup', 'code', 'pre', 'blockquote',
+		'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+		'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption',
+		'img', 'a', 'font',
+	]);
+
+	/* 属性白名单：逐标签列出可以留下的属性；返回 null 表示整个标签丢弃
+	 * （没有合法 src 的 <img> 只会渲染成裂图占位，不如不放）。 */
+	const sanitizeRichAttrs = (rawAttrs, tag) => {
+		const attrs = [];
+		const pattern = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
+		let match;
+		while ((match = pattern.exec(String(rawAttrs ?? ''))) !== null) {
+			const name = match[1].toLowerCase();
+			const value = match[2] ?? match[3] ?? match[4] ?? '';
+			if (value === '') continue;
+			if (tag === 'img') {
+				if (name === 'src') {
+					const src = absolutizeUrl(value);
+					if (!/^(https?:|data:image\/)/i.test(src)) return null;
+					attrs.push(`src="${escapeHtml(src)}"`);
+				} else if (name === 'alt' || name === 'title') {
+					attrs.push(`${name}="${escapeHtml(value)}"`);
+				} else if (name === 'width' || name === 'height') {
+					if (/^\d{1,4}$/.test(value)) attrs.push(`${name}="${value}"`);
+				}
+			} else if (tag === 'a') {
+				if (name === 'href') {
+					const href = absolutizeUrl(value);
+					if (!/^(https?:|mailto:)/i.test(href)) continue;
+					attrs.push(`href="${escapeHtml(href)}"`);
+				} else if (name === 'title') {
+					attrs.push(`title="${escapeHtml(value)}"`);
+				}
+			} else if ((tag === 'td' || tag === 'th') && (name === 'colspan' || name === 'rowspan')) {
+				if (/^\d{1,3}$/.test(value)) attrs.push(`${name}="${value}"`);
+			}
+		}
+		if (tag === 'img') attrs.push('loading="lazy"');
+		/* 链接在 webview 里不允许带走页面本身；点击由容器统一接管（在
+		 * 真实浏览器里打开），这两个属性是接管之外的兜底。 */
+		if (tag === 'a') attrs.push('target="_blank"', 'rel="noreferrer noopener"');
+		return attrs.length === 0 ? '' : ` ${attrs.join(' ')}`;
+	};
+
+	/** Reduce a TAPD rich-text body to the safe subset described above. */
+	const sanitizeRichHtml = (html) => {
+		const source = String(html ?? '');
+		const pattern = /<!--[\s\S]*?-->|<\/?([a-zA-Z][a-zA-Z0-9-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
+		let out = '';
+		let cursor = 0;
+		const open = [];
+		let match;
+		while ((match = pattern.exec(source)) !== null) {
+			out += escapeHtml(source.slice(cursor, match.index));
+			cursor = pattern.lastIndex;
+			const raw = match[0];
+			if (raw.startsWith('<!--')) continue;
+			const name = match[1].toLowerCase();
+			const closing = raw.startsWith('</');
+			if (RICH_DROP_WITH_CONTENT.has(name)) {
+				/* 连文带内容一起丢：跳到对应的闭合标签为止。 */
+				if (!closing && !RICH_VOID_TAGS.has(name)) {
+					const closer = new RegExp(`</${name}\\s*>`, 'gi');
+					closer.lastIndex = cursor;
+					const stop = closer.exec(source);
+					cursor = stop === null ? source.length : stop.index + stop[0].length;
+					pattern.lastIndex = cursor;
+				}
+				continue;
+			}
+			if (!RICH_KEEP_TAGS.has(name)) continue;
+			if (closing) {
+				const at = open.lastIndexOf(name);
+				if (at === -1) continue;
+				while (open.length > at) out += `</${open.pop()}>`;
+				continue;
+			}
+			const attrs = sanitizeRichAttrs(match[2] ?? '', name);
+			if (attrs === null) continue;
+			out += `<${name}${attrs}>`;
+			if (!RICH_VOID_TAGS.has(name)) open.push(name);
+		}
+		out += escapeHtml(source.slice(cursor));
+		while (open.length > 0) out += `</${open.pop()}>`;
+		return out;
+	};
+
+	/* 行内 markdown：先整体转义再叠加替换，所以产物天然落在安全子集里。
+	 * 标题文本（`[文字](地址 "标题")` 的标题部分）直接忽略——转义过的引号
+	 * 让它不再值得单独解析。 */
+	const inlineMarkdown = (text) =>
+		escapeHtml(text)
+			.replace(/`([^`]+)`/g, '<code>$1</code>')
+			.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;.*&quot;)?\)/g, (_m, alt, src) => {
+				const url = absolutizeUrl(src);
+				return /^(https?:|data:image\/)/i.test(url) ? `<img src="${url}" alt="${alt}" loading="lazy">` : alt;
+			})
+			.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;.*&quot;)?\)/g, (_m, label, href) => {
+				const url = absolutizeUrl(href);
+				return /^(https?:|mailto:)/i.test(url)
+					? `<a href="${url}" target="_blank" rel="noreferrer noopener">${label}</a>`
+					: label;
+			})
+			.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+			.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+			.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+			.replace(/(^|[^*\\])\*([^*\s](?:[^*]*[^*\s])?)\*/g, '$1<em>$2</em>');
+
+	/** Block-level markdown → the same safe HTML subset. */
+	const markdownToHtml = (text) => {
+		const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n');
+		const out = [];
+		let para = [];
+		let list = null;
+		let quote = [];
+		let fence = null;
+		let table = null;
+		const flushPara = () => {
+			if (para.length > 0) {
+				out.push(`<p>${para.join('<br>')}</p>`);
+				para = [];
+			}
+		};
+		const flushList = () => {
+			if (list !== null) {
+				out.push(`</${list}>`);
+				list = null;
+			}
+		};
+		const flushQuote = () => {
+			if (quote.length > 0) {
+				out.push(`<blockquote>${markdownToHtml(quote.join('\n'))}</blockquote>`);
+				quote = [];
+			}
+		};
+		const flushTable = () => {
+			if (table === null) return;
+			const row = (cells, tag) => `<tr>${cells.map((cell) => `<${tag}>${inlineMarkdown(cell.trim())}</${tag}>`).join('')}</tr>`;
+			out.push(
+				`<table><thead>${row(table.head, 'th')}</thead><tbody>${table.rows.map((cells) => row(cells, 'td')).join('')}</tbody></table>`
+			);
+			table = null;
+		};
+		const flushAll = () => {
+			flushPara();
+			flushList();
+			flushQuote();
+			flushTable();
+		};
+		for (let index = 0; index < lines.length; index += 1) {
+			const line = lines[index];
+			if (fence !== null) {
+				if (/^\s*```/.test(line)) {
+					out.push(`<pre><code>${escapeHtml(fence.join('\n'))}</code></pre>`);
+					fence = null;
+				} else {
+					fence.push(line);
+				}
+				continue;
+			}
+			if (/^\s*```/.test(line)) {
+				flushAll();
+				fence = [];
+				continue;
+			}
+			if (line.trim() === '') {
+				flushAll();
+				continue;
+			}
+			const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+			if (heading !== null) {
+				flushAll();
+				const level = Math.min(6, heading[1].length + 2); // h1–h6 太大，压到 h3–h6 的排版
+				out.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+				continue;
+			}
+			if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+				flushAll();
+				out.push('<hr>');
+				continue;
+			}
+			if (/^\s*>/.test(line)) {
+				flushPara();
+				flushList();
+				flushTable();
+				quote.push(line.replace(/^\s*>\s?/, ''));
+				continue;
+			}
+			const cells = line.includes('|') ? line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|') : null;
+			if (cells !== null && /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(lines[index + 1] ?? '')) {
+				flushPara();
+				flushList();
+				flushQuote();
+				table = { head: cells, rows: [] };
+				index += 1;
+				continue;
+			}
+			if (table !== null && cells !== null) {
+				table.rows.push(cells);
+				continue;
+			}
+			flushQuote();
+			flushTable();
+			const item = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line);
+			if (item !== null) {
+				flushPara();
+				const wanted = /^\d/.test(item[2]) ? 'ol' : 'ul';
+				if (list !== wanted) {
+					if (list !== null) out.push(`</${list}>`);
+					out.push(`<${wanted}>`);
+					list = wanted;
+				}
+				out.push(`<li>${inlineMarkdown(item[3])}</li>`);
+				continue;
+			}
+			flushList();
+			para.push(inlineMarkdown(line));
+		}
+		flushAll();
+		if (fence !== null) out.push(`<pre><code>${escapeHtml(fence.join('\n'))}</code></pre>`);
+		return out.join('');
+	};
+
+	/* 详情面板的唯一入口：正文里已经有块级 HTML 就走净化路径，否则一律按
+	 * markdown 渲染（纯文本也因此天然安全）。 */
+	const RICH_BLOCK_PATTERN = /<(p|div|br|img|table|ul|ol|li|h[1-6]|blockquote|pre|span|a|section|figure|td|th)\b[^>]*>/i;
+	const descriptionToRichHtml = (value) => {
+		const text = String(value ?? '').replace(/\r\n?/g, '\n').trim();
 		if (text === '') return '';
-		return text
-			.replace(/<br\s*\/?>/gi, '\n')
-			.replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
-			.replace(/<[^>]+>/g, '')
-			.replace(/&nbsp;/g, ' ')
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/&quot;/g, '"')
-			.replace(/&#39;/g, "'")
-			.replace(/&amp;/g, '&')
-			.replace(/\n{3,}/g, '\n\n')
-			.trim();
+		return RICH_BLOCK_PATTERN.test(text) ? sanitizeRichHtml(text) : markdownToHtml(text);
+	};
+
+	/* `tapd <kind> show` 回的是一条完整记录，但形态随 CLI 版本浮动：裸对象、
+	 * 单元素数组，或者单键包裹（`{bug: {…}}`）。统一剥到记录本身。 */
+	const isTapdKind = (kind) => kind === 'bug' || kind === 'story' || kind === 'task';
+	const detailFromShow = (value, id) => {
+		let parsed = value;
+		if (typeof parsed === 'string') parsed = safeParse(parsed.trim());
+		if (parsed === null || typeof parsed !== 'object') return null;
+		const list = asList(parsed);
+		if (list.length > 0) {
+			const hit = list.find((entry) => entry !== null && typeof entry === 'object' && String(entry.id ?? '') === String(id));
+			return hit ?? list[0];
+		}
+		for (const key of ['bug', 'story', 'task', 'data', 'info', 'item']) {
+			const inner = parsed[key];
+			if (inner !== null && typeof inner === 'object') return asList(inner)[0] ?? inner;
+		}
+		return parsed;
 	};
 
 	/* A due date is read, not parsed: `2026-10-25` is a database value, and
@@ -967,6 +1230,9 @@ function createWorkspace(require, ctx, catalog) {
 		 * item object, and a held reference would freeze the panel on stale
 		 * status. */
 		const [inspectorKey, setInspectorKey] = React.useState('');
+		/* 每个打开过的详情的完整记录（`tapd <kind> show`），按 `kind:id`
+		 * 缓存：列表行经常不带描述，详情只在第一次打开时取一次。 */
+		const [details, setDetails] = React.useState({});
 		const [rowQuery, setRowQuery] = React.useState('');
 		const [bugSync, setBugSync] = React.useState({ phase: 'idle', at: null, error: null });
 		const [toast, setToast] = React.useState('');
@@ -978,6 +1244,7 @@ function createWorkspace(require, ctx, catalog) {
 		const projectControlRef = React.useRef(null);
 		const segRef = React.useRef(null);
 		const plateRef = React.useRef(null);
+		const richRef = React.useRef(null);
 
 		const showToast = React.useCallback((text) => {
 			setToast(text);
@@ -1427,6 +1694,65 @@ function createWorkspace(require, ctx, catalog) {
 				alive = false;
 			};
 		}, [tapdAuthorized, loadedAt]);
+
+		/* 打开详情时补齐完整记录：`todo` 列表经常不带描述字段，详情面板首次
+		 * 打开时拉一次 `tapd <kind> show <id>`，结果按 key 缓存（每个工作项
+		 * 最多取一次；列表刷新不重取——描述不是状态，不会自己变化）。 */
+		React.useEffect(() => {
+			if (inspectorKey === '' || !live.tapd) return undefined;
+			const sep = inspectorKey.indexOf(':');
+			const kind = inspectorKey.slice(0, sep);
+			const id = inspectorKey.slice(sep + 1);
+			if (!isTapdKind(kind) || id === '') return undefined;
+			if (details[inspectorKey] !== undefined) return undefined;
+			let alive = true;
+			setDetails((prev) =>
+				prev[inspectorKey] === undefined ? { ...prev, [inspectorKey]: { phase: 'loading', raw: null } } : prev
+			);
+			void (async () => {
+				const run = await attempt('tapd', [kind, 'show', id], 30000);
+				if (!alive) return;
+				if (run.error !== undefined) {
+					setDetails((prev) => ({ ...prev, [inspectorKey]: { phase: 'error', error: String(run.error), raw: null } }));
+					return;
+				}
+				setDetails((prev) => ({ ...prev, [inspectorKey]: { phase: 'done', raw: detailFromShow(run.value, id) } }));
+			})();
+			return () => {
+				alive = false;
+			};
+		}, [inspectorKey, live.tapd, details]);
+
+		/* 描述里是净化过的外部 HTML，所以用两个容器级守卫代替逐节点绑定：
+		 * 捕获阶段的 error 监听把加载失败的 <img> 换成指向原图的链接；点击
+		 * 图片或链接一律交给真实浏览器打开（应用壳不能被带走到别的页面）。 */
+		React.useEffect(() => {
+			const node = richRef.current;
+			if (node === null) return undefined;
+			const onError = (event) => {
+				const image = event.target;
+				if (!(image instanceof Element) || image.tagName !== 'IMG') return;
+				const src = image.getAttribute('src') ?? '';
+				const link = document.createElement('a');
+				link.className = 'lgwsp-rich-broken-img';
+				link.textContent = image.getAttribute('alt') || '图片加载失败';
+				if (/^https?:/i.test(src)) link.href = src;
+				image.replaceWith(link);
+			};
+			const onClick = (event) => {
+				const target = event.target instanceof Element ? event.target.closest('a, img') : null;
+				if (target === null) return;
+				event.preventDefault();
+				const url = (target.tagName === 'IMG' ? target.getAttribute('src') : target.getAttribute('href')) ?? '';
+				if (/^(https?:|mailto:)/i.test(url)) void openExternal(url);
+			};
+			node.addEventListener('error', onError, true);
+			node.addEventListener('click', onClick);
+			return () => {
+				node.removeEventListener('error', onError, true);
+				node.removeEventListener('click', onClick);
+			};
+		}, [inspectorKey, details]);
 
 		/* wecom scan: poll the host while the QR flow runs. The interval is
 		 * torn down when the panel unmounts, when the flow leaves 'running',
@@ -2506,8 +2832,21 @@ function createWorkspace(require, ctx, catalog) {
 				? null
 				: (() => {
 						const meta = KIND_META[selectedItem.kind] ?? KIND_META.bug;
-						const raw = selectedItem.raw ?? {};
-						const description = plainText(firstOf(raw, ['description', 'desc', 'description_text', 'remark']));
+						/* 描述优先用 `show` 补齐的完整记录；`show` 还没回来（或失败）
+						 * 就退回列表自带的那份。 */
+						const detail = details[`${selectedItem.kind}:${selectedItem.id}`];
+						const raw = detail?.raw ?? selectedItem.raw ?? {};
+						const descriptionHtml = descriptionToRichHtml(firstOf(raw, ['description', 'desc', 'description_text', 'remark']));
+						const detailNote =
+							descriptionHtml !== ''
+								? null
+								: detail?.phase === 'error'
+									? `完整描述读取失败（${String(detail.error ?? '未知原因')}）；可在浏览器中查看原文。`
+									: detail !== undefined && detail.phase === 'loading'
+										? '正在从 TAPD 读取完整描述…'
+										: live.tapd && isTapdKind(selectedItem.kind)
+											? '这条工作项没有描述内容。'
+											: '这条记录没有描述内容。';
 						const source =
 							selectedItem.kind === 'doc' || selectedItem.kind === 'wecom-todo'
 								? 'wecom://workspace'
@@ -2578,7 +2917,13 @@ function createWorkspace(require, ctx, catalog) {
 											),
 											h('div', { className: 'lgwsp-detail-divider' }),
 											h('h3', { className: 'lgwsp-detail-label' }, '描述'),
-											h('p', { className: 'lgwsp-detail-description' }, description === '' ? '这条工作项没有随列表返回描述；TAPD 详情页会给出完整内容。' : description),
+											descriptionHtml !== ''
+												? h('div', {
+														className: 'lgwsp-detail-rich',
+														ref: richRef,
+														dangerouslySetInnerHTML: { __html: descriptionHtml },
+													})
+												: h('p', { className: 'lgwsp-detail-description' }, detailNote),
 											h(
 												'div',
 												{ className: 'lgwsp-detail-grid' },

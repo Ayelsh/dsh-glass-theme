@@ -251,11 +251,14 @@ await check('the workbench keeps the hooks its tests and screenshots drive', () 
 	if (!/id: 'refreshButton'/.test(src)) throw new Error('the top-bar reload lost its id');
 });
 
-await check('the embedded detail reads as text, not as TAPD HTML', () => {
-	// TAPD returns <p>/<img> bodies; rendering them raw put literal tags in the
-	// panel and a broken image path under the description.
-	if (!/const plainText = \(value\)/.test(src)) throw new Error('no HTML stripper');
-	if (!/plainText\(firstOf\(raw, \['description'/.test(src)) throw new Error('the description bypasses plainText');
+await check('the embedded detail renders sanitized rich HTML, not raw TAPD HTML', () => {
+	// TAPD bodies arrive as HTML or as the CLI's markdown conversion. They must
+	// go through the whitelist sanitizer before dangerouslySetInnerHTML — raw
+	// HTML put literal tags in the panel and scripts in the app's origin.
+	if (!/const descriptionToRichHtml = \(value\)/.test(src)) throw new Error('no rich renderer entry');
+	if (!/descriptionToRichHtml\(firstOf\(raw, \['description'/.test(src)) throw new Error('the description bypasses descriptionToRichHtml');
+	if (!/dangerouslySetInnerHTML: \{ __html: descriptionHtml \}/.test(src)) throw new Error('the rich container is not fed the sanitized html');
+	if (!/detailNote/.test(src)) throw new Error('the empty/loading description lost its note');
 	if (!/priorityLabel\(selectedItem\.severity\)/.test(src)) throw new Error('priority codes reach the chip untranslated');
 });
 
