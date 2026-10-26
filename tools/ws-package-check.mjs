@@ -89,6 +89,10 @@ const required = [
 	['const descriptionToRichHtml', 'the rich description renderer'],
 	['sanitizeRichHtml', 'the HTML sanitizer'],
 	["'show'", 'the tapd detail backfill command'],
+	/* 0.3.7: TAPD 描述图片是站内路径，cookie 又是 SameSite=Lax，应用内
+	 * <img> 加载不到，所以 src 全部改走宿主的同源图片代理。 */
+	['const proxiedImageUrl', 'the image proxy mapper'],
+	['/dsh-glass-theme/ws/image', 'the host image route'],
 ]
 const missing = required.filter(([needle]) => !clientSource.includes(needle))
 let failures = 0

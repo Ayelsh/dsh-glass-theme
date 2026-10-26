@@ -19,6 +19,7 @@ import {
   registerWorkspaceRoutes,
   startLoginChild,
   validateExternalUrl,
+  validateImagePath,
   wecomLoginQrFile,
 } from "../src/host/workspace.js";
 
@@ -703,6 +704,46 @@ if (process.platform === "win32") {
     res.status === 400 && json?.ok === false && /allow-listed host/.test(String(json?.error)),
     `got ${res.status} ${JSON.stringify(json)}`,
   );
+}
+
+{
+  // The image proxy feeds TAPD paths to the CLI, so the path is validated
+  // before anything spawns; the refusal reasons must survive the wire.
+  check(
+    "image: a tfl capture path validates",
+    validateImagePath("/tfl/captures/2026-10/tapd_1_base64_1_2.png") === null,
+  );
+  const refused = [
+    ["", "empty"],
+    ["tfl/captures/a.png", "not site-relative"],
+    ["/tfl/../secrets", "traversal"],
+    ["/tfl/a b.png", "space"],
+    ["/tfl/a.png?x=1", "query smuggled in"],
+    [`/${"a".repeat(600)}`, "too long"],
+  ];
+  for (const [path, label] of refused) {
+    check(`image: refuses ${label}`, typeof validateImagePath(path) === "string", `${path} was accepted`);
+  }
+  {
+    const { res } = await request("POST", "/dsh-glass-theme/ws/image?path=%2Ftfl%2Fa.png", JSON.stringify({}));
+    check("image: route answers 405 for POST", res.status === 405, `got ${res.status}`);
+  }
+  {
+    const { res, json } = await request("GET", "/dsh-glass-theme/ws/image?path=%2Ftfl%2F..%2Fx.png");
+    check(
+      "image: route answers 400 for a traversal path",
+      res.status === 400 && json?.ok === false && /\.\./.test(String(json?.error)),
+      `got ${res.status} ${JSON.stringify(json)}`,
+    );
+  }
+  {
+    const { res, json } = await request("GET", "/dsh-glass-theme/ws/image");
+    check(
+      "image: route answers 400 when path is missing",
+      res.status === 400 && json?.ok === false,
+      `got ${res.status} ${JSON.stringify(json)}`,
+    );
+  }
 }
 
 // 14b. The child must never inherit a piped stdin that nobody ends. `tapd bug

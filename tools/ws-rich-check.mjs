@@ -27,8 +27,8 @@ const stubs = `
 		return [];
 	};
 `;
-const factory = new Function(`${stubs}${block}\nreturn { escapeHtml, absolutizeUrl, sanitizeRichHtml, markdownToHtml, descriptionToRichHtml, detailFromShow, isTapdKind };`);
-const { escapeHtml, absolutizeUrl, sanitizeRichHtml, markdownToHtml, descriptionToRichHtml, detailFromShow, isTapdKind } = factory();
+const factory = new Function(`${stubs}${block}\nreturn { escapeHtml, absolutizeUrl, proxiedImageUrl, sanitizeRichHtml, markdownToHtml, descriptionToRichHtml, detailFromShow, isTapdKind };`);
+const { escapeHtml, absolutizeUrl, proxiedImageUrl, sanitizeRichHtml, markdownToHtml, descriptionToRichHtml, detailFromShow, isTapdKind } = factory();
 
 let failures = 0;
 const check = (name, fn) => {
@@ -55,15 +55,26 @@ check('absolutizeUrl pins protocol- and site-relative TAPD addresses to https', 
 	expect(absolutizeUrl('') === '', 'empty url');
 });
 
+check('proxiedImageUrl routes TAPD paths through the host proxy and refuses the rest', () => {
+	expect(proxiedImageUrl('/tfl/captures/2026-10/a.png') === '/dsh-glass-theme/ws/image?path=%2Ftfl%2Fcaptures%2F2026-10%2Fa.png', proxiedImageUrl('/tfl/captures/2026-10/a.png'));
+	expect(proxiedImageUrl('https://www.tapd.cn/tfl/a.png') === '/dsh-glass-theme/ws/image?path=%2Ftfl%2Fa.png', proxiedImageUrl('https://www.tapd.cn/tfl/a.png'));
+	expect(proxiedImageUrl('//img.tapd.cn/a.png') === '/dsh-glass-theme/ws/image?path=%2Fa.png', proxiedImageUrl('//img.tapd.cn/a.png'));
+	expect(proxiedImageUrl('//example.com/a.png') === null, 'protocol-relative external host stays direct');
+	expect(proxiedImageUrl('data:image/png;base64,AAAA') === null, 'data url needs no proxy');
+	expect(proxiedImageUrl('https://example.com/a.png') === null, 'external host stays direct');
+	expect(proxiedImageUrl('/tfl/../etc') === null, 'traversal refused');
+	expect(proxiedImageUrl('/tfl/a b.png') === null, 'spaces refused (TAPD paths are clean)');
+});
+
 check('sanitizer drops scripts with their content and keeps prose around them', () => {
 	const out = sanitizeRichHtml('<p>前文</p><script>alert(1)</script><p>后文</p>');
 	expect(!out.includes('script') && !out.includes('alert'), out);
 	expect(out.includes('前文') && out.includes('后文'), out);
 });
 
-check('sanitizer strips event handlers and styles but keeps the safe attributes', () => {
+check('sanitizer sends TAPD images through the proxy and keeps the original as data-rich-href', () => {
 	const out = sanitizeRichHtml('<img src="https://img.tapd.cn/a.png" onerror="x" style="width:9px" alt="截图" width="600">');
-	expect(out === '<img src="https://img.tapd.cn/a.png" alt="截图" width="600" loading="lazy">', out);
+	expect(out === '<img src="/dsh-glass-theme/ws/image?path=%2Fa.png" data-rich-href="https://img.tapd.cn/a.png" alt="截图" width="600" loading="lazy">', out);
 	const link = sanitizeRichHtml('<a href="javascript:alert(1)">x</a>');
 	expect(link.startsWith('<a') && !link.includes('javascript:') && link.includes('target="_blank"'), link);
 });
@@ -87,9 +98,9 @@ check('markdown path renders headings, emphasis, code, lists and links', () => {
 	expect(out.includes('<a href="https://www.tapd.cn/x"'), out);
 });
 
-check('markdown images become lazy absolute imgs; plain text stays escaped', () => {
+check('markdown images become proxied lazy imgs; plain text stays escaped', () => {
 	const out = markdownToHtml('前![截图](//img.tapd.cn/a.png)后\n行2 <b>');
-	expect(out.includes('<img src="https://img.tapd.cn/a.png" alt="截图" loading="lazy">'), out);
+	expect(out.includes('<img src="/dsh-glass-theme/ws/image?path=%2Fa.png" data-rich-href="https://img.tapd.cn/a.png" alt="截图" loading="lazy">'), out);
 	expect(out.includes('行2 &lt;b&gt;'), out);
 });
 

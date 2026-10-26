@@ -812,6 +812,34 @@ function createWorkspace(require, ctx, catalog) {
 		return url;
 	};
 
+	/* 描述里的图片即使拼出绝对地址也加载不出来：www.tapd.cn 的登录 cookie
+	 * 是 SameSite=Lax，应用内 <img> 的跨站子资源请求带不上它。站内图片一律
+	 * 换成宿主的同源代理（`tapd image get` 换取预签名下载地址，宿主取回字
+	 * 节）；外部图片和 data: 保持原样。 */
+	const IMAGE_PROXY_PATH = '/dsh-glass-theme/ws/image';
+	const IMAGE_PROXY_HOSTS = new Set(['www.tapd.cn', 'tapd.cn', 'img.tapd.cn']);
+	const proxiedImageUrl = (value) => {
+		const text = String(value ?? '').trim();
+		if (text === '' || text.startsWith('data:image/')) return null;
+		let path = '';
+		if (text.startsWith('//')) {
+			/* 协议相对地址当路径喂给 CLI 是垃圾；钉上 https 按域名判断。 */
+			if (!URL.canParse(`https:${text}`)) return null;
+			const parsed = new URL(`https:${text}`);
+			if (!IMAGE_PROXY_HOSTS.has(parsed.hostname)) return null;
+			path = parsed.pathname;
+		} else if (text.startsWith('/')) {
+			path = text;
+		} else {
+			if (!URL.canParse(text)) return null;
+			const parsed = new URL(text);
+			if (!IMAGE_PROXY_HOSTS.has(parsed.hostname)) return null;
+			path = parsed.pathname;
+		}
+		if (!/^\/[A-Za-z0-9._\-/]+$/.test(path) || path.includes('..')) return null;
+		return `${IMAGE_PROXY_PATH}?path=${encodeURIComponent(path)}`;
+	};
+
 	const RICH_VOID_TAGS = new Set(['br', 'hr', 'img']);
 	/* 这些标签的*内容*是代码或元数据（`<script>` 的正文不是散文），连文带
 	 * 内容一起丢；其余未知的标签只摘掉标签本身，文字保留。 */
@@ -838,7 +866,10 @@ function createWorkspace(require, ctx, catalog) {
 				if (name === 'src') {
 					const src = absolutizeUrl(value);
 					if (!/^(https?:|data:image\/)/i.test(src)) return null;
-					attrs.push(`src="${escapeHtml(src)}"`);
+					const proxied = proxiedImageUrl(src);
+					/* src 走同源代理；原图地址留给点击跳浏览器和裂图兜底。 */
+					attrs.push(`src="${escapeHtml(proxied ?? src)}"`);
+					if (proxied !== null) attrs.push(`data-rich-href="${escapeHtml(src)}"`);
 				} else if (name === 'alt' || name === 'title') {
 					attrs.push(`${name}="${escapeHtml(value)}"`);
 				} else if (name === 'width' || name === 'height') {
@@ -913,8 +944,13 @@ function createWorkspace(require, ctx, catalog) {
 		escapeHtml(text)
 			.replace(/`([^`]+)`/g, '<code>$1</code>')
 			.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;.*&quot;)?\)/g, (_m, alt, src) => {
+				/* 文本已转义过一遍，这里再交给 escapeHtml 属于双重转义；
+				 * TAPD 的图片路径只含字母数字和 `._-/`，不受影响。 */
 				const url = absolutizeUrl(src);
-				return /^(https?:|data:image\/)/i.test(url) ? `<img src="${url}" alt="${alt}" loading="lazy">` : alt;
+				if (!/^(https?:|data:image\/)/i.test(url)) return alt;
+				const proxied = proxiedImageUrl(url);
+				const origin = proxied === null ? '' : ` data-rich-href="${escapeHtml(url)}"`;
+				return `<img src="${escapeHtml(proxied ?? url)}"${origin} alt="${alt}" loading="lazy">`;
 			})
 			.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;.*&quot;)?\)/g, (_m, label, href) => {
 				const url = absolutizeUrl(href);
@@ -1732,18 +1768,25 @@ function createWorkspace(require, ctx, catalog) {
 			const onError = (event) => {
 				const image = event.target;
 				if (!(image instanceof Element) || image.tagName !== 'IMG') return;
-				const src = image.getAttribute('src') ?? '';
+				/* 代理失败时把用户送到原图：浏览器整页导航会带上 tapd 的
+				 * 会话 cookie，人点得开机器加载不出的那张图。 */
+				const url = image.getAttribute('data-rich-href') ?? image.getAttribute('src') ?? '';
 				const link = document.createElement('a');
 				link.className = 'lgwsp-rich-broken-img';
 				link.textContent = image.getAttribute('alt') || '图片加载失败';
-				if (/^https?:/i.test(src)) link.href = src;
+				if (/^https?:/i.test(url)) link.href = url;
 				image.replaceWith(link);
 			};
 			const onClick = (event) => {
 				const target = event.target instanceof Element ? event.target.closest('a, img') : null;
 				if (target === null) return;
 				event.preventDefault();
-				const url = (target.tagName === 'IMG' ? target.getAttribute('src') : target.getAttribute('href')) ?? '';
+				/* 图片的 src 已经是同源代理；data-rich-href 才是用户在浏览器
+				 * 里真正想看的原图地址。 */
+				const url =
+					target.getAttribute('data-rich-href') ??
+					(target.tagName === 'IMG' ? target.getAttribute('src') : target.getAttribute('href')) ??
+					'';
 				if (/^(https?:|mailto:)/i.test(url)) void openExternal(url);
 			};
 			node.addEventListener('error', onError, true);
