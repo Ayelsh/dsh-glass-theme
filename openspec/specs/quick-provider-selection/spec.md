@@ -56,7 +56,9 @@ The settings page SHALL let a user enable or disable a provider, and SHALL let t
 
 #### Scenario: Choosing models
 - **WHEN** the user checks or unchecks models in that view
-- **THEN** the change is applied immediately and the provider row reflects how many of its models are selected
+- **THEN** the view reflects the unsaved draft immediately with no host round trip, and nothing is persisted until the user saves, at which point the choice is written once and the provider row reflects how many of its models are selected
+- **WHEN** the user leaves the model list without saving
+- **THEN** the draft is discarded and the previously saved selection stays in effect
 
 #### Scenario: Provider is not enabled
 - **WHEN** a provider is disabled

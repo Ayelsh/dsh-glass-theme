@@ -1113,9 +1113,17 @@ window.__ModuleLoader__.load({
 			const writeHost = async (selection) => {
 				if (form === null) return false;
 				try {
-					const accepted = await form.set('quickProviders', selection.providers);
-					const modelsAccepted = await form.set('quickModels', selection.models);
-					if (!accepted || !modelsAccepted) {
+					/* ONE mutation carries both fields: the pair describes one
+					   choice, and one revision means one echo. Two sequential
+					   sets left a window where the first echo still carried the
+					   old model map and a fast second click fought it — the
+					   batched form is atomic end to end (verified live: two ops
+					   land in a single revision bump). */
+					const accepted = await form.mutate([
+						{ op: 'set', path: ['quickProviders'], value: selection.providers },
+						{ op: 'set', path: ['quickModels'], value: selection.models },
+					]);
+					if (!accepted) {
 						/* The controller re-reads the document on a refused write, so
 						   the subscription delivers the authoritative value; dropping
 						   the intent here is what makes the control follow it. */
@@ -1287,16 +1295,30 @@ window.__ModuleLoader__.load({
 							if (!live.has(provider)) delete next.models[provider];
 						}
 					}
-					const accepted = form === null ? false : await writeHost(next);
-					if (form === null || !accepted) {
-						/* Degraded or refused: the mirror is still the only surface the
-						   picker reads, so keep it level with what the page shows. */
-						pending = null;
-					}
+					/* Publish first, await second. The click must land on screen in
+					   the same interaction — not one or two host round trips later —
+					   and the mirror goes with it, because the picker may be open in
+					   this very window and reads it synchronously. `pending` holds
+					   the intent so the echo of THIS write reads as ours; a write the
+					   host refuses re-reads and re-adopts the stored value below. */
 					state = next;
-					pending = form !== null && accepted ? next : null;
+					pending = next;
 					writeMirror(next);
 					notify();
+					const accepted = form === null ? false : await writeHost(next);
+					if (form !== null && !accepted) {
+						/* Refused: writeHost's refusal path already re-adopted the
+						   authoritative value and notified the page — do not clobber
+						   it with the refused selection. Degraded (form === null)
+						   keeps what was published: the mirror is the only surface the
+						   picker reads, and it is already level with the page. */
+						pending = null;
+					} else {
+						/* Success (or degraded): keep holding the intent until the echo
+						   lands, so an in-flight snapshot cannot snap the control back
+						   for a frame. */
+						pending = next;
+					}
 					return form !== null && accepted;
 				},
 				dispose() {

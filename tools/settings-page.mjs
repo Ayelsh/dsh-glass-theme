@@ -9,6 +9,7 @@
  *   5. the model drill-down does not round-trip     -> the selection fault
  *   6. the workspace switch leaves the rail behind  -> the registration fault
  *   7. the picker ignores the (provider, model) set -> the filtering fault
+ *   8. the toolbar misses a state, or a check lags  -> the bulk/latency fault
  *
  * The selectors are looked up by role and aria-label on purpose: the shell's
  * hashed class names change between builds, the accessible names do not.
@@ -320,7 +321,7 @@ try {
 	check('switch: meter counts the selection', after.pipsOn === 1 && after.count === '1 / 4', [after.pipsOn, after.count]);
 	check('switch: reset appears with a selection', after.reset === true, after.reset);
 
-	// ---- the model drill-down ---------------------------------------------
+	// ---- the model drill-down (draft until 保存) ----------------------------
 	check('door: pressable', await press(page, '.lg-settings-row[data-on=true] .lg-settings-modelDoor'));
 	await wait(700);
 	const view1 = await page.evaluate(`(() => {
@@ -330,6 +331,7 @@ try {
     return {
       open: true,
       back: view.querySelector('.lg-settings-back') !== null,
+      backLabel: (view.querySelector('.lg-settings-back') || {}).getAttribute('aria-label'),
       title: (view.querySelector('.lg-settings-viewTitle') || {}).textContent,
       count: (view.querySelector('.lg-settings-viewCount') || {}).textContent,
       total: rows.length,
@@ -337,57 +339,216 @@ try {
     };
   })()`);
 	check('view: opens with a back affordance', view1.open === true && view1.back === true, view1);
+	check('view: back says it does not save', view1.backLabel === '返回供应商列表（不保存）', view1.backLabel);
 	check('view: counts the provider models', view1.open === true && new RegExp('^' + view1.total + ' \\/ ' + view1.total + ' 个模型$').test(view1.count || ''), view1.count);
 	check('view: starts with every model chosen', view1.allOn === true, view1.allOn);
 	/* Uncheck one row — deliberately not the running model, so the picker
-	   step below can tell a subset from an unfiltered list. The subset must
-	   reach the mirror AND the host entry in the same interaction. */
+	   step below can tell a subset from an unfiltered list. The click is
+	   pure UI: nothing travels to the host until 保存. */
+	const clickedName = await page.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('.lg-settings-check')];
+    const target = rows.find((r) => (r.querySelector('.lg-settings-modelName') || {}).textContent !== ${JSON.stringify(currentModel)}) || rows[rows.length - 1];
+    if (!target) return null;
+    target.click();
+    return (target.querySelector('.lg-settings-modelName') || {}).textContent;
+  })()`);
+	await wait(150);
+	const fastFlip = await page.evaluate(`(() => {
+    const row = [...document.querySelectorAll('.lg-settings-check')].find((r) => (r.querySelector('.lg-settings-modelName') || {}).textContent === ${JSON.stringify(clickedName)});
+    return row ? row.getAttribute('aria-checked') : 'missing';
+  })()`);
+	check('view: the checkbox flips without waiting for the host', fastFlip === 'false', fastFlip);
+	/* Draft purity: a click wrote NOTHING. The host entry is still absent
+	   and the mirror still holds no model choice for the provider. */
+	const hostUntouched = await host(page);
+	const mirrorUntouched = await page.evaluate(`(() => {
+    const raw = window.localStorage.getItem(${JSON.stringify(KEY)});
+    let stored = null;
+    try { stored = JSON.parse(raw); } catch (e) { /* keep null */ }
+    return stored && stored.models ? Object.prototype.hasOwnProperty.call(stored.models, ${JSON.stringify(pinnedId)}) : null;
+  })()`);
+	check(
+	'view: a check is pure UI until 保存',
+	hostUntouched !== null && !(hostUntouched.qm && Object.prototype.hasOwnProperty.call(hostUntouched.qm, pinnedId)) && mirrorUntouched === false,
+	[hostUntouched && hostUntouched.qm, mirrorUntouched]
+	);
+	const view2 = await page.evaluate(`(() => {
+    const view = document.querySelector('.lg-settings-view');
+    const rows = [...view.querySelectorAll('.lg-settings-check')];
+    const count = (view.querySelector('.lg-settings-viewCount') || {}).textContent;
+    const save = view.querySelector('.lg-settings-toolSave');
+    return {
+      count,
+      leftOn: rows.filter((r) => r.getAttribute('aria-checked') === 'true').length,
+      hint: (view.querySelector('.lg-settings-viewHint') || {}).textContent,
+      dirty: save ? save.getAttribute('data-dirty') : 'missing',
+    };
+  })()`);
+	check('view: uncheck leaves a draft subset', view2.leftOn === view1.total - 1, [view2.leftOn, view1.total]);
+	check('view: subset counted in the header', view2.count === view2.leftOn + ' / ' + view1.total + ' 个模型', view2.count);
+	check('view: the subset hint explains 保存', view2.hint === '只有勾选的模型会出现在选择器里，当前正在使用的模型始终可见；改动点保存后生效。', view2.hint);
+	check('view: 保存 knows the draft is unsaved', view2.dirty === 'true', view2.dirty);
+	/* Leaving any other way discards the draft: the saved state is still
+	   "everything", and reopening seeds the draft from that truth again. */
+	check('back: pressable', await press(page, '.lg-settings-back'));
+	await wait(500);
+	const noteAfterDiscard = await page.evaluate(`(() => {
+    const row = document.querySelector('.lg-settings-row[data-on=true]');
+    return row ? (row.querySelector('.lg-settings-note') || {}).textContent : null;
+  })()`);
+	check('back: leaving without saving discards the draft', noteAfterDiscard === '全部 ' + view1.total + ' 个模型', noteAfterDiscard);
+	check('door: reopens on the saved truth', await press(page, '.lg-settings-row[data-on=true] .lg-settings-modelDoor'));
+	const reopened = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (!view) return false;
+      const rows = [...view.querySelectorAll('.lg-settings-check')];
+      return rows.length > 0 && rows.every((r) => r.getAttribute('aria-checked') === 'true');
+    })()`
+	);
+	check('view: the draft restarts from the saved entry', reopened === true);
+	/* Re-apply the subset and confirm it with 保存: this is the write the
+	   picker step below asserts against. */
 	await page.evaluate(`(() => {
     const rows = [...document.querySelectorAll('.lg-settings-check')];
     const target = rows.find((r) => (r.querySelector('.lg-settings-modelName') || {}).textContent !== ${JSON.stringify(currentModel)}) || rows[rows.length - 1];
     if (target) target.click();
   })()`);
-	/* The subset is authoritative only after both host writes echoed. */
-	const settled = await settle(
-		page,
-		`(() => {
-    const view = document.querySelector('.lg-settings-view');
-    if (!view) return false;
-    const rows = [...view.querySelectorAll('.lg-settings-check')];
-    return rows.filter((r) => r.getAttribute('aria-checked') === 'true').length === rows.length - 1;
-  })()`
+	const draftSubset = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (!view) return false;
+      const rows = [...view.querySelectorAll('.lg-settings-check')];
+      return rows.filter((r) => r.getAttribute('aria-checked') === 'true').length === rows.length - 1;
+    })()`
 	);
-	check('view: subset settles after the writes', settled === true);
-	const view2 = await page.evaluate(`(() => {
-    const view = document.querySelector('.lg-settings-view');
-    const rows = [...view.querySelectorAll('.lg-settings-check')];
-    const raw = window.localStorage.getItem(${JSON.stringify(KEY)});
-    const count = (view.querySelector('.lg-settings-viewCount') || {}).textContent;
-    return {
-      count,
-      leftOn: rows.filter((r) => r.getAttribute('aria-checked') === 'true').length,
-      stored: (() => { try { return JSON.parse(raw); } catch (e) { return null; } })(),
-      hint: (view.querySelector('.lg-settings-viewHint') || {}).textContent,
-    };
-  })()`);
-	const hostAfterSubset = await host(page);
-	const expectedModels = view2.stored && view2.stored.models ? view2.stored.models[pinnedId] : null;
-	check('view: uncheck leaves a subset', view2.leftOn === view1.total - 1, [view2.leftOn, view1.total]);
-	check('view: subset counted in the header', view2.count === view2.leftOn + ' / ' + view1.total + ' 个模型', view2.count);
-	check(
-		'view: subset reaches the mirror',
-		view2.stored !== null && !Array.isArray(view2.stored) && Array.isArray(expectedModels) && expectedModels.length === view2.leftOn,
-		view2.stored
+	check('view: the draft subset returns', draftSubset === true);
+	check('save: pressable', await press(page, '.lg-settings-toolSave'));
+	const savedSettled = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (view) return false;
+      const snap = ${HOST_SNAPSHOT};
+      if (!snap) return false;
+      const raw = window.localStorage.getItem(${JSON.stringify(KEY)});
+      let mirror = null;
+      try { mirror = JSON.parse(raw); } catch (e) { /* keep null */ }
+      const want = mirror && mirror.models ? mirror.models[${JSON.stringify(pinnedId)}] : undefined;
+      return Array.isArray(want) && want.length === ${view1.total} - 1 && JSON.stringify(snap.qm[${JSON.stringify(pinnedId)}]) === JSON.stringify(want);
+    })()`
 	);
-	check('view: subset reaches the host entry', hostAfterSubset !== null && JSON.stringify(hostAfterSubset.qm) === JSON.stringify(view2.stored.models), hostAfterSubset && hostAfterSubset.qm);
-	check('view: not-yet-all hint explains the subset', typeof view2.hint === 'string' && view2.hint.length > 0, view2.hint);
-	check('back: pressable', await press(page, '.lg-settings-back'));
-	await wait(500);
-	const note = await page.evaluate(`(() => {
+	check('save: writes the confirmed draft to host and mirror', savedSettled === true, savedSettled);
+	const noteAfterSave = await page.evaluate(`(() => {
     const row = document.querySelector('.lg-settings-row[data-on=true]');
     return row ? (row.querySelector('.lg-settings-note') || {}).textContent : null;
   })()`);
-	check('back: row counts the subset', note === view2.leftOn + ' / ' + view1.total + ' 个模型', note);
+	check('save: returns to the board and counts the subset', noteAfterSave === view2.leftOn + ' / ' + view1.total + ' 个模型', noteAfterSave);
+
+	// ---- the bulk toolbar (draft edits, saved once) ------------------------
+	/* The toolbar edits the DRAFT with the same two states the checkboxes
+	   produce: 全不选 is the explicit empty list, an inversion that covers
+	   everything folds back to the absent entry, and none of it reaches
+	   the host until 保存. */
+	check('door: reopens for the toolbar', await press(page, '.lg-settings-row[data-on=true] .lg-settings-modelDoor'));
+	await wait(700);
+	const tools1 = await page.evaluate(`(() => {
+    const bar = document.querySelector('.lg-settings-viewTools');
+    if (!bar) return { present: false };
+    const byLabel = (t) => [...bar.querySelectorAll('.lg-settings-tool')].find((n) => n.textContent.trim() === t);
+    return {
+      present: true,
+      labels: [...bar.querySelectorAll('.lg-settings-tool')].map((n) => n.textContent.trim()),
+      allDisabled: byLabel('全选') ? byLabel('全选').disabled : null,
+      noneDisabled: byLabel('全不选') ? byLabel('全不选').disabled : null,
+      saveLabel: byLabel('保存') ? byLabel('保存').getAttribute('aria-label') : null,
+      dirty: byLabel('保存') ? byLabel('保存').getAttribute('data-dirty') : 'missing',
+    };
+  })()`);
+	check('toolbar: offers the four affordances', tools1.present === true && ['全选', '全不选', '反选', '保存'].every((t) => tools1.labels.indexOf(t) >= 0), tools1.labels);
+	check('toolbar: 全选 enabled while a subset is explicit', tools1.allDisabled === false, tools1.allDisabled);
+	check('toolbar: 保存 says what it does', tools1.saveLabel === '保存并返回供应商列表', tools1.saveLabel);
+	check('toolbar: a saved draft starts clean', tools1.dirty === 'false', tools1.dirty);
+	check('toolbar: 全不选 pressable', await press(page, '.lg-settings-tool', '全不选'));
+	const noneSettled = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (!view) return false;
+      const rows = [...view.querySelectorAll('.lg-settings-check')];
+      return rows.length > 0 && rows.every((r) => r.getAttribute('aria-checked') === 'false') && (view.querySelector('.lg-settings-viewCount') || {}).textContent === '0 / ' + rows.length + ' 个模型';
+    })()`
+	);
+	check('toolbar: 全不选 turns every check off', noneSettled === true);
+	/* Draft purity again: the host entry still holds the saved subset — a
+	   bulk button must not write on its own. */
+	const hostDuringDraft = await host(page);
+	check(
+	'toolbar: 全不选 stays in the draft',
+	hostDuringDraft !== null && JSON.stringify(hostDuringDraft.qm[pinnedId]) !== '[]',
+	hostDuringDraft && hostDuringDraft.qm
+	);
+	check('toolbar: 反选 pressable', await press(page, '.lg-settings-tool', '反选'));
+	const invertSettled = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (!view) return false;
+      const rows = [...view.querySelectorAll('.lg-settings-check')];
+      return rows.length > 0 && rows.every((r) => r.getAttribute('aria-checked') === 'true');
+    })()`
+	);
+	check('toolbar: 反选 from empty selects everything', invertSettled === true);
+	const tools2 = await page.evaluate(`(() => {
+    const bar = document.querySelector('.lg-settings-viewTools');
+    if (!bar) return { present: false };
+    const byLabel = (t) => [...bar.querySelectorAll('.lg-settings-tool')].find((n) => n.textContent.trim() === t);
+    const view = document.querySelector('.lg-settings-view');
+    return {
+      present: true,
+      allDisabled: byLabel('全选') ? byLabel('全选').disabled : null,
+      dirty: byLabel('保存') ? byLabel('保存').getAttribute('data-dirty') : 'missing',
+      count: view ? (view.querySelector('.lg-settings-viewCount') || {}).textContent : null,
+    };
+  })()`);
+	check('toolbar: 全选 retires once everything is chosen', tools2.allDisabled === true, tools2.allDisabled);
+	check('toolbar: the header counts everything', tools2.count === view1.total + ' / ' + view1.total + ' 个模型', tools2.count);
+	check('toolbar: the inverted draft is dirty', tools2.dirty === 'true', tools2.dirty);
+	/* Restore the subset the picker step below asserts against: uncheck the
+	   non-running model, confirm with 保存, and watch one write land. */
+	await page.evaluate(`(() => {
+    const rows = [...document.querySelectorAll('.lg-settings-check')];
+    const target = rows.find((r) => (r.querySelector('.lg-settings-modelName') || {}).textContent !== ${JSON.stringify(currentModel)}) || rows[rows.length - 1];
+    if (target) target.click();
+  })()`);
+	const restoreSettled = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (!view) return false;
+      const rows = [...view.querySelectorAll('.lg-settings-check')];
+      return rows.filter((r) => r.getAttribute('aria-checked') === 'true').length === rows.length - 1;
+    })()`
+	);
+	check('toolbar: a plain check after the toolbar still flips', restoreSettled === true);
+	check('save: pressable again', await press(page, '.lg-settings-toolSave'));
+	const hostRestored = await settle(
+	page,
+	`(() => {
+      const view = document.querySelector('.lg-settings-view');
+      if (view) return false;
+      const snap = ${HOST_SNAPSHOT};
+      if (!snap) return false;
+      const raw = window.localStorage.getItem(${JSON.stringify(KEY)});
+      let mirror = null;
+      try { mirror = JSON.parse(raw); } catch (e) { /* keep null */ }
+      const want = mirror && mirror.models ? mirror.models[${JSON.stringify(pinnedId)}] : undefined;
+      return JSON.stringify(snap.qm[${JSON.stringify(pinnedId)}]) === JSON.stringify(want) && Array.isArray(want) && want.length === ${view1.total} - 1;
+    })()`
+	);
+	check('toolbar: a plain check after the toolbar still writes on save', hostRestored === true, hostRestored);
 
 	// ---- the picker honours the (provider, model) set without a reload -----
 	await closeSettings(page);

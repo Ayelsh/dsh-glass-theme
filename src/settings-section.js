@@ -101,6 +101,9 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 		const [list, setList] = React.useState(() => providers());
 		/* null = the provider board; an id = that provider's model list. */
 		const [view, setView] = React.useState(null);
+		/* The unsaved model choice for the open view: { id, value } where
+		   value is undefined (= 全部) or an array of model ids. */
+		const [draft, setDraft] = React.useState(null);
 		const [workspace, setWorkspace] = React.useState(() => {
 			if (!prefs) return true;
 			const value = prefs.get('workspaceView');
@@ -151,22 +154,55 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			commit({ providers, models: selection.models });
 		};
 
-		const setModels = (provider, next) => {
-			const models = Object.assign({}, selection.models);
-			if (next === undefined) delete models[provider.id];
-			else models[provider.id] = next;
-			commit({ providers: pinned, models });
+		/* The model list is a DRAFT until 保存 confirms it: a checkbox or a
+		   bulk button mutates only the local draft, so every click is pure UI
+		   with no round trip to wait for. The draft copies the saved entry when
+		   the view opens, and leaving without 保存 discards it. */
+		const copyEntry = (entry) => (Array.isArray(entry) ? entry.slice() : undefined);
+		const sameEntry = (a, b) => {
+			if (a === b) return true;
+			if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+			for (let index = 0; index < a.length; index += 1) {
+				if (a[index] !== b[index]) return false;
+			}
+			return true;
 		};
-
-		const toggleModel = (provider, modelId) => {
-			const entry = chosen(selection, provider.id);
-			const current = entry === undefined ? provider.models.map((model) => model.id) : entry;
-			const next = current.indexOf(modelId) >= 0 ? current.filter((value) => value !== modelId) : current.concat(modelId);
+		const changeDraft = (value) => setDraft({ id: view, value });
+		const toggleModelDraft = (modelId, entry) => {
+			const ids = current.models.map((model) => model.id);
+			const base = entry === undefined ? ids : entry;
+			const next = base.indexOf(modelId) >= 0 ? base.filter((value) => value !== modelId) : base.concat(modelId);
 			/* Choosing everything again drops the entry instead of writing the
 			   full list: "全部" is the same behaviour and survives a model being
 			   added to the provider later. */
-			if (next.length === provider.models.length) setModels(provider, undefined);
-			else setModels(provider, next);
+			changeDraft(next.length === ids.length ? undefined : next);
+		};
+		/* The bulk affordances speak the same two states the checkboxes do:
+		   "everything" is the absent entry (it survives models added later),
+		   "nothing" is the empty list, and an inversion is whatever set
+		   remains after the flip — an inversion that covers everything folds
+		   back into the absent entry, so a later model still joins. */
+		const selectAllDraft = () => changeDraft(undefined);
+		const selectNoDraft = () => changeDraft([]);
+		const invertDraft = (entry) => {
+			const ids = current.models.map((model) => model.id);
+			if (ids.length === 0) return;
+			const effective = entry === undefined ? ids : entry;
+			const inverted = ids.filter((id) => effective.indexOf(id) < 0);
+			changeDraft(inverted.length === ids.length ? undefined : inverted);
+		};
+		/* 保存 is the only place the model choice is written: the confirmed
+		   draft leaves as one host mutation (and one mirror write), and the
+		   board behind it already shows the result. */
+		const saveModels = () => {
+			if (current !== null) {
+				const entry = draft === null ? chosen(selection, current.id) : draft.value;
+				const models = Object.assign({}, selection.models);
+				if (entry === undefined) delete models[current.id];
+				else models[current.id] = entry.slice();
+				commit({ providers: pinned, models });
+			}
+			closeModels();
 		};
 
 		const current = view === null ? null : list.filter((provider) => provider.id === view)[0] || null;
@@ -178,10 +214,14 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 		const boardRef = React.useRef(null);
 		const openModels = (provider, element) => {
 			opener.current = element || null;
+			/* The draft starts as a copy of the saved entry, so the view always
+			   opens on the persisted truth, never on a previous unsaved visit. */
+			setDraft({ id: provider.id, value: copyEntry(chosen(selection, provider.id)) });
 			setView(provider.id);
 		};
 		const closeModels = () => {
 			setView(null);
+			setDraft(null);
 			const node = opener.current;
 			opener.current = null;
 			if (node && typeof node.focus === 'function') {
@@ -272,7 +312,9 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 
 		const modelList = () => {
 			if (current === null) return null;
-			const entry = chosen(selection, current.id);
+			const saved = chosen(selection, current.id);
+			const entry = draft === null ? saved : draft.value;
+			const dirty = draft === null ? false : !sameEntry(draft.value, saved);
 			const selectedCount = entry === undefined ? current.models.length : entry.length;
 			const rows =
 				current.models.length === 0
@@ -294,7 +336,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 											'aria-checked': on ? 'true' : 'false',
 											'aria-label': model.name,
 											'data-on': on ? 'true' : 'false',
-											onClick: () => toggleModel(current, model.id),
+											onClick: () => toggleModelDraft(model.id, entry),
 										},
 										h('span', { className: 'lg-settings-checkMark', 'aria-hidden': 'true' }, on ? '✓' : ''),
 										h('span', { className: 'lg-settings-modelName' }, model.name)
@@ -310,7 +352,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 					{ className: 'lg-settings-viewHead' },
 					h(
 						'button',
-						{ type: 'button', className: 'lg-settings-back', onClick: closeModels, 'aria-label': '返回供应商列表' },
+						{ type: 'button', className: 'lg-settings-back', onClick: closeModels, 'aria-label': '返回供应商列表（不保存）' },
 						h('span', { className: 'lg-settings-backMark', 'aria-hidden': 'true' }, '‹'),
 						'供应商'
 					),
@@ -322,13 +364,68 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 					h('span', { className: 'lg-settings-glyph', 'aria-hidden': 'true' }, (current.name.trim() || '?').slice(0, 1)),
 					h('span', { className: 'lg-settings-name' }, current.name)
 				),
+				/* Every check and bulk button edits the local draft only — no host
+				   round trip, nothing to wait for. 保存 writes the confirmed draft
+				   once and returns; leaving any other way discards the draft. */
+				h(
+					'div',
+					{ className: 'lg-settings-viewTools' },
+					current.models.length === 0
+						? null
+						: [
+								h(
+									'button',
+									{
+										type: 'button',
+										className: 'lg-settings-tool',
+										disabled: entry === undefined,
+										'aria-label': '全选 ' + current.name + ' 的全部模型',
+										onClick: selectAllDraft,
+									},
+									'全选'
+								),
+								h(
+									'button',
+									{
+										type: 'button',
+										className: 'lg-settings-tool',
+										disabled: entry !== undefined && entry.length === 0,
+										'aria-label': '全不选 ' + current.name + ' 的模型',
+										onClick: selectNoDraft,
+									},
+									'全不选'
+								),
+								h(
+									'button',
+									{
+										type: 'button',
+										className: 'lg-settings-tool',
+										'aria-label': '反选 ' + current.name + ' 的模型',
+										onClick: () => invertDraft(entry),
+									},
+									'反选'
+								),
+							],
+					h('span', { className: 'lg-settings-toolsSpace', 'aria-hidden': 'true' }),
+					h(
+						'button',
+						{
+							type: 'button',
+							className: 'lg-settings-tool lg-settings-toolSave',
+							'aria-label': '保存并返回供应商列表',
+							'data-dirty': dirty ? 'true' : 'false',
+							onClick: saveModels,
+						},
+						'保存'
+					)
+				),
 				rows,
 				h(
 					'p',
 					{ className: 'lg-settings-viewHint' },
 					entry === undefined
-						? '未单独挑选时，这个供应商的全部模型都会出现在选择器里；取消勾选即可只保留想要的模型。'
-						: '只有勾选的模型会出现在选择器里；当前正在使用的模型始终可见。'
+						? '未单独挑选时，这个供应商的全部模型都会出现在选择器里；改动点保存后生效。'
+						: '只有勾选的模型会出现在选择器里，当前正在使用的模型始终可见；改动点保存后生效。'
 				)
 			);
 		};
