@@ -22,7 +22,7 @@
    therefore lives on a pseudo-element, exactly as it does on the sidebar
    column: a pseudo cannot be an ancestor, so the card never becomes a
    containing block and fixed children keep the viewport. */
-[class~='RlGAzG_card'] {
+[class~='GRgSLq_card'] {
   border-radius: var(--lg-r-panel);
   background-color: transparent;
   backdrop-filter: none;
@@ -37,7 +37,7 @@
   transition: box-shadow var(--lg-t-base) var(--lg-ease-out);
 }
 
-[class~='RlGAzG_card']::before {
+[class~='GRgSLq_card']::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -53,57 +53,57 @@
 /* Focus lift: the material deepens a step and the ambient shadow widens. The
    old translateY(-1px) is gone — a transform is as much a containing block as
    a filter, and the lift read as a shadow change anyway. */
-[class~='RlGAzG_card']:focus-within {
+[class~='GRgSLq_card']:focus-within {
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     inset 0 -0.5px 0 var(--lg-edge-bottom),
     var(--lg-shadow-3);
 }
 
-[class~='RlGAzG_card']:focus-within::before {
+[class~='GRgSLq_card']:focus-within::before {
   background-color: var(--lg-glass-3);
 }
 
 /* Disabled / pending: the card stops claiming attention. */
-[class~='RlGAzG_card']:has([class~='RlGAzG_inputDisabled']) {
+[class~='GRgSLq_card']:has([class~='GRgSLq_inputDisabled']) {
   opacity: 0.72;
 }
 
 /* A dashed outline marks "this composer will create a workspace" — kept, but
    drawn inside the material instead of over it. */
-[class~='RlGAzG_cardWorkspaceTrigger']::after {
+[class~='GRgSLq_cardWorkspaceTrigger']::after {
   border-radius: var(--lg-r-panel);
   border-color: var(--lg-hairline-strong);
   color: var(--lg-hairline-strong);
   transition: color var(--lg-t-base) var(--lg-ease-out);
 }
 
-[class~='RlGAzG_cardWorkspaceTrigger']:hover::after {
+[class~='GRgSLq_cardWorkspaceTrigger']:hover::after {
   color: var(--lg-accent);
 }
 
 /* ---- The text surface -------------------------------------------------- */
-[class~='RlGAzG_input'] {
+[class~='GRgSLq_input'] {
   padding: 6px 10px 2px 16px;
   caret-color: var(--lg-accent);
   letter-spacing: -0.003em;
   line-height: 1.6;
 }
 
-[class~='RlGAzG_input']::placeholder,
-[class~='RlGAzG_placeholder'] {
+[class~='GRgSLq_input']::placeholder,
+[class~='GRgSLq_placeholder'] {
   color: var(--dsw-alias-label-caption);
 }
 
 /* Hero variant: the new-session page. Larger, centred, and it carries the
    page — so it gets more air and a slightly wider measure. */
-[class~='RlGAzG_hero'] [class~='RlGAzG_input'] {
+[class~='GRgSLq_hero'] [class~='GRgSLq_input'] {
   min-height: 64px;
   font-size: calc(var(--dsh-content-font-size, 14px) + 1px);
   line-height: 1.66;
 }
 
-[class~='RlGAzG_hero'] [class~='RlGAzG_card'] {
+[class~='GRgSLq_hero'] [class~='GRgSLq_card'] {
   border-radius: var(--lg-r-panel);
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
@@ -114,7 +114,7 @@
 /* ---- Send -------------------------------------------------------------
    The one flooded-accent control in the app. It reads as the primary action
    precisely because nothing else is filled with the accent. */
-[class~='RlGAzG_primary'] {
+[class~='GRgSLq_primary'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--lg-accent);
   color: #fff;
@@ -128,7 +128,7 @@
     box-shadow var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='RlGAzG_primary']:hover:not(:disabled) {
+[class~='GRgSLq_primary']:hover:not(:disabled) {
   background-color: var(--lg-accent-strong);
   box-shadow:
     inset 0 0.5px 0 rgba(255, 255, 255, 0.45),
@@ -136,18 +136,18 @@
     0 8px 20px -4px color-mix(in srgb, var(--lg-accent) 55%, transparent);
 }
 
-[class~='RlGAzG_primary']:active:not(:disabled) {
+[class~='GRgSLq_primary']:active:not(:disabled) {
   transform: translateY(-1px) scale(0.94);
 }
 
-[class~='RlGAzG_primary']:disabled {
+[class~='GRgSLq_primary']:disabled {
   opacity: 0.34;
   box-shadow: none;
 }
 
 /* Pending: the button becomes a pulsing dot, so the state lives in the same
    place the action did. */
-[class~='RlGAzG_pending'] {
+[class~='GRgSLq_pending'] {
   background-color: var(--lg-accent);
   box-shadow: 0 0 0 4px var(--lg-accent-soft);
 }
@@ -168,10 +168,10 @@
    a plate on hover. The send button is excluded because it is the one flooded
    control in the app and carries its own shape; without the exclusion this
    descendant rule (0-1-1) outranks the send rule's 0-1-0 and squares it off. */
-[class~='RlGAzG_tools'] button:not([class~='RlGAzG_primary']),
-[class~='RlGAzG_trailing'] button:not([class~='RlGAzG_primary']),
-[class~='RlGAzG_modes'] button:not([class~='RlGAzG_primary']),
-[class~='RlGAzG_add'] {
+[class~='GRgSLq_tools'] button:not([class~='GRgSLq_primary']),
+[class~='GRgSLq_trailing'] button:not([class~='GRgSLq_primary']),
+[class~='GRgSLq_modes'] button:not([class~='GRgSLq_primary']),
+[class~='GRgSLq_add'] {
   border-radius: var(--lg-r-sm);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
@@ -179,22 +179,22 @@
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='RlGAzG_tools'] button:not([class~='RlGAzG_primary']):hover,
-[class~='RlGAzG_trailing'] button:not([class~='RlGAzG_primary']):hover,
-[class~='RlGAzG_modes'] button:not([class~='RlGAzG_primary']):hover,
-[class~='RlGAzG_add']:hover {
+[class~='GRgSLq_tools'] button:not([class~='GRgSLq_primary']):hover,
+[class~='GRgSLq_trailing'] button:not([class~='GRgSLq_primary']):hover,
+[class~='GRgSLq_modes'] button:not([class~='GRgSLq_primary']):hover,
+[class~='GRgSLq_add']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='RlGAzG_tools'] button:not([class~='RlGAzG_primary']):active,
-[class~='RlGAzG_trailing'] button:not([class~='RlGAzG_primary']):active {
+[class~='GRgSLq_tools'] button:not([class~='GRgSLq_primary']):active,
+[class~='GRgSLq_trailing'] button:not([class~='GRgSLq_primary']):active {
   transform: scale(0.95);
 }
 
 /* ---- Dock --------------------------------------------------------------
    The strip under the card: hints, stats, status. Quiet by design — it is
    metadata about the composer, not part of it. */
-[class~='RlGAzG_dock'] {
+[class~='GRgSLq_dock'] {
   gap: 10px;
   padding-top: 6px;
   color: var(--dsw-alias-label-caption);
@@ -204,8 +204,8 @@
 /* ---- Notices -----------------------------------------------------------
    A notice inside the composer is a warning, not a modal: tinted, inset, and
    it never covers the input. */
-[class~='RlGAzG_notice'],
-[class~='RlGAzG_retry'] {
+[class~='GRgSLq_notice'],
+[class~='GRgSLq_retry'] {
   border-radius: var(--lg-r-md);
   background-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 12%, transparent);
   box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 32%, transparent);
@@ -214,17 +214,17 @@
   font-size: 12.5px;
 }
 
-[class~='RlGAzG_overlayAnchor'] {
+[class~='GRgSLq_overlayAnchor'] {
   border-radius: var(--lg-r-md);
 }
 
 /* ---- Selectors --------------------------------------------------------
    Model, permission and reasoning controls share one trigger language: a
    capsule with a translucent plate, a chevron that rotates in place. */
-[class~='wq12jW_trigger'],
-[class~='dlU_AG_trigger'],
-[class~='mP3ANa_selector'],
-[class~='wq12jW_cell'] {
+[class~='_9r0rkG_trigger'],
+[class~='Ag-ohG_trigger'],
+[class~='V68kMG_selector'],
+[class~='_9r0rkG_cell'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--dsw-alias-button-tool-bar-fill);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
@@ -233,56 +233,56 @@
     box-shadow var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='wq12jW_trigger']:hover,
-[class~='dlU_AG_trigger']:hover,
-[class~='mP3ANa_selector']:hover,
-[class~='wq12jW_cell']:hover {
+[class~='_9r0rkG_trigger']:hover,
+[class~='Ag-ohG_trigger']:hover,
+[class~='V68kMG_selector']:hover,
+[class~='_9r0rkG_cell']:hover {
   background-color: var(--dsw-alias-button-tool-bar-hover);
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     0 0 0 0.5px var(--lg-hairline);
 }
 
-[class~='wq12jW_triggerLabel'],
-[class~='wq12jW_cellLabel'] {
+[class~='_9r0rkG_triggerLabel'],
+[class~='_9r0rkG_cellLabel'] {
   font-weight: 500;
   letter-spacing: -0.002em;
 }
 
-[class~='wq12jW_triggerEffort'] {
+[class~='_9r0rkG_triggerEffort'] {
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-tertiary);
 }
 
 /* The chevron rotates on open rather than swapping glyphs — one object, two
    states. */
-[class~='wq12jW_chevron'],
-[class~='dlU_AG_chevron'],
-[class~='mP3ANa_chevron'] {
+[class~='_9r0rkG_chevron'],
+[class~='Ag-ohG_chevron'],
+[class~='V68kMG_chevron'] {
   transition: transform var(--lg-t-base) var(--lg-ease-out);
 }
 
-[class~='wq12jW_chevronOpen'],
-[class~='dlU_AG_chevronOpen'] {
+[class~='_9r0rkG_chevronOpen'],
+[class~='Ag-ohG_chevronOpen'] {
   transform: rotate(180deg);
 }
 
 /* ---- Reasoning effort slider ------------------------------------------ */
-[class~='wq12jW_triggerEffort']::after {
+[class~='_9r0rkG_triggerEffort']::after {
   content: '';
   display: inline-block;
   width: 3px;
 }
 
 /* ---- Attachments ------------------------------------------------------ */
-[class~='RlGAzG_accessory'],
-[class~='RlGAzG_grow'] {
+[class~='GRgSLq_accessory'],
+[class~='GRgSLq_grow'] {
   border-radius: var(--lg-r-md);
 }
 
 /* ---- Queue dock (messages waiting behind a running turn) --------------- */
-[class~='v1kfCW_panel'],
-[class~='v1kfCW_dock'] {
+[class~='F07MqG_panel'],
+[class~='F07MqG_dock'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-1);
   backdrop-filter: blur(20px) saturate(175%);
@@ -292,18 +292,18 @@
     var(--lg-shadow-1);
 }
 
-[class~='v1kfCW_pendingRow'],
-[class~='v1kfCW_row'] {
+[class~='F07MqG_pendingRow'],
+[class~='F07MqG_row'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='v1kfCW_pendingRow']:hover,
-[class~='v1kfCW_row']:hover {
+[class~='F07MqG_pendingRow']:hover,
+[class~='F07MqG_row']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='v1kfCW_count'] {
+[class~='F07MqG_count'] {
   font-variant-numeric: tabular-nums;
   border-radius: var(--lg-r-pill);
   padding: 0 6px;
@@ -314,18 +314,18 @@
 }
 
 /* ---- Todo panel ------------------------------------------------------- */
-[class~='aSus8q_root'] {
+[class~='DXuOLW_root'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
 }
 
-[class~='aSus8q_item'] {
+[class~='DXuOLW_item'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='aSus8q_progress'] {
+[class~='DXuOLW_progress'] {
   border-radius: var(--lg-r-pill);
   overflow: hidden;
 }
@@ -336,12 +336,12 @@
    because the row spans the full content width the plate ran edge to edge and
    collided with the scrollbar and the panel's rounded corner. Rows that are not
    clickable do not highlight. */
-[class~='mP3ANa_row'] {
+[class~='V68kMG_row'] {
   border-radius: var(--lg-r-sm);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class~='RlGAzG_primary']:active:not(:disabled) {
+  [class~='GRgSLq_primary']:active:not(:disabled) {
     transform: none;
   }
 }

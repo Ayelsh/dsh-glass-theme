@@ -1,5 +1,10 @@
 /* Assert that the BUILT bundle carries the rules we authored.
  *
+ * The jobs-panel hashes churn with every upstream rebuild (foD-wG before
+ * 2026-10-23, Ag-ohG since) — when this file fails wholesale on one family,
+ * re-derive the prefix from research/shipped-class-map.json, do not delete the
+ * assertions.
+ *
  * The bundle embeds each sheet as a JSON string, so every newline appears as
  * the two characters `\` + `n` and every quote as `\"`. A regex written against
  * the SOURCE text therefore misses in the bundle — not because the rule is
@@ -15,21 +20,21 @@ const css = built.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\
 
 const checks = [
   ['jobs: every row line is flat',
-    /\[class~='foD-wG_rowLine'\],\s*\[class~='foD-wG_rowLineLive'\]\s*\{[^}]*background-color:\s*transparent/],
+    /\[class~='Ag-ohG_rowLine'\],\s*\[class~='Ag-ohG_rowLineLive'\]\s*\{[^}]*background-color:\s*transparent/],
   ['jobs: live row line is flat (no accent wash)',
-    /\[class~='foD-wG_rowLineLive'\][^{]*\{[^}]*background-color:\s*transparent/],
+    /\[class~='Ag-ohG_rowLineLive'\][^{]*\{[^}]*background-color:\s*transparent/],
   ['jobs: primary is a text column',
-    /\[class~='foD-wG_primary'\]\s*\{[^}]*background-color:\s*transparent/],
+    /\[class~='Ag-ohG_primary'\]\s*\{[^}]*background-color:\s*transparent/],
   ['jobs: live command text is tinted',
-    /\[class~='foD-wG_rowLineLive'\]\s+\[class~='foD-wG_label'\]\s*\{[^}]*color:/],
+    /\[class~='Ag-ohG_rowLineLive'\]\s+\[class~='Ag-ohG_label'\]\s*\{[^}]*color:/],
   ['jobs: state indicator only stops shrinking',
-    /\[class~='foD-wG_rowDot'\],\s*\[class~='foD-wG_triggerDot'\]\s*\{[^}]*flex:\s*none/],
+    /\[class~='Ag-ohG_rowDot'\],\s*\[class~='Ag-ohG_triggerDot'\]\s*\{[^}]*flex:\s*none/],
   ['jobs: shell radius is the panel radius',
-    /\[class~='foD-wG_menu'\]\s*\{[^}]*border-radius:\s*var\(--lg-r-lg\)/],
+    /\[class~='Ag-ohG_menu'\]\s*\{[^}]*border-radius:\s*var\(--lg-r-lg\)/],
   ['jobs: kind chip is an outline',
-    /\[class~='foD-wG_kind'\]\s*\{[^}]*background-color:\s*transparent/],
+    /\[class~='Ag-ohG_kind'\]\s*\{[^}]*background-color:\s*transparent/],
   ['jobs: no 999px capsule survives on a row line',
-    /\[class~='foD-wG_rowLine'\](?![^{]*\{[^}]*999px)/],
+    /\[class~='Ag-ohG_rowLine'\](?![^{]*\{[^}]*999px)/],
   /* Quick-provider page: the board IS the page's material, lit from inside. */
   ['quick: the board is frosted glass',
     /\.lg-settings-board\s*\{[^}]*backdrop-filter:\s*blur\(24px\)\s*saturate\(185%\)/],
@@ -75,8 +80,8 @@ for (const [name, re] of checks) {
 
 /* Negative checks: things that must NOT be in the bundle. */
 const forbidden = [
-  ['jobs: no pill-radius row plate', /\[class~='foD-wG_rowLine'\][^{]*\{[^}]*border-radius:\s*999px/],
-  ['jobs: no accent fill on a row line', /\[class~='foD-wG_rowLineLive'\][^{]*\{[^}]*--lg-accent-soft/],
+  ['jobs: no pill-radius row plate', /\[class~='Ag-ohG_rowLine'\][^{]*\{[^}]*border-radius:\s*999px/],
+  ['jobs: no accent fill on a row line', /\[class~='Ag-ohG_rowLineLive'\][^{]*\{[^}]*--lg-accent-soft/],
 ]
 for (const [name, re] of forbidden) {
   const ok = !re.test(css)

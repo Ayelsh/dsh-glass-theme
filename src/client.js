@@ -869,6 +869,457 @@ window.__ModuleLoader__.load({
 		};
 
 		/* ================================================================== *
+		 * Preferences — the host settings entry and its browser mirror
+		 *
+		 * The host's settings entry (`ui-skin-glass-theme`) is the fact source;
+		 * the localStorage key is a PROJECTION of it (design D1). The projection
+		 * exists because the picker must know the quick-provider selection at
+		 * first paint: an async read there would either block the composer's
+		 * first paint or reflow it a frame later, and the picker is a popover
+		 * that is often the first thing the user opens.
+		 *
+		 * The two travel together in one record. `providers` is the pinned
+		 * provider id list, `models` the per-provider model choice; a provider
+		 * MISSING from `models` shows all of its models, while a provider mapped
+		 * to `[]` has had every model explicitly deselected. That distinction is
+		 * the whole reason the model choice is a map rather than pairs folded
+		 * into the provider list (design D2).
+		 *
+		 * The record shape is `{ providers: [...], models: { id: [...] } }`. The
+		 * previous build stored a bare array of provider ids; a mirror in that
+		 * shape is read as `{ providers: [...], models: {} }`, which is exactly
+		 * the old behaviour — pinned providers, no model narrowing.
+		 * ================================================================== */
+
+		const QUICK_KEY = 'dsh-glass-theme:quick-providers';
+		const QUICK_MAX = 4;
+		const PREF_NS = 'ui-skin-glass-theme';
+		const QUICK_EVENT = 'lg-quick-providers';
+
+		/** Strings only, trimmed, de-duplicated: the mirror is user-writable storage. */
+		const prefStrings = (value) => {
+			if (!Array.isArray(value)) return [];
+			const out = [];
+			for (const item of value) {
+				if (typeof item !== 'string') continue;
+				const text = item.trim();
+				if (text === '' || out.indexOf(text) >= 0) continue;
+				out.push(text);
+			}
+			return out;
+		};
+
+		/**
+		 * Sanitise the model map. An empty array is KEPT — it means "this provider
+		 * has been configured and nothing is wanted from it", which is different
+		 * from the key being absent. Anything that is not an array is dropped.
+		 */
+		const prefModels = (value) => {
+			const out = {};
+			if (value === null || typeof value !== 'object' || Array.isArray(value)) return out;
+			for (const provider of Object.keys(value)) {
+				if (provider === '' || !Array.isArray(value[provider])) continue;
+				out[provider] = prefStrings(value[provider]);
+			}
+			return out;
+		};
+
+		const EMPTY_SELECTION = Object.freeze({ providers: Object.freeze([]), models: Object.freeze({}) });
+
+		const copySelection = (selection) => {
+			const models = {};
+			for (const provider of Object.keys(selection.models)) models[provider] = selection.models[provider].slice();
+			return { providers: selection.providers.slice(), models };
+		};
+
+		const sameList = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+
+		const sameModels = (a, b) => {
+			const left = Object.keys(a).sort();
+			const right = Object.keys(b).sort();
+			return sameList(left, right) && left.every((key) => sameList(a[key], b[key]));
+		};
+
+		const sameSelection = (a, b) => sameList(a.providers, b.providers) && sameModels(a.models, b.models);
+
+		/**
+		 * Read the mirror. `null` means "never configured" — the picker treats
+		 * that as its unconfigured state (list everything), which is not the same
+		 * as an empty selection (nothing pinned, also everything, but the settings
+		 * page can tell them apart).
+		 */
+		const readMirror = () => {
+			try {
+				const raw = window.localStorage.getItem(QUICK_KEY);
+				if (raw === null) return null;
+				const parsed = JSON.parse(raw);
+				/* The pre-0.3.8 shape: a bare provider id list. */
+				if (Array.isArray(parsed)) return { providers: prefStrings(parsed), models: {} };
+				if (parsed === null || typeof parsed !== 'object') return null;
+				return { providers: prefStrings(parsed.providers), models: prefModels(parsed.models) };
+			} catch (error) {
+				return null;
+			}
+		};
+
+		const writeMirror = (selection) => {
+			try {
+				window.localStorage.setItem(
+					QUICK_KEY,
+					JSON.stringify({ providers: selection.providers, models: selection.models })
+				);
+				/* The picker subscribes to this; the `storage` event only fires in
+				   OTHER windows, so a same-window edit needs its own signal. */
+				window.dispatchEvent(new CustomEvent(QUICK_EVENT, { detail: selection }));
+			} catch (error) {
+				/* a private-mode quota failure must not break the page */
+			}
+		};
+
+		const subscribeMirror = (onChange) => {
+			try {
+				window.addEventListener(QUICK_EVENT, onChange);
+				window.addEventListener('storage', onChange);
+				return () => {
+					window.removeEventListener(QUICK_EVENT, onChange);
+					window.removeEventListener('storage', onChange);
+				};
+			} catch (error) {
+				return () => {};
+			}
+		};
+
+		/**
+		 * The one preference adapter (design D6): created once, handed to the
+		 * settings page and to the workspace registration. The picker keeps
+		 * reading the mirror directly — it needs a synchronous first-paint value
+		 * and nothing else.
+		 *
+		 * `get(field)` / `set(field, value)` are the field-level face the task
+		 * asks for; `selection()` / `commit(selection)` are the pair-level face
+		 * the settings page writes with, because both fields describe one choice
+		 * and must land in one interaction.
+		 *
+		 * DEGRADATION (design D5): `configForms` is in the inject list, so on a
+		 * build that does not serve it `apply` never runs at all. If it is served
+		 * but the namespace is absent, or the controller never leaves `loading`,
+		 * everything here falls back to the mirror and the page keeps working.
+		 */
+		const createPreferences = (ctx) => {
+			let form = null;
+			try {
+				const forms = ctx.get('configForms');
+				if (forms && typeof forms.get === 'function') {
+					const candidate = forms.get(PREF_NS);
+					if (candidate && typeof candidate.getSnapshot === 'function') form = candidate;
+				}
+			} catch (error) {
+				form = null;
+			}
+
+			const listeners = new Set();
+			let state = EMPTY_SELECTION;
+			/* The last raw host document value. `get('workspaceView')` and the
+			   other scalar preferences are read straight off it — only the
+			   quick-provider pair needs the sanitised shape above. */
+			let documentValue = null;
+			/* A committed-but-not-yet-echoed value. The host answers a write with
+			   the new document, but the mirror listener may fire first; holding the
+			   intent keeps the control from snapping back for one frame. */
+			let pending = null;
+			let hostReady = false;
+			let settled = false;
+			let resolveReady;
+			const ready = new Promise((resolve) => {
+				resolveReady = resolve;
+			});
+
+			const notify = () => {
+				for (const listener of [...listeners]) {
+					try {
+						listener(state);
+					} catch (error) {
+						/* a listener must not break the others */
+					}
+				}
+			};
+
+			const fromSnapshot = (snapshot) => {
+				const value = snapshot && snapshot.value !== undefined && snapshot.value !== null ? snapshot.value : {};
+				documentValue = value;
+				return {
+					providers: prefStrings(value.quickProviders),
+					models: prefModels(value.quickModels),
+				};
+			};
+
+			/** Fold one observed value into the published state, and keep the mirror level with it. */
+			const adopt = (next) => {
+				const changed = !sameSelection(state, next);
+				state = next;
+				if (pending !== null && sameSelection(pending, next)) pending = null;
+				const mirror = readMirror();
+				if (mirror === null || !sameSelection(mirror, next)) writeMirror(next);
+				if (changed) notify();
+			};
+
+			const readHost = () => {
+				if (form === null) return null;
+				try {
+					const snapshot = form.getSnapshot();
+					if (!snapshot) return null;
+					if (snapshot.status === 'unavailable') return null;
+					if (snapshot.status !== 'ready') return null;
+					return fromSnapshot(snapshot);
+				} catch (error) {
+					return null;
+				}
+			};
+
+			/**
+			 * Boot (design D7). Runs exactly once, on the first READY host
+			 * snapshot:
+			 *
+			 *   - an empty stored selection with a usable mirror → migrate the
+			 *     mirror into the host, so an existing user's choice survives the
+			 *     upgrade;
+			 *   - a non-empty stored selection → overwrite the mirror from it, so a
+			 *     stale mirror heals;
+			 *   - a mirror that will not parse is simply ignored (readMirror
+			 *     returns null), and the host value wins.
+			 *
+			 * A second load sees a non-empty stored selection, so it takes the
+			 * second branch and never re-migrates.
+			 */
+			const boot = () => {
+				const host = readHost();
+				if (host === null) return false;
+				hostReady = true;
+				const mirror = readMirror();
+				const stored = host.providers.length > 0 || Object.keys(host.models).length > 0;
+				if (!stored && mirror !== null && (mirror.providers.length > 0 || Object.keys(mirror.models).length > 0)) {
+					/* Migration: the host is empty, the browser knows better. Write it
+					   up, and keep the mirror as it is. */
+					state = mirror;
+					pending = mirror;
+					notify();
+					void writeHost(mirror);
+				} else {
+					adopt(host);
+				}
+				return true;
+			};
+
+			const writeHost = async (selection) => {
+				if (form === null) return false;
+				try {
+					const accepted = await form.set('quickProviders', selection.providers);
+					const modelsAccepted = await form.set('quickModels', selection.models);
+					if (!accepted || !modelsAccepted) {
+						/* The controller re-reads the document on a refused write, so
+						   the subscription delivers the authoritative value; dropping
+						   the intent here is what makes the control follow it. */
+						pending = null;
+						const host = readHost();
+						if (host !== null) adopt(host);
+						return false;
+					}
+					return true;
+				} catch (error) {
+					pending = null;
+					return false;
+				}
+			};
+
+			/** Whether any scalar field of the host document moved. Pair
+			 *  fields are compared by `sameSelection` on their own; this
+			 *  covers the remaining preferences (e.g. `workspaceView`), whose
+			 *  change must reach listeners even when the pair is untouched. */
+			const documentChanged = (before, after) => {
+				if (before === after) return false;
+				if (before === null || before === undefined || after === null || after === undefined) return true;
+				for (const key of Object.keys(after)) {
+					const value = after[key];
+					if (value === null || typeof value !== 'object') {
+						if (before[key] !== value) return true;
+					}
+				}
+				return false;
+			};
+
+			const onSnapshot = () => {
+				if (form === null) return;
+				let snapshot;
+				try {
+					snapshot = form.getSnapshot();
+				} catch (error) {
+					return;
+				}
+				if (!snapshot) return;
+				if (snapshot.status === 'unavailable') {
+					/* The namespace left the document: keep the last known value and
+					   stop treating the host as authoritative. */
+					hostReady = false;
+					if (!settled) {
+						settled = true;
+						resolveReady();
+					}
+					return;
+				}
+				if (snapshot.status !== 'ready') return;
+				if (!hostReady) {
+					/* First ready snapshot: run the one-shot boot. */
+					const booted = boot();
+					if (booted && !settled) {
+						settled = true;
+						resolveReady();
+					}
+					return;
+				}
+				const previous = documentValue;
+				const next = fromSnapshot(snapshot);
+				/* A host echo of a write we already applied changes nothing. */
+				if (sameSelection(state, next)) {
+					if (pending !== null) pending = null;
+					/* The pair can be identical while a scalar preference moved
+					   underneath it — the workspace switch writes exactly one
+					   field — so the document still has to reach listeners. */
+					if (documentChanged(previous, documentValue)) notify();
+					return;
+				}
+				adopt(next);
+			};
+
+			/* Seed from the mirror synchronously, so anything reading before the
+			   host answers gets the last known selection rather than "nothing
+			   configured". */
+			const seed = readMirror();
+			if (seed !== null) state = seed;
+
+			let stopForm = null;
+			if (form !== null) {
+				try {
+					stopForm = form.subscribe(onSnapshot);
+				} catch (error) {
+					stopForm = null;
+				}
+				onSnapshot();
+			}
+			if (!settled) {
+				settled = true;
+				resolveReady();
+			}
+
+			/* A mirror edit from ANOTHER window (or a leftover writer) must reach
+			   the page; the host echo arrives separately and wins when they differ. */
+			const stopMirror = subscribeMirror(() => {
+				if (hostReady) return;
+				const mirror = readMirror();
+				if (mirror === null) return;
+				if (sameSelection(state, mirror)) return;
+				state = mirror;
+				notify();
+			});
+
+			return {
+				ready,
+				max: QUICK_MAX,
+				key: QUICK_KEY,
+				/** Whether the host entry answered at least once. */
+				get hosted() {
+					return hostReady;
+				},
+				/**
+				 * Field read. `quickProviders` / `quickModels` come from the
+				 * sanitised pair; anything else is a scalar preference read off the
+				 * last host document (so `get('workspaceView')` answers `undefined`
+				 * — "not known yet" — until the host has spoken, which is what the
+				 * workspace effect needs to tell "not loaded" from "false").
+				 */
+				get(field) {
+					if (field === 'quickProviders') return state.providers.slice();
+					if (field === 'quickModels') return copySelection(state).models;
+					if (documentValue === null || documentValue === undefined) return undefined;
+					return documentValue[field];
+				},
+				set(field, value) {
+					if (field === 'quickProviders' || field === 'quickModels') {
+						const next = copySelection(state);
+						if (field === 'quickProviders') next.providers = prefStrings(value);
+						else next.models = prefModels(value);
+						return this.commit(next);
+					}
+					return this.write(field, value);
+				},
+				selection() {
+					return copySelection(state);
+				},
+				/** Write one scalar preference through the host entry. */
+				async write(field, value) {
+					if (form === null) return false;
+					try {
+						return await form.set(field, value);
+					} catch (error) {
+						return false;
+					}
+				},
+				/**
+				 * Write both quick-provider fields, then the mirror. The mirror
+				 * write is part of the same interaction on purpose: the picker may
+				 * be open in this very window and reads it synchronously.
+				 *
+				 * `known` is the live provider id list from the catalog. When the
+				 * settings page passes it, model choices for providers that no
+				 * longer exist are dropped — the map is keyed by provider and would
+				 * otherwise grow for the life of the profile (design D2's stated
+				 * risk). The boot path passes nothing, because a provider that is
+				 * merely missing from this session's catalog must not lose its
+				 * choice.
+				 */
+				async commit(selection, known) {
+					const next = {
+						providers: prefStrings(selection.providers),
+						models: prefModels(selection.models),
+					};
+					if (Array.isArray(known)) {
+						const live = new Set(known);
+						for (const provider of Object.keys(next.models)) {
+							if (!live.has(provider)) delete next.models[provider];
+						}
+					}
+					const accepted = form === null ? false : await writeHost(next);
+					if (form === null || !accepted) {
+						/* Degraded or refused: the mirror is still the only surface the
+						   picker reads, so keep it level with what the page shows. */
+						pending = null;
+					}
+					state = next;
+					pending = form !== null && accepted ? next : null;
+					writeMirror(next);
+					notify();
+					return form !== null && accepted;
+				},
+				dispose() {
+					listeners.clear();
+					try {
+						stopMirror();
+					} catch (error) {
+						/* already stopped */
+					}
+					try {
+						stopForm && stopForm();
+					} catch (error) {
+						/* already stopped */
+					}
+				},
+				subscribe(listener) {
+					listeners.add(listener);
+					return () => listeners.delete(listener);
+				},
+			};
+		};
+
+		/* ================================================================== *
 		 * Lifecycle
 		 * ================================================================== */
 
@@ -957,6 +1408,26 @@ window.__ModuleLoader__.load({
 		function apply(ctx) {
 			if (typeof document === 'undefined') return;
 		try { window.__lgCtx = ctx } catch (e) {}
+
+			/* One preference adapter for the whole skin (design D6). Created before
+			   any consumer so the settings page and the workspace registration see
+			   the same instance, its one boot/migration pass runs once, and both
+			   share one subscription instead of racing two. It lives in its own
+			   effect so the subscription is disposed with the plugin. */
+			let prefs = null;
+			try {
+				prefs = createPreferences(ctx);
+				ctx.effect(() => () => {
+					try {
+						prefs && prefs.dispose();
+					} catch (error) {
+						/* already disposed */
+					}
+				});
+			} catch (error) {
+				console.error('dsh-glass-theme: could not start the preference adapter', error);
+				prefs = null;
+			}
 			try {
 				stamp();
 			} catch (error) {
@@ -999,7 +1470,11 @@ window.__ModuleLoader__.load({
 						}
 						let picker = null;
 						try {
-							picker = createPicker(require, ctx, catalog);
+							/* The picker reads the mirror synchronously on first
+							   paint, so it needs the same key and cap the adapter
+							   writes — handed over instead of re-declared there
+							   (design D6: one definition, two readers). */
+							picker = createPicker(require, ctx, catalog, { key: QUICK_KEY, max: QUICK_MAX });
 						} catch (error) {
 							console.error('dsh-glass-theme: could not build the model picker', error);
 							return;
@@ -1093,15 +1568,17 @@ window.__ModuleLoader__.load({
 				console.error('dsh-glass-theme: could not install the usage panel', error);
 			}
 
-			/* The skin's own settings section: where the quick-provider list is
-			   chosen. It registers into the host's `settings.section` slot, so it
-			   appears as one more page in the settings shell rather than as a
-			   second dialog with its own idea of navigation. */
+			/* The skin's own settings section: where the quick-provider list and the
+			   工作空间 switch are chosen. It registers into the host's
+			   `settings.section` slot, so it appears as one more page in the
+			   settings shell rather than as a second dialog with its own idea of
+			   navigation. The adapter is handed in rather than rebuilt: one
+			   subscription, one migration pass (design D6). */
 			try {
 				ctx.effect(() => {
 					let done = null;
 					try {
-						done = createSettingsSection(require, ctx, catalog).register();
+						done = createSettingsSection(require, ctx, catalog, prefs).register();
 					} catch (error) {
 						console.error('dsh-glass-theme: could not register the settings section', error);
 					}
@@ -1122,21 +1599,66 @@ window.__ModuleLoader__.load({
 			   the `sidebar.panellist` icon and the `main` slot share one id,
 			   and the shell owns navigation. Like the settings section above,
 			   it lives in its own effect so a registration failure cannot
-			   take the skin down with it. */
+			   take the skin down with it.
+
+			   `workspaceView` decides whether it is registered AT ALL (design
+			   D4): the registrations are torn down and re-created rather than
+			   hidden, because a hidden-but-registered panel still occupies the
+			   shell's panel list and stays programmatically selectable. The host
+			   routes are untouched — this switch is presentation only. */
 			try {
 				ctx.effect(() => {
-					let done = null;
-					try {
-						done = createWorkspace(require, ctx, catalog).register();
-					} catch (error) {
-						console.error('dsh-glass-theme: could not register the workspace panel', error);
+					const workspace = createWorkspace(require, ctx, catalog);
+					let handle = null;
+					const open = () => {
+						if (handle !== null) return;
+						try {
+							/* `register()` only builds the handle — it claims no
+							   slot. `start()` is what puts the panel and its rail
+							   icon into the shell, and it is deliberately separate
+							   so the switch can take them out and put them back
+							   without rebuilding the workspace. */
+							handle = workspace.register();
+							if (handle !== null && typeof handle.start === 'function') handle.start();
+						} catch (error) {
+							console.error('dsh-glass-theme: could not register the workspace panel', error);
+							handle = null;
+						}
+					};
+					const close = () => {
+						if (handle === null) return;
+						const current = handle;
+						handle = null;
+						try {
+							current.stop();
+						} catch (error) {
+							/* already stopped */
+						}
+					};
+					const wanted = () => {
+						if (prefs === null) return true;
+						const value = prefs.get('workspaceView');
+						return value === undefined ? true : value !== false;
+					};
+					if (wanted()) open();
+					let stopWatch = null;
+					if (prefs !== null) {
+						try {
+							stopWatch = prefs.subscribe(() => {
+								if (wanted()) open();
+								else close();
+							});
+						} catch (error) {
+							stopWatch = null;
+						}
 					}
 					return () => {
 						try {
-							if (typeof done === 'function') done();
+							stopWatch && stopWatch();
 						} catch (error) {
-							/* already disposed */
+							/* already stopped */
 						}
+						close();
 					};
 				});
 			} catch (error) {
@@ -1167,8 +1689,15 @@ window.__ModuleLoader__.load({
 		   host's `settings.section` list. Without the service in this list the
 		   context has no `slots` accessor, `ctx.slots.inject` throws, and the page
 		   silently never appears — the failure looks exactly like "the code did
-		   nothing", which is why it cost a round trip. */
-		const inject = ['slots'];
+		   nothing", which is why it cost a round trip.
+
+		   `configForms` is declared for the same reason, one step further: the
+		   settings page persists through the host's settings entry, and that
+		   service is how it reaches it. An inject entry that never arrives keeps
+		   `apply` from running AT ALL (the package is parked, not degraded), which
+		   is why the adapter also falls back to the mirror — but on a build that
+		   serves `configForms` this is what makes `ctx.configForms` readable. */
+		const inject = ['slots', 'configForms'];
 
 		exports.apply = apply;
 		exports.inject = inject;

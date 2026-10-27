@@ -13,21 +13,21 @@
    Three swatches that preview a theme. They are the one place in the app
    where a control is legitimately an image, so the chrome around them stays
    almost invisible: a hairline that only gains weight on selection. */
-[class~='v01cdW_group'] {
+[class~='Iwzhua_group'] {
   gap: 10px;
 }
 
-[class~='v01cdW_title'] {
+[class~='Iwzhua_title'] {
   font: var(--dsw-font-xs-strong-13);
   letter-spacing: 0.01em;
   color: var(--dsw-alias-label-secondary);
 }
 
-[class~='v01cdW_cubeRow'] {
+[class~='Iwzhua_cubeRow'] {
   gap: 8px;
 }
 
-[class~='v01cdW_themeCube'] {
+[class~='Iwzhua_themeCube'] {
   border-radius: var(--lg-r-md);
   border-width: 1px;
   border-color: var(--lg-hairline);
@@ -39,13 +39,13 @@
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='v01cdW_themeCube']:hover:not([class~='v01cdW_selected']) {
+[class~='Iwzhua_themeCube']:hover:not([class~='Iwzhua_selected']) {
   border-color: var(--lg-hairline-strong);
 }
 
 /* Selection is a ring, not a fill: the swatch's own colours must not be
    tinted by the selection state or the preview lies. */
-[class~='v01cdW_selected'] {
+[class~='Iwzhua_selected'] {
   border-color: var(--lg-accent);
   background-color: var(--lg-accent-soft);
   box-shadow:
@@ -53,44 +53,44 @@
     0 0 0 2px var(--lg-accent-ring);
 }
 
-[class~='v01cdW_themeCube']:active {
+[class~='Iwzhua_themeCube']:active {
   transform: scale(0.985);
 }
 
 /* ---- Font size row ----------------------------------------------------
    A stepper: minus, value, plus. The value is tabular so the row does not
    shift when it changes between 13 and 14. */
-[class~='_0Fr0Ha_row'] {
+[class~='_7qxJPq_row'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='_0Fr0Ha_title'] {
+[class~='_7qxJPq_title'] {
   font: var(--dsw-font-s-strong-14);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='_0Fr0Ha_desc'] {
+[class~='_7qxJPq_desc'] {
   font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-tertiary);
 }
 
-[class~='_0Fr0Ha_stepper'] {
+[class~='_7qxJPq_stepper'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_0Fr0Ha_value'] {
+[class~='_7qxJPq_value'] {
   font-variant-numeric: tabular-nums;
   font-weight: 560;
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='_0Fr0Ha_unit'] {
+[class~='_7qxJPq_unit'] {
   color: var(--dsw-alias-label-tertiary);
 }
 
-[class~='_0Fr0Ha_arrow'] {
+[class~='_7qxJPq_arrow'] {
   border-radius: var(--lg-r-xs);
   color: var(--dsw-alias-label-secondary);
   transition:
@@ -98,7 +98,7 @@
     opacity var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='_0Fr0Ha_arrow']:hover {
+[class~='_7qxJPq_arrow']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
@@ -106,28 +106,28 @@
 /* The arrows are revealed on hover of the stepper. On a touch screen there
    is no hover, so they must be visible unconditionally. */
 @media (hover: none) {
-  [class~='_0Fr0Ha_arrows'] {
+  [class~='_7qxJPq_arrows'] {
     opacity: 1;
   }
 }
 
 /* ---- Language row ----------------------------------------------------- */
-[class~='Hefa_q_row'] {
+[class~='CDP_Dq_row'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='Hefa_q_title'] {
+[class~='CDP_Dq_title'] {
   font: var(--dsw-font-s-strong-14);
 }
 
-[class~='Hefa_q_selector'] {
+[class~='CDP_Dq_selector'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
   color: var(--dsw-alias-label-secondary);
 }
 
-[class~='Hefa_q_chevron'] {
+[class~='CDP_Dq_chevron'] {
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -136,28 +136,28 @@
    of a list selection — it is the preset the next session will run — so it
    gets an accent hairline plus a faint accent wash rather than a filled
    plate, which would compete with the model chips inside the composer. */
-[class~='KZf9OG_section'] {
+[class~='Wsg8iW_section'] {
   gap: 14px;
 }
 
-[class~='KZf9OG_intro'] {
+[class~='Wsg8iW_intro'] {
   font: var(--dsw-font-xs-13);
   color: var(--dsw-alias-label-secondary);
   max-width: 62ch;
 }
 
-[class~='KZf9OG_groupHead'] {
+[class~='Wsg8iW_groupHead'] {
   font: var(--dsw-font-xxxs-strong-11);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--dsw-alias-label-tertiary);
 }
 
-[class~='KZf9OG_cards'] {
+[class~='Wsg8iW_cards'] {
   gap: 10px;
 }
 
-[class~='KZf9OG_card'] {
+[class~='Wsg8iW_card'] {
   border-radius: var(--lg-r-lg);
   border-width: 1px;
   border-color: var(--lg-hairline);
@@ -169,12 +169,12 @@
     box-shadow var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='KZf9OG_card']:hover:not([class~='KZf9OG_cardActive']) {
+[class~='Wsg8iW_card']:hover:not([class~='Wsg8iW_cardActive']) {
   border-color: var(--lg-hairline-strong);
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='KZf9OG_cardActive'] {
+[class~='Wsg8iW_cardActive'] {
   border-color: color-mix(in srgb, var(--lg-accent) 55%, transparent);
   background-color: var(--lg-accent-soft);
   box-shadow:
@@ -182,40 +182,40 @@
     0 0 0 1px color-mix(in srgb, var(--lg-accent) 22%, transparent);
 }
 
-[class~='KZf9OG_cardName'] {
+[class~='Wsg8iW_cardName'] {
   font: var(--dsw-font-s-strong-14);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='KZf9OG_cardId'] {
+[class~='Wsg8iW_cardId'] {
   font-family: var(--dsw-font-mono);
   font-size: 11px;
   color: var(--dsw-alias-label-tertiary);
 }
 
-[class~='KZf9OG_cardDesc'] {
+[class~='Wsg8iW_cardDesc'] {
   font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-secondary);
 }
 
-[class~='KZf9OG_cardFoot'] {
+[class~='Wsg8iW_cardFoot'] {
   border-top-color: var(--lg-hairline);
 }
 
-[class~='KZf9OG_brokenBadge'] {
+[class~='Wsg8iW_brokenBadge'] {
   border-radius: var(--lg-r-xs);
   background-color: var(--dsw-alias-state-error-tertiary);
   color: var(--dsw-alias-state-error-primary);
   font: var(--dsw-font-xxxs-strong-11);
 }
 
-[class~='KZf9OG_viewerCode'] {
+[class~='Wsg8iW_viewerCode'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='KZf9OG_dialog'] {
+[class~='Wsg8iW_dialog'] {
   border-radius: var(--lg-r-panel);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(34px) saturate(190%);
@@ -227,11 +227,11 @@
    A list of rows where each row is a provider. The row itself is the card,
    so the radius is one step smaller than the settings cards around it —
    a row is not a container, it is an item in one. */
-[class~='_3nPmjq_section'] {
+[class~='jrmgQW_section'] {
   gap: 12px;
 }
 
-[class~='_3nPmjq_rowCard'] {
+[class~='jrmgQW_rowCard'] {
   border-radius: var(--lg-r-lg);
   border-width: 1px;
   border-color: var(--lg-hairline);
@@ -240,16 +240,16 @@
   padding: 12px 16px;
 }
 
-[class~='_3nPmjq_rowCard']:hover {
+[class~='jrmgQW_rowCard']:hover {
   border-color: var(--lg-hairline-strong);
 }
 
-[class~='_3nPmjq_rowName'] {
+[class~='jrmgQW_rowName'] {
   font: var(--dsw-font-s-strong-14);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='_3nPmjq_rowTag'] {
+[class~='jrmgQW_rowTag'] {
   border-radius: var(--lg-r-xs);
   border-color: var(--lg-hairline);
   background-color: var(--lg-glass-tint);
@@ -257,35 +257,35 @@
   font: var(--dsw-font-xxxs-11);
 }
 
-[class~='_3nPmjq_credentialDot'] {
+[class~='jrmgQW_credentialDot'] {
   border-radius: var(--lg-r-pill);
 }
 
-[class~='_3nPmjq_credentialDotConfigured'] {
+[class~='jrmgQW_credentialDotConfigured'] {
   background-color: var(--dsw-alias-state-success-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-success-primary) 16%, transparent);
 }
 
-[class~='_3nPmjq_credentialDotMissing'] {
+[class~='jrmgQW_credentialDotMissing'] {
   background-color: var(--dsw-alias-state-warn-primary);
 }
 
-[class~='_3nPmjq_editor'] {
+[class~='jrmgQW_editor'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_3nPmjq_addCard'],
-[class~='_3nPmjq_setupCard'] {
+[class~='jrmgQW_addCard'],
+[class~='jrmgQW_setupCard'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_3nPmjq_input'],
-[class~='_3nPmjq_keyInput'],
-[class~='_3nPmjq_selectInput'] {
+[class~='jrmgQW_input'],
+[class~='jrmgQW_keyInput'],
+[class~='jrmgQW_selectInput'] {
   border-radius: var(--lg-r-sm);
   border-width: 1px;
   border-color: var(--lg-hairline);
@@ -293,75 +293,75 @@
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='_3nPmjq_input']:focus,
-[class~='_3nPmjq_keyInput']:focus,
-[class~='_3nPmjq_selectInput']:focus {
+[class~='jrmgQW_input']:focus,
+[class~='jrmgQW_keyInput']:focus,
+[class~='jrmgQW_selectInput']:focus {
   border-color: var(--lg-accent);
   box-shadow: 0 0 0 3px var(--lg-accent-ring);
 }
 
-[class~='_3nPmjq_primaryButton'],
-[class~='_3nPmjq_secondaryButton'],
-[class~='_3nPmjq_addButton'] {
+[class~='jrmgQW_primaryButton'],
+[class~='jrmgQW_secondaryButton'],
+[class~='jrmgQW_addButton'] {
   border-radius: var(--lg-r-sm);
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='_3nPmjq_primaryButton'] {
+[class~='jrmgQW_primaryButton'] {
   background-color: var(--lg-accent);
   color: #fff;
   box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.32);
 }
 
-[class~='_3nPmjq_secondaryButton'],
-[class~='_3nPmjq_addButton'] {
+[class~='jrmgQW_secondaryButton'],
+[class~='jrmgQW_addButton'] {
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='_3nPmjq_secondaryButton']:hover,
-[class~='_3nPmjq_addButton']:hover {
+[class~='jrmgQW_secondaryButton']:hover,
+[class~='jrmgQW_addButton']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='_3nPmjq_dangerButton'] {
+[class~='jrmgQW_dangerButton'] {
   border-radius: var(--lg-r-sm);
   color: var(--dsw-alias-state-error-primary);
 }
 
-[class~='_3nPmjq_dangerButton']:hover {
+[class~='jrmgQW_dangerButton']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover-danger);
 }
 
-[class~='_3nPmjq_iconButton'] {
+[class~='jrmgQW_iconButton'] {
   border-radius: var(--lg-r-xs);
 }
 
-[class~='_3nPmjq_candidateList'] {
+[class~='jrmgQW_candidateList'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
   padding: 4px;
 }
 
-[class~='_3nPmjq_candidate'] {
+[class~='jrmgQW_candidate'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='_3nPmjq_modelCatalog'] {
+[class~='jrmgQW_modelCatalog'] {
   border-top-color: var(--lg-hairline);
 }
 
-[class~='_3nPmjq_modelRow'] {
+[class~='jrmgQW_modelRow'] {
   gap: 8px;
 }
 
 /* ---- Account ----------------------------------------------------------
    Balance and identity. The balance figure is the only large number on the
    page, so it carries the display weight and everything else recedes. */
-[class~='_8RVnMG_card'],
-[class~='_8RVnMG_balanceCard'] {
+[class~='_6qcDqa_card'],
+[class~='_6qcDqa_balanceCard'] {
   border-radius: var(--lg-r-lg);
   border-width: 1px;
   border-color: var(--lg-hairline);
@@ -369,23 +369,23 @@
   box-shadow: 0 1px 2px rgba(16, 22, 40, 0.04);
 }
 
-[class~='_8RVnMG_balanceCard'] {
+[class~='_6qcDqa_balanceCard'] {
   background-image: var(--lg-surface-light-1), var(--lg-surface-light-2);
 }
 
-[class~='_8RVnMG_amount'] {
+[class~='_6qcDqa_amount'] {
   font: var(--dsw-font-xl-24);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-[class~='_8RVnMG_avatar'] {
+[class~='_6qcDqa_avatar'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_8RVnMG_divider'] {
+[class~='_6qcDqa_divider'] {
   border-top-color: var(--lg-hairline);
 }
 
@@ -395,7 +395,7 @@
    `color` declaration, and the link colour (accent) then lands on top of the
    accent FILL — blue text on blue, invisible. The compound selector below pins
    the filled variant to white-on-accent regardless of source order. */
-[class~='_8RVnMG_primary'] {
+[class~='_6qcDqa_primary'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-accent);
   color: #fff;
@@ -404,28 +404,28 @@
     0 1px 2px rgba(16, 22, 40, 0.16);
 }
 
-[class~='_8RVnMG_linkButton'][class~='_8RVnMG_primary'],
-[class~='_8RVnMG_secondary'][class~='_8RVnMG_primary'] {
+[class~='_6qcDqa_linkButton'][class~='_6qcDqa_primary'],
+[class~='_6qcDqa_secondary'][class~='_6qcDqa_primary'] {
   color: #fff;
 }
 
-[class~='_8RVnMG_linkButton'][class~='_8RVnMG_primary']:hover,
-[class~='_8RVnMG_secondary'][class~='_8RVnMG_primary']:hover {
+[class~='_6qcDqa_linkButton'][class~='_6qcDqa_primary']:hover,
+[class~='_6qcDqa_secondary'][class~='_6qcDqa_primary']:hover {
   background-color: var(--lg-accent-strong);
 }
 
-[class~='_8RVnMG_secondary'],
-[class~='_8RVnMG_linkButton'] {
+[class~='_6qcDqa_secondary'],
+[class~='_6qcDqa_linkButton'] {
   border-radius: var(--lg-r-sm);
   color: var(--lg-accent);
 }
 
-[class~='_8RVnMG_secondary']:hover,
-[class~='_8RVnMG_linkButton']:hover {
+[class~='_6qcDqa_secondary']:hover,
+[class~='_6qcDqa_linkButton']:hover {
   background-color: var(--lg-accent-soft);
 }
 
-[class~='uKWioa_dialog'] {
+[class~='J8V0KW_dialog'] {
   border-radius: var(--lg-r-panel);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(34px) saturate(190%);
@@ -433,14 +433,14 @@
   box-shadow: var(--lg-shadow-3);
 }
 
-[class~='uKWioa_primaryButton'] {
+[class~='J8V0KW_primaryButton'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-accent);
   color: #fff;
 }
 
-[class~='uKWioa_secondaryButton'],
-[class~='uKWioa_close'] {
+[class~='J8V0KW_secondaryButton'],
+[class~='J8V0KW_close'] {
   border-radius: var(--lg-r-sm);
 }
 
@@ -449,7 +449,7 @@
    border — that is the app's safety language, not decoration — but the
    strip becomes a soft tint instead of a saturated band, so the command
    below it stays the loudest thing on the card. */
-[class~='j_8BDW_card'] {
+[class~='Zf6DNq_card'] {
   border-radius: var(--lg-r-lg);
   border-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 42%, transparent);
   background-color: var(--lg-glass-2);
@@ -458,56 +458,56 @@
   box-shadow: var(--lg-shadow-2);
 }
 
-[class~='j_8BDW_strip'] {
+[class~='Zf6DNq_strip'] {
   background-color: var(--dsw-alias-state-warn-tertiary);
   color: var(--dsw-alias-state-warn-primary);
   font: var(--dsw-font-xs-13);
 }
 
-[class~='j_8BDW_headline'] {
+[class~='Zf6DNq_headline'] {
   font: var(--dsw-font-s-strong-14);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='j_8BDW_command'] {
+[class~='Zf6DNq_command'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
   font-family: var(--ds-font-family-code);
 }
 
-[class~='j_8BDW_actionRow'] {
+[class~='Zf6DNq_actionRow'] {
   gap: 8px;
 }
 
-[class~='j_8BDW_reject'] {
+[class~='Zf6DNq_reject'] {
   border-radius: var(--lg-r-sm);
 }
 
 /* ---- Plan preview ----------------------------------------------------- */
-[class~='KuQXFq_card'] {
+[class~='lLdGaq_card'] {
   border-radius: var(--lg-r-md);
   border-width: 1px;
   border-color: var(--lg-hairline);
   background-color: var(--lg-surface-raised);
 }
 
-[class~='KuQXFq_cardTitle'] {
+[class~='lLdGaq_cardTitle'] {
   font: var(--dsw-font-s-strong-14);
 }
 
-[class~='KuQXFq_cardDescription'] {
+[class~='lLdGaq_cardDescription'] {
   font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-secondary);
 }
 
-[class~='KuQXFq_document'] {
+[class~='lLdGaq_document'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_0D_3ea_chip'] {
+[class~='C7Zcma_chip'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--dsw-alias-state-business-tertiary);
   color: var(--dsw-alias-state-business-primary);
@@ -517,11 +517,11 @@
 /* ---- Schedules / tasks ------------------------------------------------
    A two-pane page: list on the left, detail on the right. Both panes are
    reading surfaces, so neither gets a blur; the split is a hairline. */
-[class~='S0jZwq_page'] {
+[class~='olCj9W_page'] {
   background-color: transparent;
 }
 
-[class~='S0jZwq_pageHeading'] {
+[class~='olCj9W_pageHeading'] {
   font: var(--dsw-font-l-20);
   letter-spacing: -0.01em;
 }
@@ -530,7 +530,7 @@
    `hasDetails` — the class the page root only carries when a detail pane is
    actually rendered. Ungated, the line drew down the right edge of an
    otherwise empty page with nothing on the other side of it. */
-[class~='S0jZwq_hasDetails'] > [class~='S0jZwq_listPane'] {
+[class~='olCj9W_hasDetails'] > [class~='olCj9W_listPane'] {
   border-inline-end: 1px solid var(--lg-hairline);
 }
 
@@ -539,7 +539,7 @@
    one raised surface is the iOS grouped-list idiom: the card is the container,
    the rows are its cells, and the hairline between them is what says "these are
    peers". Without the container each row is a floating sentence. */
-[class~='S0jZwq_listRows'] {
+[class~='olCj9W_listRows'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-surface-raised);
   box-shadow:
@@ -550,29 +550,29 @@
   overflow: hidden;
 }
 
-[class~='S0jZwq_listRows'] > * + * {
+[class~='olCj9W_listRows'] > * + * {
   border-top: 0.5px solid var(--lg-hairline);
 }
 
-[class~='S0jZwq_row'] {
+[class~='olCj9W_row'] {
   border-radius: var(--lg-r-md);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='S0jZwq_row']:hover {
+[class~='olCj9W_row']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='S0jZwq_selectedRow'] {
+[class~='olCj9W_selectedRow'] {
   background-color: var(--lg-accent-soft);
   box-shadow: inset 2px 0 0 var(--lg-accent);
 }
 
-[class~='S0jZwq_rowTitle'] {
+[class~='olCj9W_rowTitle'] {
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='S0jZwq_ruleCard'] {
+[class~='olCj9W_ruleCard'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
@@ -582,11 +582,11 @@
    `filterTab` is a pill row (a filter, applied instantly); `detailTab` is an
    underline row inside a header bar (navigation between panes). Treating
    them as one control is what makes the page look unresolved. */
-[class~='S0jZwq_filterTabs'] {
+[class~='olCj9W_filterTabs'] {
   gap: 6px;
 }
 
-[class~='S0jZwq_filterTab'] {
+[class~='olCj9W_filterTab'] {
   border-radius: var(--lg-r-pill);
   height: 28px;
   color: var(--dsw-alias-label-secondary);
@@ -596,62 +596,62 @@
     color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='S0jZwq_filterTab']:hover {
+[class~='olCj9W_filterTab']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='S0jZwq_filterTabActive'] {
+[class~='olCj9W_filterTabActive'] {
   background-color: var(--lg-accent-soft);
   color: var(--lg-accent);
   font-weight: 560;
 }
 
-[class~='S0jZwq_detailTabsBar'] {
+[class~='olCj9W_detailTabsBar'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='S0jZwq_detailTab'] {
+[class~='olCj9W_detailTab'] {
   color: var(--dsw-alias-label-tertiary);
   transition: color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='S0jZwq_detailTab']:hover {
+[class~='olCj9W_detailTab']:hover {
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='S0jZwq_detailTab'][aria-selected='true'] {
+[class~='olCj9W_detailTab'][aria-selected='true'] {
   color: var(--lg-accent);
 }
 
-[class~='S0jZwq_detailTab'][aria-selected='true']::after {
+[class~='olCj9W_detailTab'][aria-selected='true']::after {
   background-color: var(--lg-accent);
   border-radius: var(--lg-r-pill);
 }
 
-[class~='q7hbua_row'] {
+[class~='Luqt-a_row'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='q7hbua_title'] {
+[class~='Luqt-a_title'] {
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='q7hbua_rowOverdue'] {
+[class~='Luqt-a_rowOverdue'] {
   box-shadow: inset 2px 0 0 var(--dsw-alias-state-warn-primary);
 }
 
-[class~='QSKnSa_card'] {
+[class~='oT5lKa_card'] {
   border-radius: var(--lg-r-md);
   border-width: 1px;
   border-color: var(--lg-hairline);
   background-color: var(--lg-surface-raised);
 }
 
-[class~='QSKnSa_title'] {
+[class~='oT5lKa_title'] {
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='CVUQCW_panel'] {
+[class~='Z17U9a_panel'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(30px) saturate(190%);
@@ -659,25 +659,25 @@
   box-shadow: var(--lg-shadow-3);
 }
 
-[class~='LOs-Za_cell'] {
+[class~='TlO7Ga_cell'] {
   border-radius: var(--lg-r-xs);
 }
 
-[class~='LOs-Za_selected'] {
+[class~='TlO7Ga_selected'] {
   background-color: var(--lg-accent);
   color: #fff;
 }
 
-[class~='_DSe8a_option'] {
+[class~='wS8JCq_option'] {
   border-radius: var(--lg-r-xs);
 }
 
-[class~='_DSe8a_selected'] {
+[class~='wS8JCq_selected'] {
   background-color: var(--lg-accent-soft);
   color: var(--lg-accent);
 }
 
-[class~='_3tUStW_root'] {
+[class~='js5r2G_root'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(28px) saturate(185%);
@@ -685,31 +685,31 @@
   box-shadow: var(--lg-shadow-3);
 }
 
-[class~='_3tUStW_item'] {
+[class~='js5r2G_item'] {
   border-radius: var(--lg-r-xs);
 }
 
 /* ---- Trajectory -------------------------------------------------------
    The table is a dense instrument. It stays flat and monospaced; the only
    material in it is the details drawer, which floats over the table. */
-[class~='haSm5q_table'] {
+[class~='xeixwq_table'] {
   font-family: var(--ds-font-family-code);
 }
 
-[class~='haSm5q_tablePane'] {
+[class~='xeixwq_tablePane'] {
   background-color: transparent;
 }
 
-[class~='haSm5q_eventHeader'] {
+[class~='xeixwq_eventHeader'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='haSm5q_kindTag'] {
+[class~='xeixwq_kindTag'] {
   border-radius: var(--lg-r-xs);
   font: var(--dsw-font-xxxs-strong-11);
 }
 
-[class~='haSm5q_details'] {
+[class~='xeixwq_details'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(30px) saturate(185%);
@@ -717,65 +717,65 @@
   box-shadow: var(--lg-shadow-3);
 }
 
-[class~='haSm5q_detailTabs'] {
+[class~='xeixwq_detailTabs'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   padding: 2px;
 }
 
-[class~='haSm5q_detailTab'] {
+[class~='xeixwq_detailTab'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='haSm5q_detailTabActive'] {
+[class~='xeixwq_detailTabActive'] {
   background-color: var(--lg-surface-raised);
   box-shadow: 0 1px 2px rgba(16, 22, 40, 0.08);
 }
 
-[class~='haSm5q_sourceBlock'],
-[class~='haSm5q_programPanel'],
-[class~='haSm5q_jsonPayload'] {
+[class~='xeixwq_sourceBlock'],
+[class~='xeixwq_programPanel'],
+[class~='xeixwq_jsonPayload'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='ZNyiNW_root'] {
+[class~='tzG23a_root'] {
   background-color: transparent;
 }
 
-[class~='ZNyiNW_track'] {
+[class~='tzG23a_track'] {
   background-color: var(--lg-hairline);
   border-radius: var(--lg-r-pill);
 }
 
-[class~='ZNyiNW_selection'] {
+[class~='tzG23a_selection'] {
   background-color: color-mix(in srgb, var(--lg-accent) 22%, transparent);
   border-radius: var(--lg-r-xs);
 }
 
-[class~='QnvEwG_root'] {
+[class~='Wd4N7W_root'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='QnvEwG_searchInput'] {
+[class~='Wd4N7W_searchInput'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='QnvEwG_action'] {
+[class~='Wd4N7W_action'] {
   border-radius: var(--lg-r-xs);
 }
 
-[class~='QnvEwG_control'] {
+[class~='Wd4N7W_control'] {
   border-radius: var(--lg-r-pill);
 }
 
 /* ---- Shortcuts reference ---------------------------------------------
    A searchable table of key bindings. Keys are physical objects here: a
    key cap is a small raised plate, not a coloured tag. */
-[class~='_3Y3Nma_dialog'] {
+[class~='St8tea_dialog'] {
   border-radius: var(--lg-r-panel);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(34px) saturate(190%);
@@ -783,27 +783,27 @@
   box-shadow: var(--lg-shadow-3);
 }
 
-[class~='_3Y3Nma_searchField'] {
+[class~='St8tea_searchField'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_3Y3Nma_group'] {
+[class~='St8tea_group'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='_3Y3Nma_row'] {
+[class~='St8tea_row'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='_3Y3Nma_row']:hover {
+[class~='St8tea_row']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='_3Y3Nma_keyBadge'],
-[class~='_3Y3Nma_fixedKeyBadge'],
-[class~='_3Y3Nma_binding'] {
+[class~='St8tea_keyBadge'],
+[class~='St8tea_fixedKeyBadge'],
+[class~='St8tea_binding'] {
   border-radius: var(--lg-r-xs);
   background-color: var(--lg-surface-raised);
   box-shadow:
@@ -814,145 +814,148 @@
   font-family: var(--ds-font-family-code);
 }
 
-[class~='_3Y3Nma_invalid'] {
+[class~='St8tea_invalid'] {
   color: var(--dsw-alias-state-error-primary);
 }
 
 /* ---- Cordis panel ----------------------------------------------------- */
-[class~='zf92ZW_panel'] {
+[class~='Fu0XRq_panel'] {
   border-radius: var(--lg-r-lg);
   background-color: transparent;
 }
 
-[class~='zf92ZW_header'] {
+[class~='Fu0XRq_header'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='zf92ZW_row'] {
+[class~='Fu0XRq_row'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-raised);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='zf92ZW_rowName'] {
+[class~='Fu0XRq_rowName'] {
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='zf92ZW_rowId'] {
+[class~='Fu0XRq_rowId'] {
   font-family: var(--dsw-font-mono);
   font-size: 11px;
   color: var(--dsw-alias-label-tertiary);
 }
 
-[class~='zf92ZW_badge'] {
+[class~='Fu0XRq_badge'] {
   border-radius: var(--lg-r-pill);
 }
 
-[class~='zf92ZW_actionButton'] {
+[class~='Fu0XRq_actionButton'] {
   border-radius: var(--lg-r-xs);
 }
 
-[class~='_3jVEXG_card'] {
+[class~='M4PAiq_card'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='_3jVEXG_row'] {
+[class~='M4PAiq_row'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='p_wyXq_card'],
-[class~='p_wyXq_sourceCard'] {
+[class~='LyoXsq_card'],
+[class~='LyoXsq_sourceCard'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='p_wyXq_sourceCode'],
-[class~='p_wyXq_bodyWrap'] {
+[class~='LyoXsq_sourceCode'],
+[class~='LyoXsq_bodyWrap'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-sunken);
 }
 
 /* ---- Skill rows ------------------------------------------------------- */
-[class~='Xpfrra_card'] {
+[class~='iJmaOG_card'] {
   border-radius: var(--lg-r-md);
   border-width: 1px;
   border-color: var(--lg-hairline);
   background-color: var(--lg-surface-raised);
 }
 
-[class~='Xpfrra_row'] {
+[class~='iJmaOG_row'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='Xpfrra_summary'] {
+[class~='iJmaOG_summary'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='Xpfrra_title'] {
+[class~='iJmaOG_title'] {
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='Xpfrra_instructionsCard'] {
+[class~='iJmaOG_instructionsCard'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='Xpfrra_instructionsHeader'] {
+[class~='iJmaOG_instructionsHeader'] {
   border-bottom-color: var(--lg-hairline);
 }
 
-[class~='Xpfrra_separator'] {
+[class~='iJmaOG_separator'] {
   border-top-color: var(--lg-hairline);
 }
 
 /* ---- Jobs panel -------------------------------------------------------
    Authored in settings.css alongside the schedules/goals lists, because the
    two are the same subject and must be read together to stay distinct. This
-   sheet deliberately carries nothing for `foD-wG_*`: a second, weaker set of
+   sheet deliberately carries nothing for `Ag-ohG_*`: a second, weaker set of
    rules for the same classes is how the row plates came back the first time. */
 
 /* ---- Goal bar ---------------------------------------------------------
    Sits in the composer dock and states the session objective. It is chrome
    over content, so it is glass, and it is quiet until hovered because the
    objective is reference, not a call to action. */
-[class~='nJdiTq_bar'],
-[class~='nJdiTq_dock'] {
+[class~='Gc24Bq_bar'],
+[class~='Gc24Bq_dock'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
-[class~='nJdiTq_objective'] {
+[class~='Gc24Bq_objective'] {
   font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-secondary);
 }
 
-[class~='nJdiTq_iconBtn'] {
+[class~='Gc24Bq_iconBtn'] {
   border-radius: var(--lg-r-xs);
 }
 
-[class~='-ja1rG_bubble'] {
+[class~='rhSLKq_bubble'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
 }
 
 /* ---- Terminal guide / session log / model label ----------------------- */
-[class~='zpy3TW_entry'],
-[class~='zpy3TW_trigger'] {
+/* The TerminalGuide module hash is `-4GESq` — it begins with a digit, so the
+   build emits the byte form `-4GESq_*` (stylesheet `.-\34 GESq_entry`, JS
+   module map `"-4GESq_entry"`); a bare `GESq_*` spelling never matches. */
+[class~='-4GESq_entry'],
+[class~='-4GESq_trigger'] {
   border-radius: var(--lg-r-sm);
 }
 
-[class~='zpy3TW_entry']:hover,
-[class~='zpy3TW_trigger']:hover {
+[class~='-4GESq_entry']:hover,
+[class~='-4GESq_trigger']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='zpy3TW_menu'] {
+[class~='-4GESq_menu'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(28px) saturate(185%);
@@ -960,7 +963,7 @@
   box-shadow: var(--lg-shadow-3);
 }
 
-[class~='zpy3TW_shortcut'] {
+[class~='-4GESq_shortcut'] {
   border-radius: var(--lg-r-xs);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
@@ -973,15 +976,15 @@
    thing that contains it stops saying "this is a group" and starts colliding with
    the column edge and the scrollbar. It keeps the same hairline divider as its
    neighbours instead, and the toggle carries the row's weight. */
-[class~='PUqB7a_row'] {
+[class~='jxYm2G_row'] {
   border-bottom: 0.5px solid var(--lg-hairline);
 }
 
-[class~='PUqB7a_title'] {
+[class~='jxYm2G_title'] {
   font: var(--dsw-font-xs-strong-13);
 }
 
-[class~='dO-SVa_label'] {
+[class~='_2Cxzxa_label'] {
   font: var(--dsw-font-xxs-12);
   color: var(--dsw-alias-label-tertiary);
 }
@@ -1100,8 +1103,8 @@
 /* ---- One motion floor for this sheet ---------------------------------
    These pages are dense; the only motion worth paying for is the press. */
 @media (prefers-reduced-motion: reduce) {
-  [class~='v01cdW_themeCube']:active,
-  [class~='KZf9OG_card']:active {
+  [class~='Iwzhua_themeCube']:active,
+  [class~='Wsg8iW_card']:active {
     transform: none;
   }
 }

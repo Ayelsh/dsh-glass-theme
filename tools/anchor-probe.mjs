@@ -20,7 +20,7 @@ await page.cookie({ name: out.slice(0, eq), value: out.slice(eq + 1), domain: '1
 await page.goto(url, { settleMs: 12000 });
 await page.evaluate(`(() => { const r=[...document.querySelectorAll('[class*=hIlkoa_sessionRow]')]; if(r[1]) r[1].click(); return 1 })()`);
 await new Promise((r) => setTimeout(r, 7000));
-await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['workbuddy'])); window.dispatchEvent(new Event('lg-quick-providers')); } catch (e) {} })()`);
+await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['workbuddy'], models: {} })); window.dispatchEvent(new Event('lg-quick-providers')); } catch (e) {} })()`);
 
 const report = { checks: [] };
 const measure = async (label) => {

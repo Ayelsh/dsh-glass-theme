@@ -38,26 +38,26 @@
    into a specific duration still wins by writing it in a later sheet or with a
    more specific selector.
    -------------------------------------------------------------------------- */
-[class~='_2H3hWW_newSession'],
-[class~='_2H3hWW_panelRow'],
-[class~='_2H3hWW_toggle'],
-[class~='hIlkoa_sessionRow'],
-[class~='hIlkoa_projectRow'],
-[class~='fO69Vq_row'],
-[class~='wCInkW_navCell'],
-[class~='RlGAzG_primary'],
-[class~='RlGAzG_add'],
-[class~='RlGAzG_tools'] button,
-[class~='RlGAzG_trailing'] button,
-[class~='xz4KEq_toBottom'],
-[class~='GjTS2W_card'],
-[class~='rtYPxa_chip'],
-[class~='wq12jW_trigger'],
-[class~='dlU_AG_trigger'],
-[class~='mP3ANa_selector'],
-[class~='wq12jW_cell'],
-[class~='wCInkW_close'],
-[class~='iq1doa_pill'] {
+[class~='wtg9ga_newSession'],
+[class~='wtg9ga_panelRow'],
+[class~='wtg9ga_toggle'],
+[class~='wnFoaW_sessionRow'],
+[class~='wnFoaW_projectRow'],
+[class~='V7pFBG_row'],
+[class~='AnXs9G_navCell'],
+[class~='GRgSLq_primary'],
+[class~='GRgSLq_add'],
+[class~='GRgSLq_tools'] button,
+[class~='GRgSLq_trailing'] button,
+[class~='V4vHZW_toBottom'],
+[class~='EEnIVa_card'],
+[class~='NOA9Ua_chip'],
+[class~='_9r0rkG_trigger'],
+[class~='Ag-ohG_trigger'],
+[class~='V68kMG_selector'],
+[class~='_9r0rkG_cell'],
+[class~='AnXs9G_close'],
+[class~='hNGZaa_pill'] {
   transition-duration: var(--lg-t-fast);
   transition-timing-function: var(--lg-ease-out);
 }
@@ -65,10 +65,10 @@
 /* Selection is a slower, calmer event than hover. A pointer crossing a row
    should light it instantly; the row that becomes *selected* is a state change
    the user is meant to register, so it settles rather than snaps. */
-[class~='_2H3hWW_panelActive'],
-[class~='hIlkoa_selected'],
-[class~='Dc7zOa_tabActive'],
-[class~='Dc7zOa_tab'] {
+[class~='wtg9ga_panelActive'],
+[class~='wnFoaW_selected'],
+[class~='an3WzG_tabActive'],
+[class~='an3WzG_tab'] {
   transition-duration: var(--lg-t-base);
   transition-timing-function: var(--lg-ease-in-out);
 }
@@ -86,24 +86,24 @@
    duration on `:active` and the slower one on the base selector gives exactly
    that, because on release the base rule takes over.
    -------------------------------------------------------------------------- */
-[class~='_2H3hWW_newSession']:active,
-[class~='hIlkoa_sessionRow']:active,
-[class~='hIlkoa_projectRow']:active,
-[class~='GjTS2W_card']:active,
-[class~='rtYPxa_chip']:active,
-[class~='fO69Vq_row']:active,
-[class~='xz4KEq_toBottom']:active {
+[class~='wtg9ga_newSession']:active,
+[class~='wnFoaW_sessionRow']:active,
+[class~='wnFoaW_projectRow']:active,
+[class~='EEnIVa_card']:active,
+[class~='NOA9Ua_chip']:active,
+[class~='V7pFBG_row']:active,
+[class~='V4vHZW_toBottom']:active {
   transition-duration: 70ms;
   transition-timing-function: var(--lg-ease-out);
 }
 
-[class~='_2H3hWW_newSession'],
-[class~='hIlkoa_sessionRow'],
-[class~='hIlkoa_projectRow'],
-[class~='GjTS2W_card'],
-[class~='rtYPxa_chip'],
-[class~='fO69Vq_row'],
-[class~='xz4KEq_toBottom'] {
+[class~='wtg9ga_newSession'],
+[class~='wnFoaW_sessionRow'],
+[class~='wnFoaW_projectRow'],
+[class~='EEnIVa_card'],
+[class~='NOA9Ua_chip'],
+[class~='V7pFBG_row'],
+[class~='V4vHZW_toBottom'] {
   transition-property: background-color, border-color, box-shadow, color, transform, opacity;
   transition-duration: var(--lg-t-fast);
   transition-timing-function: var(--lg-ease-spring);
@@ -145,7 +145,7 @@
    is set per-anchor by the sheets above where the anchor is known; the fallback
    here is the top edge, which is right for the overwhelmingly common case of a
    menu hanging below a button. */
-[class~='Z9Jnlq_menu'],
+[class~='pc3rQa_menu'],
 [class*='_root_4ub78'],
 [class*='_card_1pq26'] {
   animation: lg-surface-in var(--lg-t-base) var(--lg-ease-spring) both;
@@ -160,8 +160,8 @@
    blinking. One plate that slides reads as a single object that moved, and the
    eye tracks it. This is the only place in the skin where a longer duration is
    correct: the travel has to be slow enough to be followed. */
-[class~='_2H3hWW_panelActive']::before,
-[class~='hIlkoa_selected']::before {
+[class~='wtg9ga_panelActive']::before,
+[class~='wnFoaW_selected']::before {
   transition:
     transform var(--lg-t-base) var(--lg-ease-spring),
     opacity var(--lg-t-fast) var(--lg-ease-out);
@@ -182,7 +182,7 @@
    duration so the change is still readable as a change.
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  [class~='Z9Jnlq_menu'],
+  [class~='pc3rQa_menu'],
   [class*='_root_4ub78'] {
     animation: none;
     opacity: 1;
@@ -191,33 +191,33 @@
 
   /* No element may translate or scale on interaction. Colour and shadow carry
      the feedback instead, which is what the surfaces above already provide. */
-  [class~='_2H3hWW_newSession']:active,
-  [class~='hIlkoa_sessionRow']:active,
-  [class~='hIlkoa_projectRow']:active,
-  [class~='GjTS2W_card']:active,
-  [class~='rtYPxa_chip']:active,
-  [class~='fO69Vq_row']:active,
-  [class~='xz4KEq_toBottom']:active,
-  [class~='RlGAzG_primary']:active:not(:disabled),
-  [class~='RlGAzG_tools'] button:active,
-  [class~='RlGAzG_trailing'] button:active,
-  [class~='wCInkW_close']:active,
-  [class~='fO69Vq_addPrimary']:active,
-  [class~='fO69Vq_addMore']:active {
+  [class~='wtg9ga_newSession']:active,
+  [class~='wnFoaW_sessionRow']:active,
+  [class~='wnFoaW_projectRow']:active,
+  [class~='EEnIVa_card']:active,
+  [class~='NOA9Ua_chip']:active,
+  [class~='V7pFBG_row']:active,
+  [class~='V4vHZW_toBottom']:active,
+  [class~='GRgSLq_primary']:active:not(:disabled),
+  [class~='GRgSLq_tools'] button:active,
+  [class~='GRgSLq_trailing'] button:active,
+  [class~='AnXs9G_close']:active,
+  [class~='V7pFBG_addPrimary']:active,
+  [class~='V7pFBG_addMore']:active {
     transform: none;
   }
 
   /* Hover lifts are travel too. Keep the shadow change — that is depth, not
      motion — and drop the displacement. */
-  [class~='GjTS2W_card']:hover,
-  [class~='rtYPxa_chip']:hover,
-  [class~='RlGAzG_card']:focus-within,
-  [class~='xz4KEq_toBottom']:hover {
+  [class~='EEnIVa_card']:hover,
+  [class~='NOA9Ua_chip']:hover,
+  [class~='GRgSLq_card']:focus-within,
+  [class~='V4vHZW_toBottom']:hover {
     transform: none;
   }
 
-  [class~='_2H3hWW_panelActive']::before,
-  [class~='hIlkoa_selected']::before {
+  [class~='wtg9ga_panelActive']::before,
+  [class~='wnFoaW_selected']::before {
     transition-duration: 1ms;
   }
 
@@ -225,8 +225,8 @@
      animations in the skin. Under this preference they become static marks: the
      running divider keeps its tinted line, the session dot keeps its lit state,
      and neither pulses. */
-  [class~='xz4KEq_runningDivider'],
-  [class~='hIlkoa_dot'] {
+  [class~='V4vHZW_runningDivider'],
+  [class~='wnFoaW_dot'] {
     animation: none;
   }
 }
@@ -241,16 +241,16 @@
    emphasis, it is left alone.
    -------------------------------------------------------------------------- */
 @media (hover: none) {
-  [class~='v5IAXa_actions'],
-  [class~='xD_KDq_actions'] {
+  [class~='xMeOpW_actions'],
+  [class~='_1KfHza_actions'] {
     opacity: 1;
     transform: none;
   }
 
   /* Touch targets get the full row height back; the compacted hit areas above
      assume a mouse can hit a 28px plate. */
-  [class~='hIlkoa_sessionRow'],
-  [class~='_2H3hWW_panelRow'] {
+  [class~='wnFoaW_sessionRow'],
+  [class~='wtg9ga_panelRow'] {
     min-height: 36px;
   }
 
@@ -258,8 +258,8 @@
      the whole interaction. The tint is already there; this only makes sure the
      press is visible at all on a surface that has no pointer cursor to warn
      the user something is interactive. */
-  [class~='GjTS2W_card']:active,
-  [class~='hIlkoa_sessionRow']:active {
+  [class~='EEnIVa_card']:active,
+  [class~='wnFoaW_sessionRow']:active {
     background-color: var(--dsw-alias-interactive-bg-active);
   }
 }
@@ -273,12 +273,12 @@
    settle instantly is the colour and transform transition on the focused
    control, so the ring never arrives over a half-lit plate.
    -------------------------------------------------------------------------- */
-[class~='_2H3hWW_newSession']:focus-visible,
-[class~='hIlkoa_sessionRow']:focus-visible,
-[class~='fO69Vq_row']:focus-visible,
-[class~='RlGAzG_primary']:focus-visible,
-[class~='xz4KEq_toBottom']:focus-visible,
-[class~='wCInkW_close']:focus-visible {
+[class~='wtg9ga_newSession']:focus-visible,
+[class~='wnFoaW_sessionRow']:focus-visible,
+[class~='V7pFBG_row']:focus-visible,
+[class~='GRgSLq_primary']:focus-visible,
+[class~='V4vHZW_toBottom']:focus-visible,
+[class~='AnXs9G_close']:focus-visible {
   transition-duration: 0ms;
 }
 
@@ -296,14 +296,14 @@
    This is the one performance rule in the skin, and it is here rather than in
    conversation.css because it is what makes the motion above affordable.
    -------------------------------------------------------------------------- */
-[class~='xz4KEq_flowItem'] {
+[class~='V4vHZW_flowItem'] {
   content-visibility: auto;
   contain-intrinsic-size: auto 72px;
 }
 
 /* Never let the engine skip the row that is actually streaming: its height
    changes every frame and a resolved placeholder would fight the live content. */
-[class~='xz4KEq_flowItem'][data-streaming],
-[class~='xz4KEq_flowItem'][data-running] {
+[class~='V4vHZW_flowItem'][data-streaming],
+[class~='V4vHZW_flowItem'][data-running] {
   content-visibility: visible;
 }

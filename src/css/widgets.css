@@ -18,7 +18,7 @@
    That is why the material has to be gated on the open attribute rather than
    applied to the body unconditionally: an unconditional glass panelBody paints
    a 640px frosted rectangle over the middle of the transcript. */
-[class~='OUqwTW_panel'] {
+[class~='acoR2W_panel'] {
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -33,7 +33,7 @@
    the shell; the RIGHT edge stays flush on purpose, because a dock slides in
    from the edge and a gap there would read as a stray margin. The left corners
    are the only rounded ones for the same reason. */
-[class~='OUqwTW_panel'] {
+[class~='acoR2W_panel'] {
   top: var(--lg-gutter);
   bottom: var(--lg-gutter);
 }
@@ -45,7 +45,7 @@
    ladder — a heavier fill and LESS saturation, because there is more area for
    the backdrop to bleed through. The blur stays, so the panel still belongs to
    the room; it just stops competing with the text on it. */
-[class~='OUqwTW_panel'][data-sidebar-right-open] [class~='OUqwTW_panelBody'] {
+[class~='acoR2W_panel'][data-sidebar-right-open] [class~='acoR2W_panelBody'] {
   border-radius: var(--lg-r-xl) 0 0 var(--lg-r-xl);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(30px) saturate(140%);
@@ -63,7 +63,7 @@
    TOP OF the centre column instead of beside it.
 
    The app does not raise the panel for this. It cannot rely on paint order
-   either: `BynINW_rightbarCol` and `BynINW_centerCol` are both
+   either: `mP3x-q_rightbarCol` and `mP3x-q_centerCol` are both
    `position: relative; z-index: auto`, so neither opens a stacking context and
    everything inside them competes in the frame's context. The transcript's
    composer is a FLEX ITEM with `z-index: 1`, which does create a stacking
@@ -75,7 +75,7 @@
    while docked it never overlaps the centre column, so raising it there would
    only let it swallow the column resize handle. 20 clears the composer's 1 and
    stays far below the app's real overlay layers (settings 1000, menus 1100). */
-[class~='OUqwTW_panel'][data-sidebar-right-panel='fullscreen'] {
+[class~='acoR2W_panel'][data-sidebar-right-panel='fullscreen'] {
   z-index: 20;
 }
 
@@ -85,12 +85,12 @@
    (`:not(._float_*)`), so a docked host is the one case that needs the fill
    removed here. The header strip then becomes the panel's title bar: same
    material, no fill of its own. */
-[class~='OUqwTW_panel'][data-sidebar-right-open] [class*='_tabHost_6nhg2_'],
-[class~='OUqwTW_panel'][data-sidebar-right-open] [class*='_emptyTabHost_6nhg2_'] {
+[class~='acoR2W_panel'][data-sidebar-right-open] [class*='_tabHost_6nhg2_'],
+[class~='acoR2W_panel'][data-sidebar-right-open] [class*='_emptyTabHost_6nhg2_'] {
   background: transparent;
 }
 
-[class~='OUqwTW_panel'][data-sidebar-right-open] [class*='_tabHostHeader_6nhg2_'] {
+[class~='acoR2W_panel'][data-sidebar-right-open] [class*='_tabHostHeader_6nhg2_'] {
   padding-inline: 4px 10px;
 }
 
@@ -115,21 +115,21 @@
   font-size: 12.5px;
 }
 
-[class~='OUqwTW_collapseGlyph'],
-[class~='OUqwTW_iconButton'],
-[class~='dzXS4q_button'] {
+[class~='acoR2W_collapseGlyph'],
+[class~='acoR2W_iconButton'],
+[class~='RwosdG_button'] {
   border-radius: var(--lg-r-sm);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='OUqwTW_iconButton']:hover,
-[class~='dzXS4q_button']:hover {
+[class~='acoR2W_iconButton']:hover,
+[class~='RwosdG_button']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='OUqwTW_tabTitle'] {
+[class~='acoR2W_tabTitle'] {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -138,8 +138,8 @@
 }
 
 /* ---- Attachments ----------------------------------------------------- */
-[class~='GjTS2W_card'],
-[class~='GjTS2W_card'] {
+[class~='EEnIVa_card'],
+[class~='EEnIVa_card'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   box-shadow:
@@ -150,37 +150,37 @@
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='GjTS2W_card']:hover {
+[class~='EEnIVa_card']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
   transform: translateY(-1px);
 }
 
-[class~='GjTS2W_card']:active {
+[class~='EEnIVa_card']:active {
   transform: scale(0.985);
 }
 
-[class~='GjTS2W_name'],
-[class~='GjTS2W_name'] {
+[class~='EEnIVa_name'],
+[class~='EEnIVa_name'] {
   font-size: 12.5px;
   font-weight: 500;
   letter-spacing: -0.002em;
 }
 
-[class~='GjTS2W_meta'],
-[class~='GjTS2W_meta'] {
+[class~='EEnIVa_meta'],
+[class~='EEnIVa_meta'] {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-caption);
 }
 
-[class~='Mrat-G_rail'],
-[class~='srf2qa_rail'] {
+[class~='Onur9G_rail'],
+[class~='yTDIAG_rail'] {
   gap: 8px;
 }
 
-[class~='Mrat-G_thumbnail'],
-[class~='srf2qa_thumbnail'],
-[class~='Nhu-QW_frame'] {
+[class~='Onur9G_thumbnail'],
+[class~='yTDIAG_thumbnail'],
+[class~='n-Yh7q_frame'] {
   border-radius: var(--lg-r-md);
   box-shadow:
     inset 0 0 0 0.5px var(--lg-hairline),
@@ -189,45 +189,45 @@
 }
 
 /* ---- File previews -------------------------------------------------- */
-[class~='TdjKvG_preview'],
-[class~='mXcgTW_document'],
-[class~='BMNXqa_frame'],
-[class~='FYC9oG_frame'],
-[class~='ORj4nq_code'],
-[class~='j86_xG_body'],
-[class~='Woyo-G_root'] {
+[class~='_3R73eq_preview'],
+[class~='lLdGaq_document'],
+[class~='CsSxCG_frame'],
+[class~='bQZhyq_frame'],
+[class~='NYOO6G_code'],
+[class~='HoevuG_body'],
+[class~='_4EiRdG_root'] {
   background-color: var(--lg-surface);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='ORj4nq_code'] pre,
-[class~='TdjKvG_preview'] pre {
+[class~='NYOO6G_code'] pre,
+[class~='_3R73eq_preview'] pre {
   font-family: var(--ds-font-family-code);
   font-size: 12.5px;
   line-height: 1.65;
   text-autospace: no-autospace;
 }
 
-[class~='mXcgTW_document'] {
+[class~='lLdGaq_document'] {
   font-size: 14px;
   line-height: 1.7;
   letter-spacing: -0.003em;
 }
 
-[class~='GH6oSW_surface'] {
+[class~='uo9WDW_surface'] {
   background-color: var(--lg-surface-sunken);
 }
 
-[class~='eQSa2q_loading'] {
+[class~='CRvXQq_loading'] {
   color: var(--lg-accent);
 }
 
 /* ---- Browser panel -------------------------------------------------- */
-[class~='qWvkEq_root'] {
+[class~='bZwPEG_root'] {
   background-color: var(--lg-surface);
 }
 
-[class~='qWvkEq_toolbar'] {
+[class~='bZwPEG_toolbar'] {
   border-radius: 0 0 var(--lg-r-md) var(--lg-r-md);
   background-color: var(--lg-glass-1);
   backdrop-filter: blur(20px) saturate(175%);
@@ -235,7 +235,7 @@
   box-shadow: inset 0 -0.5px 0 var(--lg-hairline);
 }
 
-[class~='qWvkEq_addressBox'] {
+[class~='bZwPEG_addressBox'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
@@ -243,23 +243,23 @@
   transition: box-shadow var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='qWvkEq_addressBox']:focus-within {
+[class~='bZwPEG_addressBox']:focus-within {
   box-shadow:
     inset 0 1px 2px rgba(16, 22, 40, 0.05),
     0 0 0 3px var(--lg-accent-ring);
 }
 
-[class~='qWvkEq_addressGo'] {
+[class~='bZwPEG_addressGo'] {
   border-radius: var(--lg-r-pill);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='qWvkEq_addressGo']:hover {
+[class~='bZwPEG_addressGo']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover-solid);
 }
 
-[class~='qWvkEq_sandboxWarning'],
-[class~='qWvkEq_sandboxOff'] {
+[class~='bZwPEG_sandboxWarning'],
+[class~='bZwPEG_sandboxOff'] {
   border-radius: var(--lg-r-sm);
   background-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 12%, transparent);
   box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent);
@@ -268,8 +268,8 @@
   padding: 6px 10px;
 }
 
-[class~='qWvkEq_viewport'],
-[class~='qWvkEq_webview'] {
+[class~='bZwPEG_viewport'],
+[class~='bZwPEG_webview'] {
   border-radius: var(--lg-r-md);
   overflow: hidden;
   background-color: #fff;
@@ -279,74 +279,74 @@
    The typographic heart of the app. Apple's ramp: tighter tracking as size
    grows, generous leading for body, a clear 4px/8px rhythm between blocks. */
 [class*='_markdown'],
-[class~='v5IAXa_body'] {
+[class~='xMeOpW_body'] {
   --lg-md-gap: 0.85em;
 }
 
-[class~='v5IAXa_body'] p {
+[class~='xMeOpW_body'] p {
   margin-block: 0 var(--lg-md-gap);
   line-height: 1.7;
 }
 
-[class~='v5IAXa_body'] h1,
-[class~='v5IAXa_body'] h2,
-[class~='v5IAXa_body'] h3,
-[class~='v5IAXa_body'] h4 {
+[class~='xMeOpW_body'] h1,
+[class~='xMeOpW_body'] h2,
+[class~='xMeOpW_body'] h3,
+[class~='xMeOpW_body'] h4 {
   margin-block: 1.5em 0.55em;
   font-weight: 640;
   letter-spacing: -0.018em;
   line-height: 1.3;
 }
 
-[class~='v5IAXa_body'] h1 {
+[class~='xMeOpW_body'] h1 {
   font-size: 1.62em;
   letter-spacing: -0.024em;
 }
 
-[class~='v5IAXa_body'] h2 {
+[class~='xMeOpW_body'] h2 {
   font-size: 1.32em;
   letter-spacing: -0.02em;
 }
 
-[class~='v5IAXa_body'] h3 {
+[class~='xMeOpW_body'] h3 {
   font-size: 1.12em;
   letter-spacing: -0.014em;
 }
 
-[class~='v5IAXa_body'] h4 {
+[class~='xMeOpW_body'] h4 {
   font-size: 1em;
   letter-spacing: -0.01em;
 }
 
-[class~='v5IAXa_body'] ul,
-[class~='v5IAXa_body'] ol {
+[class~='xMeOpW_body'] ul,
+[class~='xMeOpW_body'] ol {
   margin-block: 0 var(--lg-md-gap);
   padding-inline-start: 1.35em;
 }
 
-[class~='v5IAXa_body'] li {
+[class~='xMeOpW_body'] li {
   margin-block: 0.22em;
   line-height: 1.68;
 }
 
-[class~='v5IAXa_body'] li::marker {
+[class~='xMeOpW_body'] li::marker {
   color: var(--dsw-alias-label-caption);
 }
 
-[class~='v5IAXa_body'] blockquote {
+[class~='xMeOpW_body'] blockquote {
   margin-block: 0 var(--lg-md-gap);
   padding-inline-start: 14px;
   border-inline-start: 2.5px solid var(--lg-hairline-strong);
   color: var(--dsw-alias-label-secondary);
 }
 
-[class~='v5IAXa_body'] hr {
+[class~='xMeOpW_body'] hr {
   border: none;
   border-top: 0.5px solid var(--lg-hairline);
   margin-block: 1.5em;
 }
 
-[class~='v5IAXa_body'] a {
+[class~='xMeOpW_body'] a {
   color: var(--dsw-alias-link);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
@@ -354,11 +354,11 @@
   transition: text-decoration-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='v5IAXa_body'] a:hover {
+[class~='xMeOpW_body'] a:hover {
   text-decoration-color: currentColor;
 }
 
-[class~='v5IAXa_body'] strong {
+[class~='xMeOpW_body'] strong {
   font-weight: 620;
   color: var(--dsw-alias-label-primary);
 }
@@ -382,7 +382,7 @@
   margin-block: 0.15em 1.05em;
 }
 
-[class~='v5IAXa_body'] table,
+[class~='xMeOpW_body'] table,
 [class*='_tableScroll_1ypvv'] table {
   border-collapse: collapse;
   border: 0;
@@ -390,7 +390,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-[class~='v5IAXa_body'] th,
+[class~='xMeOpW_body'] th,
 [class*='_tableScroll_1ypvv'] th {
   background-color: transparent;
   padding-block: 6px 9px;
@@ -404,7 +404,7 @@
   white-space: nowrap;
 }
 
-[class~='v5IAXa_body'] td,
+[class~='xMeOpW_body'] td,
 [class*='_tableScroll_1ypvv'] td {
   padding-block: 9px;
   border: 0;
@@ -414,23 +414,23 @@
 }
 
 /* The last row's rule would hang under the table with nothing after it. */
-[class~='v5IAXa_body'] tr:last-child td,
+[class~='xMeOpW_body'] tr:last-child td,
 [class*='_tableScroll_1ypvv'] tr:last-child td {
   border-bottom-color: transparent;
 }
 
 /* Horizontal padding belongs to the CELL, not to a container, so the first
    column starts on the text edge and the rest breathe. */
-[class~='v5IAXa_body'] th + th,
+[class~='xMeOpW_body'] th + th,
 [class*='_tableScroll_1ypvv'] th + th,
-[class~='v5IAXa_body'] td + td,
+[class~='xMeOpW_body'] td + td,
 [class*='_tableScroll_1ypvv'] td + td {
   padding-inline-start: 18px;
 }
 
 /* Numeric columns line up by the decimal, which is the whole reason a table
    earns tabular figures. */
-[class~='v5IAXa_body'] td:not(:first-child),
+[class~='xMeOpW_body'] td:not(:first-child),
 [class*='_tableScroll_1ypvv'] td:not(:first-child) {
   font-variant-numeric: tabular-nums;
 }
@@ -440,7 +440,7 @@
 [class*='_tableScroll_1ypvv']:hover {
   scrollbar-color: var(--dsw-alias-scrollbar-bg-l2) transparent;
 }
-[class~='v5IAXa_body'] :not(pre) > code {
+[class~='xMeOpW_body'] :not(pre) > code {
   font-family: var(--ds-font-family-code);
   font-size: 0.88em;
   padding: 0.14em 0.4em;
@@ -516,7 +516,7 @@
 }
 
 /* ---- Reference chips (attached files in the composer) --------------- */
-[class~='rtYPxa_chip'] {
+[class~='NOA9Ua_chip'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
@@ -525,26 +525,26 @@
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='rtYPxa_chip']:hover {
+[class~='NOA9Ua_chip']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='rtYPxa_chip']:active {
+[class~='NOA9Ua_chip']:active {
   transform: scale(0.97);
 }
 
-[class~='rtYPxa_invalid'] {
+[class~='NOA9Ua_invalid'] {
   color: var(--dsw-alias-state-error-primary);
   background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);
 }
 
 /* ---- Question composer / plan review cards ------------------------- */
-[class~='mAtvLq_header'] {
+[class~='wnLwla_header'] {
   border-bottom: 0.5px solid var(--lg-hairline);
   padding-bottom: 10px;
 }
 
-[class~='mAtvLq_badge'] {
+[class~='wnLwla_badge'] {
   border-radius: var(--lg-r-xs);
   background-color: var(--lg-accent-soft);
   color: var(--lg-accent);
@@ -553,15 +553,15 @@
   font-weight: 600;
 }
 
-[class~='mAtvLq_fieldInput'],
-[class~='mAtvLq_customInline'] {
+[class~='wnLwla_fieldInput'],
+[class~='wnLwla_customInline'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
   border: none;
 }
 
-[class~='mAtvLq_footer'] {
+[class~='wnLwla_footer'] {
   border-top: 0.5px solid var(--lg-hairline);
   padding-top: 10px;
 }
@@ -577,7 +577,7 @@
    fill goes away entirely and the row earns its affordance from hover, the same
    way every other row in this column does. What remains is the avatar, which is
    the one element here that is genuinely a distinct object. */
-[class~='ET65mq_root'] {
+[class~='_5Qcc8a_root'] {
   border-radius: var(--lg-r-md);
   background-color: transparent;
   backdrop-filter: none;
@@ -586,23 +586,23 @@
   border: none;
 }
 
-[class~='ET65mq_trigger'] {
+[class~='_5Qcc8a_trigger'] {
   border-radius: var(--lg-r-md);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='ET65mq_trigger']:hover {
+[class~='_5Qcc8a_trigger']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='ET65mq_trigger']:active {
+[class~='_5Qcc8a_trigger']:active {
   transform: scale(0.985);
 }
 
 /* The avatar is the one raised object in the row: a lit disc, not a hole. */
-[class~='ET65mq_avatar'] {
+[class~='_5Qcc8a_avatar'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--lg-glass-2);
   box-shadow:
@@ -613,19 +613,19 @@
 
 /* The name is the row's label, so it takes label weight — the shipped row left
    it at body weight, which made the account entry look like stray text. */
-[class~='ET65mq_label'] {
+[class~='_5Qcc8a_label'] {
   font-weight: 560;
   letter-spacing: -0.004em;
 }
 
-[class~='KrzJGG_card'] {
+[class~='qpBK2a_card'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
 }
 
 /* ---- Secret / masked text ----------------------------------------- */
-[class~='fnygdG_mask'] {
+[class~='cnK6Wa_mask'] {
   border-radius: var(--lg-r-xs);
   background-color: var(--lg-surface-sunken);
   font-family: var(--ds-font-family-code);
@@ -633,58 +633,58 @@
 }
 
 /* ---- Open-in-app --------------------------------------------------- */
-[class~='WgQWqa_main'],
-[class~='WgQWqa_main'] {
+[class~='mOxcpG_main'],
+[class~='mOxcpG_main'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='WgQWqa_main']:hover {
+[class~='mOxcpG_main']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
 /* ---- Directory picker --------------------------------------------- */
-[class~='Fv-y6W_row'] {
+[class~='_3zXc5G_row'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='Fv-y6W_row']:hover {
+[class~='_3zXc5G_row']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='Fv-y6W_rowSelected'] {
+[class~='_3zXc5G_rowSelected'] {
   background-color: var(--lg-accent-soft);
 }
 
-[class~='Fv-y6W_crumbBar'] {
+[class~='_3zXc5G_crumbBar'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.04);
 }
 
-[class~='Fv-y6W_crumb'] {
+[class~='_3zXc5G_crumb'] {
   border-radius: var(--lg-r-xs);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='Fv-y6W_crumb']:hover {
+[class~='_3zXc5G_crumb']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover-solid);
 }
 
 /* ---- Message feedback --------------------------------------------- */
-[class~='vpunvW_action'] {
+[class~='Hyy-Wa_action'] {
   border-radius: var(--lg-r-sm);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
     color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='vpunvW_action']:hover {
+[class~='Hyy-Wa_action']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='FDoH3G_chip'] {
+[class~='cS6V_W_chip'] {
   border-radius: var(--lg-r-pill);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
@@ -693,17 +693,17 @@
     box-shadow var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='FDoH3G_chip']:hover {
+[class~='cS6V_W_chip']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='FDoH3G_chip'][class~='FDoH3G_chipActive'] {
+[class~='cS6V_W_chip'][class~='cS6V_W_chipActive'] {
   background-color: var(--lg-accent-soft);
   color: var(--lg-accent);
   box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 40%, transparent);
 }
 
-[class~='FDoH3G_detail'] {
+[class~='cS6V_W_detail'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
@@ -711,7 +711,7 @@
 }
 
 /* ---- Ask-question card -------------------------------------------- */
-[class~='LqhxcW_card'] {
+[class~='ZG377q_card'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-surface-raised);
   box-shadow:
@@ -719,26 +719,26 @@
     0 1px 3px rgba(16, 22, 40, 0.05);
 }
 
-[class~='LqhxcW_item'] {
+[class~='ZG377q_item'] {
   border-radius: var(--lg-r-md);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='LqhxcW_item']:hover {
+[class~='ZG377q_item']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
 /* ---- Goal bar / status line --------------------------------------- */
-[class~='nJdiTq_bar'] {
+[class~='Gc24Bq_bar'] {
   border-radius: var(--lg-r-md);
 }
 
-[class~='nJdiTq_iconBtn'] {
+[class~='Gc24Bq_iconBtn'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='nJdiTq_iconBtn']:hover {
+[class~='Gc24Bq_iconBtn']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
@@ -754,9 +754,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class~='GjTS2W_card']:hover,
-  [class~='GjTS2W_card']:active,
-  [class~='rtYPxa_chip']:active {
+  [class~='EEnIVa_card']:hover,
+  [class~='EEnIVa_card']:active,
+  [class~='NOA9Ua_chip']:active {
     transform: none;
   }
 }

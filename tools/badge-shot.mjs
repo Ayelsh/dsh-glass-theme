@@ -29,7 +29,7 @@ const run = async (theme, file) => {
 	await page.evaluate(`(() => { const r=[...document.querySelectorAll('[class*=hIlkoa_sessionRow]')]; if(r[1]) r[1].click(); return 1 })()`);
 	await new Promise((r) => setTimeout(r, 7000));
 	await page.evaluate(`(() => {
-    try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['workbuddy'])); window.dispatchEvent(new Event('lg-quick-providers')); } catch (e) {}
+    try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['workbuddy'], models: {} })); window.dispatchEvent(new Event('lg-quick-providers')); } catch (e) {}
     const ctx = window.__lgCtx; const v = ctx.get('uiSession').current.value;
     ctx.get('modelDirectories').directoryFor(v.key).select({ provider: 'zai-coding-cn', model: 'glm-5.3' });
     return 1;

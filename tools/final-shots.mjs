@@ -21,7 +21,7 @@ try {
   await new Promise(r => setTimeout(r, 7000));
 
   // pin two quick providers for the shot
-  await page.evaluate(`(() => { localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['deepseek-account','zai-coding-cn'])); return 1 })()`);
+  await page.evaluate(`(() => { localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['deepseek-account', 'zai-coding-cn'], models: {} })); return 1 })()`);
   await page.evaluate(`(() => { window.dispatchEvent(new Event('storage')); return 1 })()`);
 
   // --- picker: quick view ---

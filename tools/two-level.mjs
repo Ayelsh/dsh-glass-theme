@@ -145,7 +145,7 @@ try {
 	}
 
 	// ---- state 2: one provider pinned ------------------------------------
-	await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['workbuddy'])); } catch (e) {} })()`);
+	await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['workbuddy'], models: {} })); } catch (e) {} })()`);
 	await reload(page);
 	state = await openPicker(page);
 	check('configured: card opens', state !== null && state.open === true);

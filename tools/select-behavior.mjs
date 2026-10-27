@@ -24,7 +24,7 @@ await page.evaluate(`(() => { const r=[...document.querySelectorAll('[class*=hIl
 await new Promise((r) => setTimeout(r, 7000));
 // Seed a quick list that does NOT contain zai-coding-cn, so the union rule
 // (current provider beside the pinned set) is exercised for real.
-await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['workbuddy'])); window.dispatchEvent(new Event('lg-quick-providers')); } catch (e) {} })()`);
+await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['workbuddy'], models: {} })); window.dispatchEvent(new Event('lg-quick-providers')); } catch (e) {} })()`);
 
 const report = {};
 try {

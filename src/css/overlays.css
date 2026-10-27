@@ -51,11 +51,11 @@
 }
 
 /* ---- Menu surface ------------------------------------------------------ */
-[class~='Z9Jnlq_menu'],
-[class~='wq12jW_menu'],
+[class~='pc3rQa_menu'],
+[class~='_9r0rkG_menu'],
 [class*='dsh-menu-skeleton'],
-[class~='Z9Jnlq_viewport'],
-[class~='Z9Jnlq_menu'][class*='_surface_ri079'] {
+[class~='pc3rQa_viewport'],
+[class~='pc3rQa_menu'][class*='_surface_ri079'] {
   border-radius: var(--lg-r-lg);
   /* The fill lives on `_material_ri079`; a second one here would double it. */
   background-color: transparent;
@@ -72,16 +72,16 @@
   --lg-menu-fade: var(--dsw-menu-surface-fill);
 }
 
-[class~='Z9Jnlq_menu']::after {
+[class~='pc3rQa_menu']::after {
   background-image: linear-gradient(to bottom, transparent, var(--lg-menu-fade));
   border-end-start-radius: var(--lg-r-lg);
   border-end-end-radius: var(--lg-r-lg);
 }
 
 /* Menu items: rounded rows, hover plate, and a check that slides in. */
-[class~='Z9Jnlq_item'],
-[class~='wq12jW_option'],
-[class~='wq12jW_cell'] {
+[class~='pc3rQa_item'],
+[class~='_9r0rkG_option'],
+[class~='_9r0rkG_cell'] {
   border-radius: var(--lg-r-md);
   min-height: 32px;
   padding: 5px 9px;
@@ -90,34 +90,34 @@
     color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='Z9Jnlq_item']:hover,
-[class~='wq12jW_option']:hover {
+[class~='pc3rQa_item']:hover,
+[class~='_9r0rkG_option']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
 /* Active item: accent plate. This is the menu equivalent of the travelling
    selection pill — the pointer moves, the plate follows it. */
-[class~='Z9Jnlq_item'][class~='Z9Jnlq_active'],
-[class~='wq12jW_option'][class~='wq12jW_optionActive'],
-[class~='wq12jW_option'][class~='wq12jW_selected'] {
+[class~='pc3rQa_item'][class~='pc3rQa_active'],
+[class~='_9r0rkG_option'][class~='_9r0rkG_optionActive'],
+[class~='_9r0rkG_option'][class~='_9r0rkG_selected'] {
   background-color: var(--lg-accent-soft);
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='wq12jW_check'] {
+[class~='_9r0rkG_check'] {
   color: var(--lg-accent);
   transition:
     opacity var(--lg-t-fast) var(--lg-ease-out),
     transform var(--lg-t-base) var(--lg-ease-spring);
 }
 
-[class~='wq12jW_option']:not([class~='wq12jW_selected']) [class~='wq12jW_check'] {
+[class~='_9r0rkG_option']:not([class~='_9r0rkG_selected']) [class~='_9r0rkG_check'] {
   opacity: 0;
   transform: scale(0.7);
 }
 
-[class~='Z9Jnlq_groupTitle'],
-[class~='Z9Jnlq_sectionTitle'] {
+[class~='pc3rQa_groupTitle'],
+[class~='pc3rQa_sectionTitle'] {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.035em;
@@ -126,71 +126,71 @@
   padding: 8px 9px 4px;
 }
 
-[class~='Z9Jnlq_itemName'],
-[class~='wq12jW_modelName'] {
+[class~='pc3rQa_itemName'],
+[class~='_9r0rkG_modelName'] {
   font-weight: 500;
   letter-spacing: -0.002em;
 }
 
-[class~='Z9Jnlq_itemDescription'],
-[class~='wq12jW_optionCopy'],
-[class~='wq12jW_status'],
-[class~='wq12jW_warning'] {
+[class~='pc3rQa_itemDescription'],
+[class~='_9r0rkG_optionCopy'],
+[class~='_9r0rkG_status'],
+[class~='_9r0rkG_warning'] {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
 }
 
-[class~='wq12jW_warning'] {
+[class~='_9r0rkG_warning'] {
   color: var(--dsw-alias-state-warn-primary);
 }
 
 /* Menu search field: sunken, so it reads as an input inside the floating card. */
-[class~='wq12jW_search'],
-[class~='wq12jW_searchRow'] {
+[class~='_9r0rkG_search'],
+[class~='_9r0rkG_searchRow'] {
   border-radius: var(--lg-r-md);
   background-color: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);
   box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.05);
 }
 
-[class~='wq12jW_searchRow']:focus-within {
+[class~='_9r0rkG_searchRow']:focus-within {
   box-shadow:
     inset 0 1px 2px rgba(16, 22, 40, 0.05),
     0 0 0 3px var(--lg-accent-ring);
 }
 
-[class~='wq12jW_searchClear'] {
+[class~='_9r0rkG_searchClear'] {
   border-radius: var(--lg-r-pill);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='wq12jW_searchClear']:hover {
+[class~='_9r0rkG_searchClear']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover-solid);
 }
 
 /* Breadcrumb drill-down inside the menu. */
-[class~='Z9Jnlq_crumb'] {
+[class~='pc3rQa_crumb'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='Z9Jnlq_crumb']:hover {
+[class~='pc3rQa_crumb']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='Z9Jnlq_crumbCurrent'] {
+[class~='pc3rQa_crumbCurrent'] {
   font-weight: 560;
 }
 
 /* ---- Settings / sheet --------------------------------------------------
    The largest glass surface in the app. It is L3 because it replaces the page
    while open, and every pixel of text on it must stay readable. */
-[class~='wCInkW_mask'] {
+[class~='AnXs9G_mask'] {
   background-color: color-mix(in srgb, var(--lg-ambient-floor) 55%, transparent);
   backdrop-filter: blur(6px) saturate(120%);
   -webkit-backdrop-filter: blur(6px) saturate(120%);
 }
 
-[class~='wCInkW_panel'] {
+[class~='AnXs9G_panel'] {
   border-radius: var(--lg-r-panel);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(34px) saturate(190%);
@@ -216,21 +216,21 @@
   }
 }
 
-[class~='wCInkW_nav'] {
+[class~='AnXs9G_nav'] {
   background-color: transparent;
   border-inline-end: 0.5px solid var(--lg-hairline);
   padding-top: 18px;
   gap: 14px;
 }
 
-[class~='wCInkW_navTitle'] {
+[class~='AnXs9G_navTitle'] {
   font-size: 17px;
   font-weight: 640;
   letter-spacing: -0.016em;
   padding-inline: 14px;
 }
 
-[class~='wCInkW_navCell'] {
+[class~='AnXs9G_navCell'] {
   border-radius: var(--lg-r-md);
   height: 36px;
   padding: 7px 12px;
@@ -240,11 +240,11 @@
     color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='wCInkW_navCell']:hover {
+[class~='AnXs9G_navCell']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='wCInkW_navCell'][class~='wCInkW_active'] {
+[class~='AnXs9G_navCell'][class~='AnXs9G_active'] {
   /* Same HIG rule as the sidebar: a source list shows selection by filling the
      row and inverting its label, not by tinting it. */
   background-color: var(--lg-selection-fill);
@@ -253,35 +253,35 @@
   font-weight: 560;
 }
 
-[class~='wCInkW_navCell'][class~='wCInkW_active']:hover {
+[class~='AnXs9G_navCell'][class~='AnXs9G_active']:hover {
   background-color: var(--lg-selection-fill-hover);
 }
 
-[class~='wCInkW_navCell'][class~='wCInkW_active'] [class~='wCInkW_navIcon'] {
+[class~='AnXs9G_navCell'][class~='AnXs9G_active'] [class~='AnXs9G_navIcon'] {
   color: var(--lg-selection-label);
 }
 
-[class~='wCInkW_header'] {
+[class~='AnXs9G_header'] {
   height: 52px;
   padding: 16px 12px 6px 18px;
 }
 
-[class~='wCInkW_close'] {
+[class~='AnXs9G_close'] {
   border-radius: var(--lg-r-sm);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='wCInkW_close']:hover {
+[class~='AnXs9G_close']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='wCInkW_close']:active {
+[class~='AnXs9G_close']:active {
   transform: scale(0.9);
 }
 
-[class~='wCInkW_panel'] [class~='wCInkW_content'] {
+[class~='AnXs9G_panel'] [class~='AnXs9G_content'] {
   /* The content column used to paint its own 72% floor on top of the panel's
      material. Two stacked rectangles with no gap between them means the inner one
      ends exactly where the panel's rounded corner begins — a straight edge cutting
@@ -293,15 +293,15 @@
 
 /* ---- Generic dialog ---------------------------------------------------
    Feedback, sign-in, host prompts, directory pickers: all use the same base. */
-[class~='FDoH3G_dialog'],
-[class~='uKWioa_dialog'],
-[class~='tDn_6q_dialog'],
-[class~='Fv-y6W_dialog'],
-[class~='Fv-y6W_createDialog'],
-[class~='Yf9_hG_dialog'],
-[class~='d99neW_dialog'],
-[class~='KZf9OG_dialog'],
-[class~='XPF3fq_mask'] > * {
+[class~='cS6V_W_dialog'],
+[class~='J8V0KW_dialog'],
+[class~='IunAUa_dialog'],
+[class~='_3zXc5G_dialog'],
+[class~='_3zXc5G_createDialog'],
+[class~='TLFO4W_dialog'],
+[class~='m2i3Fa_dialog'],
+[class~='Wsg8iW_dialog'],
+[class~='mwbuSa_mask'] > * {
   border-radius: var(--lg-r-panel);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(32px) saturate(190%);
@@ -314,24 +314,24 @@
   animation: lg-materialize var(--lg-t-base) var(--lg-ease-out) both;
 }
 
-[class~='uKWioa_header'],
-[class~='Fv-y6W_header'],
-[class~='d99neW_dialogBody'],
-[class~='Yf9_hG_body'] {
+[class~='J8V0KW_header'],
+[class~='_3zXc5G_header'],
+[class~='m2i3Fa_dialogBody'],
+[class~='TLFO4W_body'] {
   padding-inline: 20px;
 }
 
-[class~='uKWioa_title'],
-[class~='Fv-y6W_title'],
-[class~='Yf9_hG_title'],
-[class~='d99neW_detailTitle'] {
+[class~='J8V0KW_title'],
+[class~='_3zXc5G_title'],
+[class~='TLFO4W_title'],
+[class~='m2i3Fa_detailTitle'] {
   font-size: 17px;
   font-weight: 640;
   letter-spacing: -0.016em;
 }
 
-[class~='Fv-y6W_footerBar'],
-[class~='uKWioa_actions'] {
+[class~='_3zXc5G_footerBar'],
+[class~='J8V0KW_actions'] {
   border-top: 0.5px solid var(--lg-hairline);
   padding-top: 12px;
 }
@@ -380,7 +380,7 @@
    by aria-describedby), but it is a two-line reading card that brings its own
    material in conversation.css. Without the exclusion this block reached
    across sheets and cropped it to a 9px radius with a 4px inset. */
-[role='tooltip']:not([class~='xpvNua_preview']) {
+[role='tooltip']:not([class~='SNx2jG_preview']) {
   border-radius: var(--lg-r-sm);
   /* Solid on purpose. Tooltips render inline inside glass surfaces — the
      composer card among them — so a translucent tooltip needed a
@@ -401,8 +401,8 @@
 
 /* ---- Approval / plan review ------------------------------------------
    These interrupt, so they get the modal material and a wider measure. */
-[class~='LqhxcW_card'],
-[class~='UWr8ca_panelButton'] {
+[class~='ZG377q_card'],
+[class~='ApsVga_panelButton'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-glass-3);
   backdrop-filter: blur(30px) saturate(185%);
@@ -414,13 +414,13 @@
 }
 
 /* ---- Drop overlay (file drag) ----------------------------------------- */
-[class~='XPF3fq_mask'] {
+[class~='mwbuSa_mask'] {
   background-color: color-mix(in srgb, var(--lg-accent) 10%, transparent);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
 }
 
-[class~='XPF3fq_title'] {
+[class~='mwbuSa_title'] {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -428,8 +428,8 @@
 }
 
 /* ---- Command palette / popup select ---------------------------------- */
-[class~='EhuiKa_viewport'],
-[class~='EhuiKa_card'] {
+[class~='j99sVW_viewport'],
+[class~='j99sVW_card'] {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-glass-2);
   backdrop-filter: blur(28px) saturate(185%);
@@ -441,9 +441,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class~='wCInkW_panel'],
-  [class~='FDoH3G_dialog'],
-  [class~='uKWioa_dialog'],
+  [class~='AnXs9G_panel'],
+  [class~='cS6V_W_dialog'],
+  [class~='J8V0KW_dialog'],
   [class*='_toast_l6cvn'] {
     animation: none;
   }

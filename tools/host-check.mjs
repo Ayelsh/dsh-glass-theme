@@ -13,9 +13,36 @@
 import { pathToFileURL } from 'node:url'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const entry = resolve(here, '..', 'lib', 'host', 'index.js')
+
+/**
+ * The host half resolves `@deepseek-ai/schemastery` with `createRequire` on
+ * `process.argv[1]`, which inside the app is the app's own entry point. Run
+ * from here, that anchor is this script, and the package's nearest
+ * `node_modules` chain carries no schemastery — so `Config` came back
+ * `undefined` and the projected keys could not be checked at all. Re-anchor
+ * argv[1] on the installed profile's `node_modules` when that is where the
+ * factory lives. Nothing about the shipped resolution changes: the app's own
+ * anchor is still the first one tried.
+ */
+const resolveAnchor = () => {
+  const home = process.env.DSH_HOME || resolve(homedir(), '.dsh')
+  const candidates = [
+    resolve(home, 'profiles', 'desktop', 'node_modules'),
+    resolve(home, 'profiles', 'web', 'node_modules'),
+    resolve(here, '..', 'node_modules'),
+  ]
+  for (const dir of candidates) {
+    if (existsSync(resolve(dir, '@deepseek-ai', 'schemastery'))) return resolve(dir, '.host-check-anchor.js')
+  }
+  return null
+}
+const anchor = resolveAnchor()
+if (anchor !== null) process.argv[1] = anchor
 
 const calls = []
 const routes = []
@@ -78,6 +105,17 @@ try {
 console.log(`module exports: ${Object.keys(mod).join(', ')}`)
 console.log(`name: ${mod.name}`)
 console.log(`Config: ${mod.Config === undefined ? 'undefined (schemastery not resolvable — matches the reference)' : 'defined'}`)
+
+/* The projected form keys are what the settings page can read and write, so a
+   preference added to PREFS but never projected is invisible to the client. */
+const projected = mod.Config && mod.Config.dict ? Object.keys(mod.Config.dict) : []
+console.log(`Config keys: ${projected.length}`)
+for (const key of projected) {
+  const field = mod.Config.dict[key]
+  const meta = field && field.meta ? field.meta : {}
+  const shape = field && field.type ? field.type : '?'
+  console.log(`  ${key.padEnd(20)} ${String(shape).padEnd(8)} default=${JSON.stringify(meta.default)}${meta.volatile === true ? ' volatile' : ''}`)
+}
 
 if (typeof mod.apply !== 'function') {
   console.log('FAIL: apply is not a function')

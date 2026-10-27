@@ -26,7 +26,7 @@
  * Injected by tools/build.mjs over the literal `/*__PICKER__*​/null`, so this
  * file is authored as a bare function expression, never as a module.
  */
-function createPicker(require, ctx, catalog) {
+function createPicker(require, ctx, catalog, shared) {
 	const React = require('react');
 	const ReactDOM = require('react-dom/client');
 	const ReactDOMShared = require('react-dom');
@@ -75,24 +75,73 @@ function createPicker(require, ctx, catalog) {
 	};
 
 	/* ---- quick providers ------------------------------------------------
-	   Which providers are "quick" is the user's choice, and it has to survive
-	   a reload, so it lives in localStorage under a namespaced key. The
-	   reference keeps this in its host settings; a skin has no host
-	   configuration surface of its own that the client can read, and inventing
-	   a round trip for six booleans would be worse than the six booleans. */
-	const QUICK_KEY = 'dsh-glass-theme:quick-providers';
-	const QUICK_MAX = 4;
+	   Which providers are "quick", and which of their models, is the user's
+	   choice and has to survive a reload. The host preference is now the
+	   AUTHORITATIVE copy (the settings page writes it); this namespaced key is
+	   a boot-time PROJECTION of it, mirrored into localStorage by src/client.js
+	   so the picker can read the selection synchronously during its first
+	   render. An async host read here would paint the whole catalog first and
+	   reflow the card a frame later — the exact flash the mirror exists to
+	   avoid.
 
-	/* The picker and the settings page must agree on the limit; the number lives
-	   here and settings-section.js keeps its own copy, so a change has to touch
-	   both. They are separate files because they are spliced separately. */
+	   The record is `{ providers: [providerId], models: { providerId:
+	   [modelId] } }`. A pinned provider with NO entry in `models` was never
+	   narrowed, so all of its models show — including models the catalog
+	   gained after the pin. An entry of `[]` means every one of its models was
+	   explicitly deselected, which is a different fact from "never chosen".
+	   The unit of selection is the PAIR (provider, model): the same model id
+	   under two providers is two independent choices. */
+	const QUICK_KEY = shared.key;
+	/* Read from the same record the settings page writes, so the page and the
+	   picker can never disagree about the cap. The picker only RENDERS what is
+	   stored — the cap is an editing rule enforced where the list is edited —
+	   but the number still comes from one place instead of a second literal. */
+	const QUICK_MAX = shared.max;
+	/* Strings only, trimmed, de-duplicated. The mirror is user-writable storage,
+	   so nothing read out of it may be trusted to have the shape it should. */
+	function quickStrings(value) {
+		if (!Array.isArray(value)) return [];
+		const out = [];
+		for (const item of value) {
+			if (typeof item !== 'string') continue;
+			const text = item.trim();
+			if (text === '' || out.indexOf(text) >= 0) continue;
+			out.push(text);
+		}
+		return out;
+	}
+
+	/* A missing key and unparsable JSON both mean "not configured", which is
+	   what `null` means to the caller: list everything. An empty selection
+	   parses to `{ providers: [], models: {} }` and renders the same way, but
+	   stays distinguishable so the settings page can say "nothing pinned yet"
+	   rather than "not loaded". */
 	function readQuick() {
 		try {
 			const raw = window.localStorage.getItem(QUICK_KEY);
 			if (raw === null) return null;
 			const parsed = JSON.parse(raw);
-			if (!Array.isArray(parsed)) return null;
-			return parsed.filter((value) => typeof value === 'string');
+			/* The pre-object shape was a bare provider id list. Reading it as
+			   "pinned, models never narrowed" reproduces the old behaviour
+			   exactly, so an upgrade does not silently empty the quick list. */
+			if (Array.isArray(parsed)) return { providers: quickStrings(parsed), models: {} };
+			if (parsed === null || typeof parsed !== 'object') return null;
+			const models = {};
+			if (parsed.models !== null && typeof parsed.models === 'object' && !Array.isArray(parsed.models)) {
+				for (const provider of Object.keys(parsed.models)) {
+					const value = parsed.models[provider];
+					/* `__proto__` is a real own key once it has been through
+					   JSON.parse, and assigning it would set this object's
+					   prototype instead of adding an entry — a stored id can
+					   never be that, so it is dropped rather than special-cased
+					   at every read. */
+					if (provider === '' || provider === '__proto__' || !Array.isArray(value)) continue;
+					/* An empty array is KEPT: it is the explicit "none of these",
+					   which must not collapse into "never configured". */
+					models[provider] = quickStrings(value);
+				}
+			}
+			return { providers: quickStrings(parsed.providers), models };
 		} catch (error) {
 			return null;
 		}
@@ -109,14 +158,6 @@ function createPicker(require, ctx, catalog) {
 			};
 		} catch (error) {
 			return () => {};
-		}
-	}
-
-	function writeQuick(list) {
-		try {
-			window.localStorage.setItem(QUICK_KEY, JSON.stringify(list));
-		} catch (error) {
-			/* a private-mode quota failure must not break the picker */
 		}
 	}
 
@@ -800,16 +841,31 @@ function createPicker(require, ctx, catalog) {
 					})
 				);
 
-		/* Which providers the card lists by default. A configured list narrows
-		   it; an empty one leaves the picker exactly as it was before the setting
-		   existed. The rest of the catalog stays one click away. The session's
-		   current model is NOT guaranteed to sit inside the pinned set — a
-		   model picked from 所有供应商 (or set by the host) can belong to any
-		   provider — so its group is shown alongside the pinned ones whenever
-		   it is missing there; otherwise switching to a sibling model would
-		   mean a detour through the second card. */
-		const quickList = quick === null ? [] : quick;
-		const pinnedGroups = groups.filter((group) => quickList.indexOf(group.id) >= 0);
+		/* Which providers and models the card lists by default. A configured
+		   selection narrows both levels; an absent one leaves the picker exactly
+		   as it was before the setting existed, and the rest of the catalog
+		   stays one click away.
+
+		   The PAIR is the unit. A provider appears when it is pinned, and under
+		   it only the models whose id was selected — kept in catalog order, so
+		   narrowing never reshuffles the list the user is looking at. */
+		const quickProviders = quick === null ? [] : quick.providers;
+
+		/* `models[id]` is the explicit model choice for one pinned provider.
+		   NO entry (`undefined`) means the provider was pinned before its models
+		   were ever narrowed, so all of them show — including models the catalog
+		   gained after the pin, which is why "not configured" must not be
+		   materialised into an id list anywhere. An array, even an EMPTY one, is
+		   an explicit choice and is honoured as written. The test is an OWN
+		   property on purpose: a miss must fall back to "show everything"
+		   (harmless), never to a prototype method or a stale key's list. */
+		const modelEntryFor = (providerId) => {
+			if (quick === null) return undefined;
+			const map = quick.models;
+			return Object.prototype.hasOwnProperty.call(map, providerId) ? map[providerId] : undefined;
+		};
+
+		const pinnedGroups = groups.filter((group) => quickProviders.indexOf(group.id) >= 0);
 		const hasQuick = pinnedGroups.length > 0;
 		const currentGroupId = (() => {
 			if (current === null) return null;
@@ -822,11 +878,28 @@ function createPicker(require, ctx, catalog) {
 			hasQuick && currentGroupId !== null && !pinnedGroups.some((group) => group.id === currentGroupId)
 				? groups.filter((group) => group.id === currentGroupId)
 				: [];
+		/* The rows one pinned provider contributes. No entry → its whole list.
+		   Otherwise exactly the chosen ids, PLUS the running model when it lives
+		   under this provider: a provider whose every model was deselected then
+		   contributes a single-row section instead of vanishing, so the model
+		   the session is actually using can never be filtered out of sight. The
+		   same clause re-admits the current model when a non-empty entry simply
+		   omits it. */
+		const rowsFor = (group) => {
+			const all = group.models || [];
+			const entry = modelEntryFor(group.id);
+			if (entry === undefined) return all;
+			const here = current !== null && currentGroupId === group.id;
+			return all.filter((model) => entry.indexOf(model.id) >= 0 || (here && model.id === current.model));
+		};
 		/* The current provider's group leads when it is not pinned: the user
 		   opened the picker with that model running, so its row — and the
 		   effort ladder under it — should be visible without scrolling past
-		   28 pinned rows to reach it. */
-		const shownGroups = !hasQuick ? groups : missingCurrentGroup.concat(pinnedGroups);
+		   28 pinned rows to reach it. An unpinned group is never narrowed: its
+		   models were never configured, so it shows what it always showed. */
+		const wholeGroup = (group) => ({ group, models: group.models || [] });
+		const pinnedEntries = pinnedGroups.map((group) => ({ group, models: rowsFor(group) }));
+		const shownGroups = !hasQuick ? groups.map(wholeGroup) : missingCurrentGroup.map(wholeGroup).concat(pinnedEntries);
 		const allFilter = allQuery.trim() === '' ? null : normalise(allQuery);
 
 		/* The card's footer holds only the catalog door. It lives OUTSIDE the
@@ -893,7 +966,7 @@ function createPicker(require, ctx, catalog) {
 						: React.createElement(
 							'div',
 							{ className: 'lg-picker-body' },
-							shownGroups.map((group) => sectionFor(group, group.models || []))
+							shownGroups.map((entry) => sectionFor(entry.group, entry.models))
 						),
 					foot
 				);

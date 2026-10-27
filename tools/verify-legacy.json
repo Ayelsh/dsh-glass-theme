@@ -1,0 +1,11 @@
+{
+  "_doc": "Exact classes the skin styles that NO installed bundle emits on this machine, with the reason each is still legitimate. dsh-codex-subscription — the composer model picker whose menu/option/trigger classes model.css decorates — was uninstalled here after 2026-10-22; the rules stay because the skin ships to installs that still have it. Listed explicitly so verify.mjs can tell a deliberate legacy target from a stale hash: a token not in this file and not in any inventory still fails the run.",
+  "classes": [
+    "codexModelSelectMenu",
+    "codexModelSelectGroups",
+    "codexModelSelectOption",
+    "codexModelSelectOptionDescription",
+    "codexModelSelectOptionName",
+    "codexModelSelectTrigger"
+  ]
+}

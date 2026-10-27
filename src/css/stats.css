@@ -18,8 +18,16 @@ html[data-lg-stats] [data-composer-stat] {
 
 /* The host's own context meter sits in the same dock as a SIBLING of the stat
    pills, not inside them, so hiding `[data-composer-stat]` alone leaves a
-   fourth readout behind. */
-html[data-lg-stats] [class~='_2WTFBq_root'] {
+   fourth readout behind. The meter carries no stable attribute — its class
+   names are CSS-module hashes that churn on every upstream rebuild
+   (`_2WTFBq_root` in the 0.1.x builds, `A6Bq1a_root` since 2026-10-23, …) — so
+   the hide is STRUCTURAL: every direct span child of the dock that is not our
+   seat is host readout chrome. Slot pills carry `[data-composer-stat]` and are
+   hidden by the rule above; this rule catches the meter (and any future
+   sibling readout) no matter how the hash re-rolls. (`:not(.lg-stats)` rather
+   than the attribute form: `lg-stats` is this skin's own class, which no
+   shipped inventory can confirm.) */
+html[data-lg-stats] [data-composer-dock] > span:not(.lg-stats) {
   display: none;
 }
 

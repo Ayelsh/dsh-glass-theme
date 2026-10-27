@@ -436,6 +436,302 @@
   cursor: not-allowed;
 }
 
+/* ---- Utility row -------------------------------------------------------
+   One switch that is not part of the quick-provider board: the 工作空间 panel.
+   It sits ABOVE the board and OUTSIDE it, because the board is the quick-list
+   object and this row configures a different surface. Giving it the same pill
+   material keeps the page one family without pretending the two belong to the
+   same list — and because it is the page's only always-on control, it must read
+   as a stable object before the board materialises under it. */
+.lg-settings-utility {
+  margin-bottom: 14px;
+  padding: 2px;
+  border-radius: var(--lg-r-pill);
+  background-color: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(14px) saturate(170%);
+  -webkit-backdrop-filter: blur(14px) saturate(170%);
+  box-shadow:
+    inset 0 0.5px 0 var(--lg-edge-top),
+    inset 0 -0.5px 0 var(--lg-edge-bottom),
+    0 0 0 0.5px rgba(16, 22, 40, 0.06),
+    0 1px 2px rgba(16, 22, 40, 0.05);
+}
+
+.lg-settings-utilityRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 8px;
+  border-radius: var(--lg-r-pill);
+}
+
+/* A smaller glyph than the board's: this row is a summary line, not a list
+   entry, and a 28px tile would out-weigh the heading it sits above. */
+.lg-settings-utilityGlyph {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background-image: linear-gradient(160deg, var(--lg-glyph-fill-top), var(--lg-glyph-fill-bottom));
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 0.5px var(--lg-glyph-ring),
+    0 1px 2px rgba(16, 22, 40, 0.07);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-weight: 620;
+  line-height: 1;
+}
+
+.lg-settings-utilityRow .lg-settings-note {
+  font-size: 11px;
+}
+
+/* ---- Model door --------------------------------------------------------
+   The affordance that opens one provider's model list. It is a DOOR, not a
+   checkbox: the row's switch says whether the provider is in the quick list,
+   and this says "there is more inside". Keeping the two apart is what stops a
+   user from reading the provider switch as "select all models". */
+.lg-settings-modelDoor {
+  flex: none;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform 90ms var(--lg-ease-out);
+}
+
+.lg-settings-modelDoor:hover {
+  background-color: rgba(16, 22, 40, 0.07);
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-settings-modelDoor:active {
+  transform: scale(0.94);
+}
+
+.lg-settings-modelDoor:focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: 1px;
+}
+
+/* A provider that is not pinned has no list to configure; its stored choice is
+   kept for the day it comes back, and the door says so by going quiet. */
+.lg-settings-modelDoor:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.lg-settings-modelDoor:disabled:hover {
+  background-color: transparent;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.lg-settings-modelDoorMark {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* ---- Model list view ---------------------------------------------------
+   The second view of the SAME board. Nothing new is drawn around it: the pane,
+   its light field and its grain are unchanged, which is what makes the swap
+   read as the same object showing different contents rather than as a dialog
+   opened inside a card. */
+.lg-settings-view {
+  position: relative;
+  z-index: 1;
+  padding: 4px 6px 8px;
+}
+
+.lg-settings-viewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 4px 8px;
+}
+
+.lg-settings-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 3px 9px 3px 5px;
+  border: 0;
+  border-radius: var(--lg-r-pill);
+  background-color: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform 90ms var(--lg-ease-out);
+}
+
+.lg-settings-back:hover {
+  background-color: rgba(16, 22, 40, 0.07);
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-settings-back:active {
+  transform: scale(0.96);
+}
+
+.lg-settings-back:focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: 1px;
+}
+
+.lg-settings-backMark {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.lg-settings-viewCount {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lg-settings-viewTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px 8px;
+}
+
+.lg-settings-modelList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0 0 2px;
+  list-style: none;
+}
+
+.lg-settings-model {
+  animation: lg-settings-row-in 360ms var(--lg-ease-out) both;
+  animation-delay: calc(var(--lg-row-index, 0) * 22ms);
+}
+
+/* The whole row is the checkbox. A 25-row list of small hit targets is a list
+   that cannot be used with a thumb, and the row already has the plate. */
+.lg-settings-check {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 13px;
+  background-color: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 18px;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    box-shadow var(--lg-t-fast) var(--lg-ease-out),
+    transform 90ms var(--lg-ease-out);
+}
+
+.lg-settings-check:hover {
+  background-color: var(--lg-row-hover);
+}
+
+.lg-settings-check:active {
+  transform: scale(0.995);
+}
+
+.lg-settings-check:focus-visible {
+  outline: 2px solid var(--lg-accent-ring);
+  outline-offset: 1px;
+}
+
+.lg-settings-check[data-on='true'] {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--lg-accent) 13%, transparent),
+    color-mix(in srgb, var(--lg-accent) 4%, transparent)
+  );
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 28%, transparent);
+}
+
+/* A tick box, not a switch: 16px, and the mark is a glyph rather than a moving
+   knob, because these are independent items in a set, not states of one thing. */
+.lg-settings-checkMark {
+  display: inline-flex;
+  flex: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 0.5px 1px rgba(16, 22, 40, 0.1),
+    0 0 0 0.5px rgba(16, 22, 40, 0.12);
+  color: transparent;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background-color var(--lg-t-base) var(--lg-ease-out),
+    background-image var(--lg-t-base) var(--lg-ease-out),
+    box-shadow var(--lg-t-base) var(--lg-ease-out),
+    color var(--lg-t-base) var(--lg-ease-out);
+}
+
+.lg-settings-check[data-on='true'] .lg-settings-checkMark {
+  background-image: linear-gradient(180deg, #6f87ff, var(--lg-accent));
+  background-color: var(--lg-accent);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.4),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent-strong) 42%, transparent),
+    0 1px 3px -0.5px color-mix(in srgb, var(--lg-accent) 42%, transparent);
+  color: #ffffff;
+}
+
+.lg-settings-modelName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lg-settings-viewHint {
+  margin: 6px 6px 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
 /* ---- Foot --------------------------------------------------------------
    A hairline that floats inside the pane, not a border under it: the line is
    inset so the glass keeps its edge all the way around. */
@@ -650,11 +946,61 @@ body[data-ds-dark-theme] .lg-settings-reset:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+body[data-ds-dark-theme] .lg-settings-utility {
+  background-color: rgba(255, 255, 255, 0.055);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 0.5px rgba(255, 255, 255, 0.09),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+body[data-ds-dark-theme] .lg-settings-utilityGlyph {
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 0.5px var(--lg-glyph-ring),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body[data-ds-dark-theme] .lg-settings-modelDoor:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+body[data-ds-dark-theme] .lg-settings-back:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* An unchecked box in the dark is a hole in the material, not a white chip:
+   the fill goes dark and the rim carries the edge. */
+body[data-ds-dark-theme] .lg-settings-checkMark {
+  background-color: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 0.5px 1px rgba(0, 0, 0, 0.4),
+    0 0 0 0.5px rgba(255, 255, 255, 0.16);
+}
+
+body[data-ds-dark-theme] .lg-settings-check[data-on='true'] {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--lg-accent) 20%, transparent),
+    color-mix(in srgb, var(--lg-accent) 6%, transparent)
+  );
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 40%, transparent);
+}
+
+body[data-ds-dark-theme] .lg-settings-check[data-on='true'] .lg-settings-checkMark {
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.34),
+    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 55%, transparent),
+    0 1px 3px -0.5px color-mix(in srgb, var(--lg-accent) 55%, transparent);
+}
+
 /* ---- Environment answers ----------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .lg-settings-board,
   .lg-settings-glow,
-  .lg-settings-row {
+  .lg-settings-row,
+  .lg-settings-model {
     animation: none;
   }
 
@@ -665,7 +1011,14 @@ body[data-ds-dark-theme] .lg-settings-reset:hover {
   .lg-settings-knob,
   .lg-settings-reset,
   .lg-settings-meter,
-  .lg-settings-pip {
+  .lg-settings-pip,
+  .lg-settings-modelDoor,
+  .lg-settings-modelDoor:active,
+  .lg-settings-back,
+  .lg-settings-back:active,
+  .lg-settings-check,
+  .lg-settings-check:active,
+  .lg-settings-checkMark {
     transition: none;
     transform: none;
   }
@@ -695,6 +1048,12 @@ body[data-ds-dark-theme] .lg-settings-reset:hover {
   }
 
   .lg-settings-meter {
+    background-color: var(--lg-glass-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .lg-settings-utility {
     background-color: var(--lg-glass-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

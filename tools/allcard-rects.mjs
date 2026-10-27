@@ -16,7 +16,7 @@ try {
   await page.cookie({ name: out.slice(0, eq), value: out.slice(eq + 1), domain: '127.0.0.1', path: '/' });
   await page.goto(URL_BASE, { settleMs: 12000 });
   // configure quick providers like two-level.mjs does, then reload
-  await page.evaluate(`(() => { localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['workbuddy'])); return 1 })()`);
+  await page.evaluate(`(() => { localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['workbuddy'], models: {} })); return 1 })()`);
   await page.goto(URL_BASE, { settleMs: 12000 });
   await page.evaluate(`(() => { const r=[...document.querySelectorAll('[class*=hIlkoa_sessionRow]')]; if(r[1]) r[1].click(); return 1 })()`);
   await new Promise(r => setTimeout(r, 6000));

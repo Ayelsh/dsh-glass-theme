@@ -84,7 +84,19 @@ const makeDom = () => {
     // The decorator queries for surfaces this stub does not model (the model
     // picker lives in a third-party plugin). An empty list is the honest
     // answer here: there is nothing to decorate, and the code must survive it.
-    querySelectorAll: () => [],
+    //
+    // The one selector family the stub MUST answer is the skin's own style
+    // tags: the poll backstop counts them and the disposer removes them by
+    // `style[data-plugin="..."]`. Returning `[]` there made the disposer a
+    // no-op and the poll re-raise forever, so disposal looked broken when the
+    // stub was the thing that was incomplete.
+    querySelectorAll(selector) {
+      const byOwner = /^style\[data-plugin="(.+)"\]$/.exec(selector)
+      if (byOwner) return children.filter((el) => el.tagName === 'STYLE' && el.dataset.plugin === byOwner[1])
+      const bySheet = /^style\[data-plugin-css="(.+)"\]$/.exec(selector)
+      if (bySheet) return children.filter((el) => el.tagName === 'STYLE' && el.dataset.pluginCss === bySheet[1])
+      return []
+    },
     addEventListener() {},
     removeEventListener() {},
   }

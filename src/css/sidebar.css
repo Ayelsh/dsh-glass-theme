@@ -11,7 +11,7 @@
    ========================================================================== */
 
 /* ---- The column -------------------------------------------------------- */
-[class~='_2H3hWW_root'] {
+[class~='wtg9ga_root'] {
   border-radius: var(--lg-r-xl);
   background-color: var(--lg-glass-1);
   backdrop-filter: blur(26px) saturate(180%);
@@ -41,7 +41,7 @@
    fixed child, so it is lifted back out with the viewport as its containing
    block again by painting the material on a pseudo-element instead of on the
    column itself. */
-[class~='_2H3hWW_root'] {
+[class~='wtg9ga_root'] {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   background-color: transparent;
@@ -49,7 +49,7 @@
   isolation: isolate;
 }
 
-[class~='_2H3hWW_root']::before {
+[class~='wtg9ga_root']::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -68,34 +68,34 @@
 /* The macOS build hands the window a transparent sidebar so the system vibrancy
    shows through. There is no system vibrancy in the browser, so the same slot
    takes our own material instead of going empty. */
-[data-platform='darwin'] [class~='_2H3hWW_root']::before {
+[data-platform='darwin'] [class~='wtg9ga_root']::before {
   background-color: var(--lg-glass-1);
 }
 
 /* Collapsed rail: a narrow capsule. Rounding stays proportional — a 48px rail
    with a 24px radius reads as a pill, which is the point. */
-[class~='_2H3hWW_root'][class~='_2H3hWW_collapsed']::before {
+[class~='wtg9ga_root'][class~='wtg9ga_collapsed']::before {
   border-radius: var(--lg-r-lg);
   background-color: var(--lg-glass-2);
 }
 
 /* ---- Brand row --------------------------------------------------------- */
-[class~='_2H3hWW_logoRow'] {
+[class~='wtg9ga_logoRow'] {
   padding-inline: 4px;
 }
 
-[class~='_2H3hWW_brandMark'] {
+[class~='wtg9ga_brandMark'] {
   border-radius: var(--lg-r-sm);
   box-shadow: var(--lg-shadow-1);
 }
 
-[class~='_2H3hWW_brandName'] {
+[class~='wtg9ga_brandName'] {
   font-weight: 600;
   letter-spacing: -0.012em;
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='_2H3hWW_buildVersion'] {
+[class~='wtg9ga_buildVersion'] {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
 }
@@ -104,7 +104,7 @@
    The primary affordance in the column. Elevated fill plus a specular rim, and
    it presses down (scale 0.985) on pointer-down rather than on click — the
    response belongs to the touch, not to the outcome. */
-[class~='_2H3hWW_newSession'] {
+[class~='wtg9ga_newSession'] {
   border: 0.5px solid var(--lg-hairline);
   border-radius: var(--lg-r-md);
   background-color: var(--dsw-alias-button-elevated-fill);
@@ -119,19 +119,19 @@
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='_2H3hWW_newSession']:hover {
+[class~='wtg9ga_newSession']:hover {
   background-color: var(--dsw-alias-button-floating-hover);
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     0 2px 6px rgba(16, 22, 40, 0.09);
 }
 
-[class~='_2H3hWW_newSession']:active {
+[class~='wtg9ga_newSession']:active {
   transform: scale(0.985);
   box-shadow: inset 0 0.5px 0 var(--lg-edge-bottom);
 }
 
-[class~='_2H3hWW_newSessionShortcut'] {
+[class~='wtg9ga_newSessionShortcut'] {
   font-variant-numeric: tabular-nums;
   opacity: 0.55;
 }
@@ -142,11 +142,11 @@
    used to give selection a tint plus a 2.5px accent bar, which is a desktop-app
    idiom from a different family; Apple's source list fills the row and flips the
    text to white, so selection can never be mistaken for hover. */
-[class~='_2H3hWW_panelList'] {
+[class~='wtg9ga_panelList'] {
   gap: 1px;
 }
 
-[class~='_2H3hWW_panelRow'] {
+[class~='wtg9ga_panelRow'] {
   border-radius: var(--lg-r-md);
   min-height: 32px;
   padding: 5px 9px;
@@ -157,11 +157,11 @@
     color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='_2H3hWW_panelRow']:hover {
+[class~='wtg9ga_panelRow']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='_2H3hWW_panelRow'][class~='_2H3hWW_panelActive'] {
+[class~='wtg9ga_panelRow'][class~='wtg9ga_panelActive'] {
   background-color: var(--lg-selection-fill);
   box-shadow:
     inset 0 0.5px 0 rgba(255, 255, 255, 0.22),
@@ -170,22 +170,22 @@
   font-weight: 560;
 }
 
-[class~='_2H3hWW_panelRow'][class~='_2H3hWW_panelActive']:hover {
+[class~='wtg9ga_panelRow'][class~='wtg9ga_panelActive']:hover {
   background-color: var(--lg-selection-fill-hover);
 }
 
 /* The selected row is one filled object: no leading bar, no second plate. */
-[class~='_2H3hWW_panelRow'][class~='_2H3hWW_panelActive']::before {
+[class~='wtg9ga_panelRow'][class~='wtg9ga_panelActive']::before {
   content: none;
 }
 
-[class~='_2H3hWW_panelGlyph'],
-[class~='_2H3hWW_panelIcon'] {
+[class~='wtg9ga_panelGlyph'],
+[class~='wtg9ga_panelIcon'] {
   opacity: 0.9;
 }
 
-[class~='_2H3hWW_panelActive'] [class~='_2H3hWW_panelGlyph'],
-[class~='_2H3hWW_panelActive'] [class~='_2H3hWW_panelIcon'] {
+[class~='wtg9ga_panelActive'] [class~='wtg9ga_panelGlyph'],
+[class~='wtg9ga_panelActive'] [class~='wtg9ga_panelIcon'] {
   opacity: 1;
   color: var(--lg-selection-label);
 }
@@ -193,11 +193,11 @@
 /* ---- Region area -------------------------------------------------------
    Holds the workspace browser and the session list. It is the only scrolling
    part of the column, so the scrollbar is narrowed and inset. */
-[class~='_2H3hWW_regionArea'] {
+[class~='wtg9ga_regionArea'] {
   scrollbar-gutter: stable;
 }
 
-[class~='_2H3hWW_regionArea'] > * {
+[class~='wtg9ga_regionArea'] > * {
   min-height: 0;
 }
 
@@ -209,35 +209,35 @@
    row jump 5px when the list starts overflowing), so the compensation moves to
    the list's own padding: drop the shipped right padding and the 2px margin, keep
    2px of clearance for the thumb. Row edges then sit 12px from both sides. */
-[class~='_9lTDKa_list'] {
+[class~='GAkraW_list'] {
   margin-right: 0;
   padding-right: 2px;
 }
 
 /* ---- Footer ------------------------------------------------------------ */
-[class~='_2H3hWW_footArea'] {
+[class~='wtg9ga_footArea'] {
   border-top: 0.5px solid var(--lg-hairline);
   padding-top: 6px;
   margin-top: 4px;
 }
 
-[class~='_2H3hWW_settingsArea'] {
+[class~='wtg9ga_settingsArea'] {
   border-radius: var(--lg-r-md);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='_2H3hWW_settingsArea']:hover {
+[class~='wtg9ga_settingsArea']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
 /* ---- Workspace browser ------------------------------------------------- */
-[class~='_9lTDKa_root'],
-[class~='hIlkoa_slot'] {
+[class~='GAkraW_root'],
+[class~='wnFoaW_slot'] {
   background: transparent;
 }
 
-[class~='_9lTDKa_sectionHeader'],
-[class~='_9lTDKa_groupSection'] > [class~='_9lTDKa_sectionHeader'] {
+[class~='GAkraW_sectionHeader'],
+[class~='GAkraW_groupSection'] > [class~='GAkraW_sectionHeader'] {
   /* A sticky header has to paint an opaque band to hide the rows sliding under
      it, and that band is a rectangle the full width of the list — inside a 260px
      column it is the widest box in the sidebar, which is precisely what makes a
@@ -252,7 +252,7 @@
   padding-block: 14px 4px;
 }
 
-[class~='_9lTDKa_sectionLabel'] {
+[class~='GAkraW_sectionLabel'] {
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -265,8 +265,8 @@
    appears on hover; the SELECTED row is a filled plate with an inverted label.
    Selection therefore never reads as hover, which matters here because this list
    scrolls and the user needs to find the open session at a glance. */
-[class~='hIlkoa_sessionRow'],
-[class~='hIlkoa_projectRow'] {
+[class~='wnFoaW_sessionRow'],
+[class~='wnFoaW_projectRow'] {
   border-radius: var(--lg-r-md);
   height: 32px;
   position: relative;
@@ -275,57 +275,57 @@
     transform var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='hIlkoa_sessionRow']:hover,
-[class~='hIlkoa_projectRow']:hover {
+[class~='wnFoaW_sessionRow']:hover,
+[class~='wnFoaW_projectRow']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='hIlkoa_sessionRow']:active,
-[class~='hIlkoa_projectRow']:active {
+[class~='wnFoaW_sessionRow']:active,
+[class~='wnFoaW_projectRow']:active {
   transform: scale(0.99);
 }
 
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected'] {
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected'] {
   background-color: var(--lg-selection-fill);
   box-shadow:
     inset 0 0.5px 0 rgba(255, 255, 255, 0.22),
     0 1px 2px color-mix(in srgb, var(--lg-selection-fill) 40%, transparent);
 }
 
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected']:hover {
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected']:hover {
   background-color: var(--lg-selection-fill-hover);
 }
 
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected'] [class~='hIlkoa_title'] {
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected'] [class~='wnFoaW_title'] {
   font-weight: 560;
   color: var(--lg-selection-label);
 }
 
 /* Every muted thing in a selected row has to invert with it, or the timestamp
    disappears against the fill. */
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected'] [class~='hIlkoa_time'],
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected'] [class~='hIlkoa_meta'],
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected'] [class~='hIlkoa_slot'] {
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected'] [class~='wnFoaW_time'],
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected'] [class~='wnFoaW_meta'],
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected'] [class~='wnFoaW_slot'] {
   color: color-mix(in srgb, var(--lg-selection-label) 74%, transparent);
 }
 
-[class~='hIlkoa_sessionRow'][class~='hIlkoa_selected'] [class~='hIlkoa_dot'] {
+[class~='wnFoaW_sessionRow'][class~='wnFoaW_selected'] [class~='wnFoaW_dot'] {
   background-color: var(--lg-selection-label);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
 }
 
-[class~='hIlkoa_title'] {
+[class~='wnFoaW_title'] {
   color: var(--dsw-alias-label-secondary);
   letter-spacing: -0.002em;
 }
 
-[class~='hIlkoa_sessionRow']:hover [class~='hIlkoa_title'],
-[class~='hIlkoa_projectRow']:hover [class~='hIlkoa_title'] {
+[class~='wnFoaW_sessionRow']:hover [class~='wnFoaW_title'],
+[class~='wnFoaW_projectRow']:hover [class~='wnFoaW_title'] {
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='hIlkoa_time'],
-[class~='hIlkoa_meta'] {
+[class~='wnFoaW_time'],
+[class~='wnFoaW_meta'] {
   font-variant-numeric: tabular-nums;
   font-size: 11px;
   color: var(--dsw-alias-label-caption);
@@ -333,7 +333,7 @@
 
 /* A live session gets a breathing dot instead of a static one: the only place
    in the chrome that animates at rest, so it reads as "something is happening". */
-[class~='hIlkoa_dot'] {
+[class~='wnFoaW_dot'] {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -353,27 +353,27 @@
   }
 }
 
-[class~='hIlkoa_sessionRow']:has([class~='hIlkoa_dot']) [class~='hIlkoa_dot'] {
+[class~='wnFoaW_sessionRow']:has([class~='wnFoaW_dot']) [class~='wnFoaW_dot'] {
   animation: lg-breathe 2.4s var(--lg-ease-in-out) infinite;
 }
 
-[class~='hIlkoa_rowActions'] [class~='hIlkoa_iconButton'],
-[class~='hIlkoa_iconButton'] {
+[class~='wnFoaW_rowActions'] [class~='wnFoaW_iconButton'],
+[class~='wnFoaW_iconButton'] {
   border-radius: var(--lg-r-sm);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='hIlkoa_iconButton']:hover {
+[class~='wnFoaW_iconButton']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover-solid);
 }
 
 /* ---- Search ------------------------------------------------------------ */
-[class~='_9lTDKa_search'],
-[class~='_9lTDKa_searchInput'] {
+[class~='GAkraW_search'],
+[class~='GAkraW_searchInput'] {
   border-radius: var(--lg-r-md);
 }
 
-[class~='_9lTDKa_searchInput'] {
+[class~='GAkraW_searchInput'] {
   background-color: var(--lg-glass-tint);
   border: 0.5px solid var(--lg-hairline);
   box-shadow: inset 0 1px 2px rgba(16, 22, 40, 0.04);
@@ -382,33 +382,33 @@
     box-shadow var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='_9lTDKa_searchInput']:focus,
-[class~='_9lTDKa_searchInput']:focus-within {
+[class~='GAkraW_searchInput']:focus,
+[class~='GAkraW_searchInput']:focus-within {
   background-color: var(--dsw-alias-bg-layer-1);
   box-shadow: 0 0 0 3px var(--lg-accent-ring);
 }
 
-[class~='hIlkoa_searchResultRow'] {
+[class~='wnFoaW_searchResultRow'] {
   border-radius: var(--lg-r-md);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='hIlkoa_searchResultRow']:hover {
+[class~='wnFoaW_searchResultRow']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
-[class~='hIlkoa_searchResultTitle'] {
+[class~='wnFoaW_searchResultTitle'] {
   font-weight: 560;
   color: var(--dsw-alias-label-primary);
 }
 
-[class~='hIlkoa_searchResultSnippet'],
-[class~='hIlkoa_searchResultWorkspace'],
-[class~='hIlkoa_searchResultMeta'] {
+[class~='wnFoaW_searchResultSnippet'],
+[class~='wnFoaW_searchResultWorkspace'],
+[class~='wnFoaW_searchResultMeta'] {
   color: var(--dsw-alias-label-tertiary);
 }
 
-[class~='hIlkoa_searchResultHeading'] {
+[class~='wnFoaW_searchResultHeading'] {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -428,9 +428,9 @@
   }
 }
 
-[class~='_9lTDKa_skeletonBar'],
-[class~='_9lTDKa_skeletonRow'] [class~='_9lTDKa_skeletonBar'],
-[class~='_9lTDKa_skeletonBarWide'] {
+[class~='GAkraW_skeletonBar'],
+[class~='GAkraW_skeletonRow'] [class~='GAkraW_skeletonBar'],
+[class~='GAkraW_skeletonBarWide'] {
   border-radius: var(--lg-r-xs);
   background-image: linear-gradient(
     90deg,
@@ -444,31 +444,31 @@
 }
 
 /* ---- Collapsed rail ---------------------------------------------------- */
-[class~='_2H3hWW_collapsed'] [class~='_2H3hWW_panelRow'] {
+[class~='wtg9ga_collapsed'] [class~='wtg9ga_panelRow'] {
   border-radius: var(--lg-r-md);
 }
 
-[class~='_2H3hWW_collapsed'] [class~='_2H3hWW_panelActive']::before {
+[class~='wtg9ga_collapsed'] [class~='wtg9ga_panelActive']::before {
   inset-inline-start: -6px;
   inset-block: 10px;
 }
 
-[class~='_2H3hWW_toggle'],
-[class~='_2H3hWW_iconButton'] {
+[class~='wtg9ga_toggle'],
+[class~='wtg9ga_iconButton'] {
   border-radius: var(--lg-r-sm);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
     color var(--lg-t-fast) var(--lg-ease-out);
 }
 
-[class~='_2H3hWW_toggle']:hover,
-[class~='_2H3hWW_iconButton']:hover {
+[class~='wtg9ga_toggle']:hover,
+[class~='wtg9ga_iconButton']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class~='hIlkoa_sessionRow']:has([class~='hIlkoa_dot']) [class~='hIlkoa_dot'],
-  [class~='_9lTDKa_skeletonBar'] {
+  [class~='wnFoaW_sessionRow']:has([class~='wnFoaW_dot']) [class~='wnFoaW_dot'],
+  [class~='GAkraW_skeletonBar'] {
     animation: none;
   }
 }

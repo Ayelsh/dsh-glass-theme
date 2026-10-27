@@ -18,7 +18,7 @@ try {
 	const page = await b.newPage();
 	await page.cookie({ name: cookie.slice(0, eq), value: cookie.slice(eq + 1), domain: '127.0.0.1', path: '/' });
 	await page.goto(URL_BASE, { settleMs: 12000 });
-	await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify(['workbuddy'])); } catch (e) {} })()`);
+	await page.evaluate(`(() => { try { window.localStorage.setItem('dsh-glass-theme:quick-providers', JSON.stringify({ providers: ['workbuddy'], models: {} })); } catch (e) {} })()`);
 	await page.goto(URL_BASE, { settleMs: 9000 });
 	await page.evaluate(`(() => { const row = document.querySelector('[class*=hIlkoa_sessionRow]:not([class*=selected])'); if (row) row.click(); })()`);
 	await wait(4500);

@@ -21,7 +21,7 @@
    padding on the column and the column has to be border-box; with the shipped
    content-box the padding would widen the item past its track and the sidebar
    would slide under the centre column. */
-[class~='BynINW_frame'] {
+[class~='mP3x-q_frame'] {
   --lg-gutter: 10px;
 }
 
@@ -103,12 +103,12 @@
 
    The columns keep their 10px gutter below it, because everything in this shell
    floats in the same gutter; the toolbar is simply the one bar that does not. */
-[data-windows-titlebar] [class~='BynINW_frame'] {
+[data-windows-titlebar] [class~='mP3x-q_frame'] {
   background-color: transparent !important;
   background-image: none !important;
 }
 
-[data-windows-titlebar] [class~='BynINW_frame']::before {
+[data-windows-titlebar] [class~='mP3x-q_frame']::before {
   background-color: var(--lg-glass-2) !important;
   background-image: none !important;
   backdrop-filter: blur(24px) saturate(180%);
@@ -126,7 +126,7 @@
 
 /* Inside the toolbar the drag region must still work, so nothing in the strip
    may swallow pointer events. */
-[data-windows-titlebar] [class~='BynINW_frame']::before {
+[data-windows-titlebar] [class~='mP3x-q_frame']::before {
   pointer-events: none;
 }
 
@@ -160,15 +160,15 @@
 /* ---- Column resize transition ----------------------------------------
    The shipped frame animates grid-template-columns. Keep it, but swap in the
    Apple response curve so a drag release settles instead of stopping dead. */
-[class~='BynINW_frame'][data-animating] {
+[class~='mP3x-q_frame'][data-animating] {
   transition: grid-template-columns var(--lg-t-slow) var(--lg-ease-out) !important;
 }
-[class~='BynINW_frame'][data-dragging] {
+[class~='mP3x-q_frame'][data-dragging] {
   transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class~='BynINW_frame'][data-animating] {
+  [class~='mP3x-q_frame'][data-animating] {
     transition: none !important;
   }
 }

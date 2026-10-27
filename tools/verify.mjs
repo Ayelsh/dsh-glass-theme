@@ -44,6 +44,15 @@ const foreign = existsSync(resolve(research, 'foreign-class-map.json'))
 const foreignClasses = new Set()
 for (const classes of Object.values(foreign)) for (const c of classes) foreignClasses.add(c)
 
+// Classes styled deliberately although this machine no longer emits them
+// (tools/verify-legacy.json documents each one). Enumerated, committed, and
+// reasoned — not a blanket allowlist: anything absent from the inventories AND
+// this file still fails the run.
+const legacy = existsSync(resolve(here, 'verify-legacy.json'))
+  ? JSON.parse(readFileSync(resolve(here, 'verify-legacy.json'), 'utf8'))
+  : {}
+for (const c of legacy.classes ?? []) foreignClasses.add(c)
+
 /** Every class name the app emits, hashed or global. */
 const shipped = new Set()
 

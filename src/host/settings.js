@@ -105,6 +105,16 @@ var PREFS = {
    * is dropped.
    */
   quickProviders: { type: "list", default: [], max: QUICK_PROVIDERS_MAX, entryMax: PROVIDER_ID_MAX, drop: [OFFICIAL_MODEL_GROUP] },
+  /**
+   * The models each pinned provider carries in the picker's first level: a map
+   * from provider id to the list of model ids the user ticked. A provider that
+   * has NO entry here shows all of its models — the entry's absence is the
+   * "never configured" state, and that is why this is a separate key rather
+   * than pairs packed into `quickProviders` (whose entry budget the pairs would
+   * consume). An empty array is a real choice: every model of that provider was
+   * deselected, so the provider leaves the quick list.
+   */
+  quickModels: { type: "map", default: {} },
   username: { type: "text", default: "", max: USERNAME_MAX },
   pageZoom: { type: "choice", values: PAGE_ZOOMS, default: PAGE_ZOOM_SYSTEM },
   banLocale: { type: "choice", values: BAN_LOCALES, default: BAN_LOCALE_EN },
@@ -165,7 +175,11 @@ function volatileField(field) {
   return typeof field?.volatile === "function" ? field.volatile() : field;
 }
 function prefsField(Schema, key) {
-  return Schema.union([Schema.string(), Schema.boolean(), Schema.array(Schema.string())]).default(PREFS[key].default);
+  var spec = PREFS[key];
+  if (spec.type === "map") {
+    return Schema.dict(Schema.array(Schema.string())).default(spec.default);
+  }
+  return Schema.union([Schema.string(), Schema.boolean(), Schema.array(Schema.string())]).default(spec.default);
 }
 var Config = SchemaFactory === null ? void 0 : SchemaFactory.object(Object.fromEntries(
   Object.keys(PREFS).map((key) => [key, volatileField(prefsField(SchemaFactory, key))])

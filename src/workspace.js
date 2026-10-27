@@ -3228,18 +3228,50 @@ function createWorkspace(require, ctx, catalog) {
 	 * ================================================================ */
 
 	/**
-	 * Both slots are claimed together: the `main` entry renders the panel
-	 * when the shell selects our id, and the `sidebar.panellist` entry is
-	 * the rail icon that selects it. `slots.inject` defers each registration
-	 * until that slot actually exists, so the panel tolerates a shell that
-	 * mounts the rail before the main area or vice versa.
+	 * Returns a `{ start, stop }` handle and claims nothing yet. The caller
+	 * owns the lifetime: the settings switch decides whether the panel exists
+	 * at all (design D4), so registering here would mean "off" still had to
+	 * pay for a registration it would immediately throw away.
+	 *
+	 * `start()` claims both slots as one unit — the `main` entry renders the
+	 * panel when the shell selects our id, and the `sidebar.panellist` entry
+	 * is the rail icon that selects it. `slots.inject` defers each
+	 * registration until that slot actually exists, so the panel tolerates a
+	 * shell that mounts the rail before the main area or vice versa. Its
+	 * return value is the disposer for that deferred registration and must be
+	 * kept: dropping it would let the deferred callback fire again after
+	 * `stop()` and quietly re-register the panel.
+	 *
+	 * `start()` and `stop()` are both idempotent, and `start()` works again
+	 * after `stop()` — that is what makes flipping the switch back on
+	 * re-register the panel in its usual position without a reload. `stop()`
+	 * disposes exactly what this handle's `start()` created and nothing else;
+	 * the shell's layout store clears a selected panel id whose key
+	 * disappears, so returning to the session is its job, not ours.
+	 *
+	 * A missing `slots` service yields `null` — callers read that as "not
+	 * available". A genuine failure to claim a slot only logs: the handle
+	 * still comes back so the caller's switch cannot get stuck, and `stop()`
+	 * on it is a no-op.
 	 */
 	function register() {
 		const slots = ctx.slots;
 		if (!slots || typeof slots.register !== 'function') return null;
+		/* Whether the chain is currently armed, the disposer that cancels the
+		 * deferred registrations, and the one that unwinds the entries already
+		 * claimed. Both are kept because they cover different moments: before
+		 * the slots exist only the deferred registration can be cancelled,
+		 * after they do only the inner cleanup can be unwound. */
+		let started = false;
+		let disposeOpen = null;
+		let disposeStops = null;
 		const open = () =>
 			slots.inject('main', () =>
 				slots.inject('sidebar.panellist', () => {
+					/* A deferred callback can still be queued when `stop()`
+					 * lands. Arming after that would register a panel nothing
+					 * owns, so a stopped handle registers nothing at all. */
+					if (!started) return () => {};
 					const stops = [];
 					try {
 						stops.push(
@@ -3266,7 +3298,15 @@ function createWorkspace(require, ctx, catalog) {
 					} catch (error) {
 						console.error('dsh-glass-theme: could not register the workspace rail icon', error);
 					}
-					return () => {
+					/* `stop()` can reach this twice — once through the inject
+					 * disposer's cascade and once through the reference kept
+					 * below — so it has to be idempotent itself. A second call
+					 * must not ask a `slots.register` disposer to unwind an
+					 * entry it already released. */
+					let cleaned = false;
+					const cleanup = () => {
+						if (cleaned) return;
+						cleaned = true;
 						for (const stop of stops) {
 							try {
 								stop?.();
@@ -3275,15 +3315,48 @@ function createWorkspace(require, ctx, catalog) {
 							}
 						}
 					};
+					/* The slot runtime disposes us through this return value;
+					 * remembering it lets `stop()` also unwind the case where
+					 * both slots existed immediately and the deferred callback
+					 * already ran. */
+					disposeStops = cleanup;
+					return cleanup;
 				})
 			);
-		try {
-			open();
-			return true;
-		} catch (error) {
-			console.error('dsh-glass-theme: could not open the workspace slots', error);
-			return null;
-		}
+		return {
+			start() {
+				if (started) return;
+				started = true;
+				disposeStops = null;
+				try {
+					const armed = open();
+					disposeOpen = typeof armed === 'function' ? armed : null;
+				} catch (error) {
+					console.error('dsh-glass-theme: could not open the workspace slots', error);
+					disposeOpen = null;
+					disposeStops = null;
+				}
+			},
+			stop() {
+				if (!started) return;
+				started = false;
+				const stops = disposeStops;
+				const deferred = disposeOpen;
+				disposeStops = null;
+				disposeOpen = null;
+				/* Both are idempotent; either may already be gone. */
+				try {
+					deferred?.();
+				} catch (error) {
+					/* already disposed */
+				}
+				try {
+					stops?.();
+				} catch (error) {
+					/* already disposed */
+				}
+			},
+		};
 	}
 
 	/* RawPanel is the unguarded component; tools/ws-render.mjs drives it
