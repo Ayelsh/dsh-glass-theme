@@ -2,6 +2,11 @@ node_modules/
 *.log
 .DS_Store
 
+# Test-only React 18 install for tools/interaction-check.mjs; never a runtime
+# dependency (the host supplies React at load time).
+tools/.react/
+.react18/
+
 # Local scratch: probe output, screenshots and preview pages produced by
 # tools/*.mjs land here, not in the repository. The curated screenshots that
 # ship live in assets/screenshots/ and are declared in screenshots.json.

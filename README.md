@@ -34,6 +34,16 @@ app's own.
   segmented control beside the model list (both visible at once; picking a
   model keeps the card open). Configured providers
   narrow the default list; everything else stays behind one "所有供应商" row.
+  Selection feedback is derived from the public directory snapshot: an
+  activation shows pending on the target while the host-confirmed `current`
+  stays the only checkmark, a failed or rejected command shows a retryable
+  failure note, and an acknowledged command that no projection confirms
+  within 8 seconds shows an explicit unconfirmed note — never an automatic
+  rollback. The all-providers card closes only on acknowledged + confirmed;
+  focus returns to the effort control or the "所有供应商" opener. The catalog
+  distinguishes loading, empty, overall error (retry via `load()`), filtered
+  no-match (clear the query), and partial provider failures (a note, not a
+  blocker).
 - **Merges the usage readouts.** `src/stats.js` replaces the two stat pills and
   the context ring with one control that opens a single panel: context pressure
   and its three buckets, session timings, and the token ledger. The pill sits at
@@ -120,7 +130,10 @@ node tools/verify.mjs       # every selector must resolve against the shipped bu
 node tools/leak.mjs         # [class*=] must not over-match sibling locals
 node tools/build.mjs        # inlines src/css/*.css into lib/client.js, copies the host half
 node tools/smoke.mjs        # evaluates the bundle against a stubbed DOM
+node tools/style-lifecycle-check.mjs # the sheet mount converges: it stops writing when the document is right
 node tools/assert-built.mjs # the authored rules actually survived into lib/client.js
+node tools/picker-feedback-check.mjs # picker feedback lifecycle: pending/failure/unconfirmed/catalog states (headless; real React when resolvable, else its own lifecycle harness)
+node tools/interaction-check.mjs # isolated browser fixture: layer coordinator, modal Tab containment, Escape hierarchy, picker/stats/workspace/settings keyboard flows, reduced motion
 node tools/host-check.mjs   # the host half registers its routes without throwing
 node tools/ws-check.mjs     # the workspace CLI routes: fence, whitelist, probe, caps (mock server)
 node tools/ws-render.mjs    # source render smoke test, including explicit open-case handlers
@@ -149,6 +162,16 @@ just a surface that keeps its old look. The tool resolves every token against
 `research/shipped-class-map.json` (extracted from the installed app) and fails
 the build on a miss.
 
+`style-lifecycle-check.mjs` guards the other half of the mount contract: the
+reconcile must be bounded. It runs the built bundle in a stub DOM whose mutation
+records deliver asynchronously and counts actual stylesheet DOM writes, so a
+mount that keeps moving its own tags and reacting to the records of those moves
+cannot pass as "idempotent". Host batches, partial and total sheet removal,
+`<head>` replacement, missing `MutationObserver`/`requestAnimationFrame`,
+disposal with a repair still queued, and a superseding mount are all covered;
+the original defective implementation is preserved inside the tool as scenario 1
+and must keep failing to converge, so the defect stays reproducible.
+
 ### The inventories `verify.mjs` resolves against
 
 The app generates its CSS-module class names (`_local_hash`), so the only honest
@@ -170,6 +193,27 @@ embedded as a JSON string, so a newline is the two characters `\` `n`. A regex
 written against the source file misses in the bundle for that reason alone —
 which looks exactly like a lost rule. The tool unescapes once and then asserts
 both the rules that must exist and the ones that must not.
+
+## Keyboard navigation and layer coordination
+
+All skin-owned popovers, dialogs, drawers, and menus register with a unified coordinator (`src/layers.js`). One coordinator instance is scoped to the client session and shared by all skin component factories:
+
+- **Top-layer Escape and outside routing**: Only the topmost open layer handles an Escape keypress or outside click. Closing a child card (e.g. the picker's all-providers card) leaves the parent layer open.
+- **Modal containment**: Modal layers (workspace dialogs, narrow inspector sheet) contain `Tab` and `Shift+Tab` within their boundaries and mark outside siblings `inert` (`aria-hidden` fallback). Nonmodal layers (picker, stats panel, project menu, desktop inspector) preserve natural Tab exit to the page.
+- **Focus restoration**: Closing a layer via Escape or an action button restores focus to the invoking opener control. Clicking outside dismisses nonmodal surfaces without moving keyboard focus away from whatever element the user activated.
+- **Display preference and unmounted safety**: Closed layers unmount from the DOM. Under `prefers-reduced-motion: reduce`, defensive styles ensure closed layers remain hidden (`display: none !important`), non-hit-testable, and absent from Tab order even during rapid motion-preference toggling.
+
+### Documented keyboard interaction paths
+
+| Surface | Activation & Entry | Navigation | Selection / Action | Dismissal & Return |
+| --- | --- | --- | --- | --- |
+| **Model Picker** | Click / Space / Enter on trigger opens card and focuses search input (`role="combobox"`). | `ArrowDown` / `ArrowUp` cycles active option (`aria-activedescendant`). `ArrowLeft` / `ArrowRight` cycles reasoning effort in the segmented control. | `Enter` selects active model. | `Escape` closes "所有供应商" second card first (focus returns to opener); second `Escape` closes main card (focus returns to trigger). Outside click dismisses without moving active focus. `Tab` exits to next page control. |
+| **Stats Panel** | Click on dock stats pill opens panel; focus moves to panel container (`tabIndex="-1"`). | `Tab` / `Shift+Tab` navigates internal links and actions. | Click / Enter on interactive items. | `Escape` closes panel and restores focus to stats pill. Outside click dismisses without stealing focus. |
+| **Workspace Project Menu** | Click on project trigger opens nonmodal menu. | `ArrowDown` / `ArrowUp` or `Tab` through project items. | `Enter` / Space selects project. | `Escape` or outside click closes menu and restores focus to project trigger button. |
+| **Workspace Inspector (Desktop >900px)** | Click on item row opens nonmodal side inspector. | `Tab` moves naturally between inspector actions and main list. | Click / Enter on action buttons (流转, 转派, 复制 ID). | `Escape` or "返回列表" closes inspector and restores focus to the item row. |
+| **Workspace Inspector (Narrow ≤900px)** | Click on item row opens modal bottom sheet with blocking scrim. | `Tab` / `Shift+Tab` contained strictly inside sheet; outside siblings marked `inert`. | Action buttons inside sheet. | `Escape`, sheet close button, or scrim click dismisses modal, clears `inert`, and restores focus to the item row opener. Unmounts completely on close. |
+| **Workspace Dialogs** (状态流转, 转派) | Triggered from item actions; modal titled layer opens. | `Tab` / `Shift+Tab` contained strictly inside dialog; background inert. | Form submission / confirm button. | `Escape` or cancel button closes dialog, clears `inert`, and restores focus to invoking action button. |
+| **Settings Drill-down** | Click on provider model gear/arrow swaps view to provider models. Focus lands on "返回" button. | `Tab` through model switches and tool buttons. | Click / Space toggles model enabled state; "保存" commits changes. | "返回" discards local drafts; "保存" commits. Both return focus to the originating provider row control (or safe heading/switch fallback if provider disappeared). |
 
 ## Design rules the sheets follow
 

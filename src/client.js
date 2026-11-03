@@ -56,134 +56,277 @@ window.__ModuleLoader__.load({
 		/** @type {Function} — inlined from src/workspace.js at build time. */
 		const createWorkspace = /*__WORKSPACE__*/null;
 
+		/** @type {Function} — inlined from src/layers.js at build time. */
+		const createLayers = /*__LAYERS__*/null;
+
 		/** Build stamp, inlined at build time. */
 		const built = /*__BUILT__*/"";
 
 		const PACKAGE = 'dsh-glass-theme';
 
-		/* ================================================================== *
-		 * Stylesheet mounting
-		 * ================================================================== */
+	/* ================================================================== *
+	 * Stylesheet mounting
+	 * ================================================================== */
 
-		/**
-		 * Append the sheets, then re-append them so they sit after the shipped
-		 * stylesheets. Ordering matters twice over: the app injects its CSS-module
-		 * tags as each client module loads, and several shipped rules win on equal
-		 * specificity alone. Moving a style element to the end of <head> re-runs it
-		 * in that position, which is cheaper and safer than escalating specificity
-		 * everywhere.
-		 */
-		const mount = () => {
-			let raising = false;
+	/**
+	 * Install the sheets and keep them installed — with a hard stop.
+	 *
+	 * Ordering matters twice over: the app injects its CSS-module tags as
+	 * each client module loads, and several shipped rules win on equal
+	 * specificity alone. Moving a style element to the end of <head> re-runs
+	 * it in that position, which is cheaper and safer than escalating
+	 * specificity everywhere.
+	 *
+	 * The mount is idempotent and event-driven. `raise` is the only writer:
+	 * it reconciles the document toward the declared sheet set and writes
+	 * NOTHING when the document already matches (`settled`). Its own writes
+	 * are recorded and filtered out of the mutation records it observes, so
+	 * the reconcile can never echo with itself — the failure mode of the
+	 * append-always version, which moved its own tags on every frame and
+	 * then reacted to the records of those moves forever.
+	 *
+	 * Ownership is registered on the document itself, so it also survives a
+	 * full plugin reload: a newer mount reuses the same tags, and an
+	 * obsolete disposer stops its own timers and observers but leaves the
+	 * sheets and the active-skin markers to the mount that owns the
+	 * document now.
+	 */
+	const mount = () => {
+		const OWNER_KEY = '__dshGlassSkinOwner';
+		let disposed = false;
+		let token = null;
+		let registered = false;
+		try {
+			token = {};
+			document[OWNER_KEY] = token;
+			registered = true;
+		} catch (error) {
+			/* a document that refuses the property keeps legacy behavior */
+			token = null;
+			registered = false;
+		}
+		const isCurrentOwner = () => registered === false || document[OWNER_KEY] === token;
+		const owned = () => disposed === false && isCurrentOwner();
 
-			/**
-			 * Put every sheet in the document and move it to the end of <head>.
-			 *
-			 * Appending once at boot is not enough. Three things take the skin back
-			 * out from under us, all of them silent:
-			 *
-			 *   - the shell owns every `style[data-plugin-css]` tag and rebuilds its
-			 *     set when the plugin list settles, which drops tags it never
-			 *     registered (ours);
-			 *   - its own CSS modules are injected as their client modules load, so
-			 *     a later tag at equal specificity beats ours (only a handful of the
-			 *     skin's rules carry `!important`);
-			 *   - a hot reload disposes this effect, and the next mount used to skip
-			 *     sheets whose tag it could still see — a tag the old disposer then
-			 *     removed, leaving nothing behind.
-			 *
-			 * So the mount is idempotent and re-entrant: existing tags are reused and
-			 * re-appended, missing ones are rebuilt from `sheets`.
-			 */
-			const raise = () => {
-				if (raising) return;
-				const head = document.head ?? document.documentElement ?? null;
-				if (head === null || typeof document.createElement !== 'function') return;
-				raising = true;
-				try {
-					for (const sheet of sheets) {
-						let tag = document.querySelector(`style[data-plugin-css="${sheet.id}"]`);
-						if (tag === null || tag === undefined) {
-							tag = document.createElement('style');
-							tag.dataset.plugin = PACKAGE;
-							tag.dataset.pluginCss = sheet.id;
-							tag.textContent = sheet.css;
-						}
-						// Append-or-move: the skin is always the last cascade layer.
-						head.appendChild(tag);
-					}
-				} finally {
-					raising = false;
-				}
-			};
+		/* Nodes this mount itself inserted or moved; their mutation records
+		 * are self-echo and must not schedule another repair. */
+		const selfWrites = new Set();
 
-			raise();
-			// The shell installs the theme layer during boot; re-raise once the
-			// first paint settles so the skin always lands on top of it.
-			if (typeof requestAnimationFrame === 'function') requestAnimationFrame(raise);
-
-			const stops = [];
-
-			// Another stylesheet arriving is the normal case, not an error: wait for
-			// the batch to finish (rAF) and only then take the last slot back.
-			if (typeof MutationObserver === 'function' && document.head !== null && document.head !== undefined) {
-				let queued = false;
-				const flush = () => {
-					queued = false;
-					raise();
-				};
-				const observer = new MutationObserver((records) => {
-					if (raising || queued) return;
-					let relevant = false;
-					for (const record of records) {
-						for (const node of record.addedNodes ?? []) {
-							const name = node === null || node === undefined ? '' : node.nodeName;
-							if (name === 'STYLE' || name === 'LINK') {
-								relevant = true;
-								break;
-							}
-						}
-						if (relevant) break;
-					}
-					if (!relevant) return;
-					queued = true;
-					if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
-					else if (typeof setTimeout === 'function') setTimeout(flush, 0);
-					else flush();
-				});
-				observer.observe(document.head, { childList: true });
-				stops.push(() => observer.disconnect());
+		const attr = (node, name) => {
+			try {
+				if (node !== null && node !== undefined && typeof node.getAttribute === 'function') return node.getAttribute(name);
+			} catch (error) {
+				/* not an element */
 			}
-
-			// Removal cannot be observed as an addition, and a shell rebuild that
-			// replaces <head> wholesale fires nothing we can hook. A cheap poll is
-			// the backstop; it exits as soon as the document is gone.
-			if (typeof setInterval === 'function' && typeof document.querySelectorAll === 'function') {
-				const timer = setInterval(() => {
-					try {
-						if (document.visibilityState === 'hidden') return;
-						const live = document.querySelectorAll(`style[data-plugin="${PACKAGE}"]`).length;
-						const last = document.head === null || document.head === undefined ? null : document.head.lastElementChild;
-						const ours = last !== null && last !== undefined && last.dataset !== undefined && last.dataset.plugin === PACKAGE;
-						if (live < sheets.length || !ours) raise();
-					} catch (error) {
-						/* the document went away mid-poll */
-					}
-				}, 750);
-				stops.push(() => clearInterval(timer));
-			}
-
-			return () => {
-				for (const stop of stops) {
-					try {
-						stop();
-					} catch (error) {
-						/* already stopped */
-					}
-				}
-				for (const tag of document.querySelectorAll(`style[data-plugin="${PACKAGE}"]`)) tag.remove();
-			};
+			return null;
 		};
+		const sheetIndexById = new Map(sheets.map((sheet, index) => [sheet.id, index]));
+		const sheetIndex = (id) => (id === null || id === undefined ? -1 : sheetIndexById.get(id) ?? -1);
+		const isOurs = (node) => attr(node, 'data-plugin') === PACKAGE && sheetIndex(attr(node, 'data-plugin-css')) >= 0;
+		const isHostSheet = (node) => {
+			const name = node === null || node === undefined ? '' : node.nodeName ?? node.tagName ?? '';
+			const upper = String(name).toUpperCase();
+			if (upper === 'STYLE') return attr(node, 'data-plugin') !== PACKAGE;
+			if (upper === 'LINK') return /\bstylesheet\b/i.test(String(attr(node, 'rel') ?? ''));
+			return false;
+		};
+		const head = () => document.head ?? document.documentElement ?? null;
+		const childrenOf = (parent) => {
+			const list = parent === null || parent === undefined ? [] : parent.childNodes ?? parent.children;
+			if (Array.isArray(list) === false) return [];
+			return list.filter((node) => node !== null && node !== undefined && (node.nodeType === undefined || node.nodeType === 1));
+		};
+
+		/** The document already shows exactly the declared set, in declared
+		 *  order, with no host stylesheet after our block. */
+		const settled = (parent) => {
+			try {
+				const kids = childrenOf(parent);
+				let expected = 0;
+				let firstOurs = -1;
+				const seen = new Set();
+				for (let at = 0; at < kids.length; at++) {
+					const node = kids[at];
+					if (isOurs(node)) {
+						const id = attr(node, 'data-plugin-css');
+						if (seen.has(id)) return false;
+						seen.add(id);
+						if (firstOurs === -1) firstOurs = at;
+						if (sheetIndex(id) !== expected) return false;
+						expected += 1;
+						continue;
+					}
+					if (firstOurs !== -1 && isHostSheet(node)) return false;
+				}
+				return seen.size === sheets.length;
+			} catch (error) {
+				return false;
+			}
+		};
+
+		/** Reconcile toward the declared set. Writes nothing when settled;
+		 *  drops duplicates before anything else. */
+		const raise = (force) => {
+			if (owned() === false) return;
+			const parent = head();
+			if (parent === null || typeof document.createElement !== 'function') return;
+			if (force !== true && document.visibilityState === 'hidden') return;
+			try {
+				const kept = new Set();
+				for (const node of childrenOf(parent)) {
+					if (attr(node, 'data-plugin') !== PACKAGE) continue;
+					const id = attr(node, 'data-plugin-css');
+					if (sheetIndex(id) < 0) continue;
+					if (kept.has(id)) {
+						selfWrites.add(node);
+						node.remove();
+					} else {
+						kept.add(id);
+					}
+				}
+				if (settled(parent)) return;
+				for (const sheet of sheets) {
+					let tag = document.querySelector(`style[data-plugin-css="${sheet.id}"]`);
+					if (tag === null || tag === undefined) {
+						tag = document.createElement('style');
+						tag.dataset.plugin = PACKAGE;
+						tag.dataset.pluginCss = sheet.id;
+						tag.textContent = sheet.css;
+					}
+					selfWrites.add(tag);
+					parent.appendChild(tag);
+				}
+			} catch (error) {
+				/* the document went away mid-reconcile */
+			}
+		};
+
+		/* One scheduled repair at a time: frames first, a timeout as the
+		 * scheduler of last resort. */
+		let pending = null;
+		const runRepair = () => {
+			pending = null;
+			raise(false);
+		};
+		const cancelRepair = () => {
+			if (pending === null) return;
+			if (pending.kind === 'raf' && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(pending.id);
+			if (pending.kind === 'timeout' && typeof clearTimeout === 'function') clearTimeout(pending.id);
+			pending = null;
+		};
+		const queueRepair = () => {
+			if (owned() === false || pending !== null) return;
+			if (typeof requestAnimationFrame === 'function') pending = { kind: 'raf', id: requestAnimationFrame(runRepair) };
+			else if (typeof setTimeout === 'function') pending = { kind: 'timeout', id: setTimeout(runRepair, 0) };
+			else runRepair();
+		};
+
+		/* Another stylesheet arriving is the normal case, not an error: wait
+		 * for the batch to finish (rAF) and only then take the last slot
+		 * back. Records of our own writes are filtered so the observer never
+		 * schedules a repair for the reconcile it just performed. When the
+		 * shell replaces <head> wholesale the observer is re-pointed at the
+		 * new head on the next poll. */
+		let observedHead = null;
+		const observer =
+			typeof MutationObserver === 'function'
+				? new MutationObserver((records) => {
+						if (owned() === false) return;
+						let relevant = false;
+						for (const record of records) {
+							for (const node of record.addedNodes ?? []) {
+								if (selfWrites.has(node)) continue;
+								if (isHostSheet(node) || isOurs(node)) {
+									relevant = true;
+									break;
+								}
+							}
+							if (relevant) break;
+							for (const node of record.removedNodes ?? []) {
+								if (selfWrites.has(node)) continue;
+								if (isHostSheet(node) || isOurs(node)) {
+									relevant = true;
+									break;
+								}
+							}
+							if (relevant) break;
+						}
+						selfWrites.clear();
+						if (relevant) queueRepair();
+					})
+				: null;
+		const ensureObserving = (target) => {
+			if (observer === null || target === null || target === undefined || target === observedHead) return;
+			try {
+				observer.disconnect();
+			} catch (error) {
+				/* not observing yet */
+			}
+			try {
+				observer.observe(target, { childList: true });
+				observedHead = target;
+			} catch (error) {
+				observedHead = null;
+			}
+		};
+
+		/* Removal cannot be observed as an addition, and a shell rebuild that
+		 * replaces <head> wholesale fires nothing we can hook. A cheap poll
+		 * is the backstop; it reconciles only when the document is wrong, so
+		 * a correct document costs one read per tick. */
+		const timer =
+			typeof setInterval === 'function' && typeof document.querySelectorAll === 'function'
+				? setInterval(() => {
+						if (owned() === false) return;
+						try {
+							if (document.visibilityState === 'hidden') return;
+							ensureObserving(head());
+							if (settled(head()) === false) raise(false);
+						} catch (error) {
+							/* the document went away mid-poll */
+						}
+					}, 750)
+				: null;
+
+		raise(true);
+		ensureObserving(head());
+		queueRepair();
+
+		return () => {
+			disposed = true;
+			cancelRepair();
+			if (observer !== null) {
+				try {
+					observer.disconnect();
+				} catch (error) {
+					/* already disconnected */
+				}
+			}
+			if (timer !== null) {
+				try {
+					clearInterval(timer);
+				} catch (error) {
+					/* already cleared */
+				}
+			}
+			/* A newer mount owns the sheets and the markers now; this one
+			 * stops its machinery and leaves the document to it. */
+			if (isCurrentOwner() === false) return;
+			try {
+				for (const tag of document.querySelectorAll(`style[data-plugin="${PACKAGE}"]`)) tag.remove();
+			} catch (error) {
+				/* the document went away */
+			}
+			clear();
+			if (registered === true) {
+				try {
+					if (document[OWNER_KEY] === token) delete document[OWNER_KEY];
+				} catch (error) {
+					/* property already gone */
+				}
+			}
+		};
+	};
 
 		/** Mark the document so the skin's own rules can key on being active. */
 		const stamp = () => {
@@ -1456,6 +1599,31 @@ window.__ModuleLoader__.load({
 				console.error('dsh-glass-theme: could not mark the document', error);
 			}
 
+			/* One overlay coordinator for the whole skin (design D4). Every
+			   surface the skin opens — picker cards, the stats popover, the
+			   workspace inspector and dialogs, the settings drill-down —
+			   registers here, so Escape and outside gestures always resolve
+			   top-first, modal restrictions always restore, and unloading
+			   the skin removes the handlers and restrictions it owns.
+			   Created before any consumer effect runs; released with the
+			   plugin. */
+			const shared = { layers: null };
+			try {
+				ctx.effect(() => {
+					shared.layers = createLayers();
+					return () => {
+						try {
+							shared.layers && shared.layers.release();
+						} catch (error) {
+							/* already disposed */
+						}
+						shared.layers = null;
+					};
+				});
+			} catch (error) {
+				console.error('dsh-glass-theme: could not start the layer coordinator', error);
+			}
+
 			try {
 				ctx.effect(() => trackModality());
 			} catch (error) {
@@ -1495,8 +1663,10 @@ window.__ModuleLoader__.load({
 							/* The picker reads the mirror synchronously on first
 							   paint, so it needs the same key and cap the adapter
 							   writes — handed over instead of re-declared there
-							   (design D6: one definition, two readers). */
-							picker = createPicker(require, ctx, catalog, { key: QUICK_KEY, max: QUICK_MAX });
+							   (design D6: one definition, two readers). The
+							   coordinator rides along so the picker's cards
+							   join the skin's layer stack (design D4). */
+							picker = createPicker(require, ctx, catalog, { key: QUICK_KEY, max: QUICK_MAX, layers: shared.layers });
 						} catch (error) {
 							console.error('dsh-glass-theme: could not build the model picker', error);
 							return;
@@ -1554,7 +1724,7 @@ window.__ModuleLoader__.load({
 						}
 						let stats = null;
 						try {
-							stats = createStats(require, ctx, catalog);
+							stats = createStats(require, ctx, catalog, shared);
 						} catch (error) {
 							console.error('dsh-glass-theme: could not build the usage panel', error);
 							return;
@@ -1600,7 +1770,7 @@ window.__ModuleLoader__.load({
 				ctx.effect(() => {
 					let done = null;
 					try {
-						done = createSettingsSection(require, ctx, catalog, prefs).register();
+						done = createSettingsSection(require, ctx, catalog, prefs, shared).register();
 					} catch (error) {
 						console.error('dsh-glass-theme: could not register the settings section', error);
 					}
@@ -1630,7 +1800,7 @@ window.__ModuleLoader__.load({
 			   routes are untouched — this switch is presentation only. */
 			try {
 				ctx.effect(() => {
-					const workspace = createWorkspace(require, ctx, catalog);
+					const workspace = createWorkspace(require, ctx, catalog, shared);
 					let handle = null;
 					const open = () => {
 						if (handle !== null) return;
@@ -1699,7 +1869,6 @@ window.__ModuleLoader__.load({
 						} catch (error) {
 							/* already torn down */
 						}
-						clear();
 					};
 				});
 			} catch (error) {

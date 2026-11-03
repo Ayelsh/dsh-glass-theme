@@ -37,10 +37,10 @@
   --lg-glyph-fill-top: rgba(255, 255, 255, 0.96);
   --lg-glyph-fill-bottom: rgba(255, 255, 255, 0.52);
   --lg-glyph-ring: rgba(16, 22, 40, 0.07);
-  --lg-glow-1: rgba(61, 90, 254, 0.52);
-  --lg-glow-2: rgba(255, 146, 86, 0.4);
-  --lg-glow-3: rgba(126, 96, 255, 0.34);
-  --lg-grain-opacity: 0.05;
+  --lg-glow-1: rgba(61, 90, 254, 0.26);
+  --lg-glow-2: rgba(255, 146, 86, 0.2);
+  --lg-glow-3: rgba(126, 96, 255, 0.17);
+  --lg-grain-opacity: 0.02;
 }
 
 /* ---- Caption row -------------------------------------------------------
@@ -128,7 +128,7 @@
 .lg-settings-count {
   margin: 0;
   color: var(--dsw-alias-label-secondary);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 560;
   line-height: 17px;
   letter-spacing: 0.01em;
@@ -138,7 +138,7 @@
 .lg-settings-intro {
   margin: 0 0 16px;
   max-width: 46em;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12.5px;
   line-height: 20px;
 }
@@ -183,7 +183,7 @@
     0 0 0 0.5px rgba(16, 22, 40, 0.06),
     0 2px 6px rgba(16, 22, 40, 0.05),
     0 20px 44px -20px rgba(16, 22, 40, 0.2),
-    0 26px 64px -34px color-mix(in srgb, var(--lg-accent) 45%, transparent);
+    0 26px 64px -34px color-mix(in srgb, var(--lg-accent) 20%, transparent);
   overflow: hidden;
   /* Materialise: the surface arrives with a slight scale and lift, and its
      shadow settles under it — not an opacity fade. */
@@ -265,19 +265,16 @@
 .lg-settings-row[data-on='true'] {
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--lg-accent) 15%, transparent),
-    color-mix(in srgb, var(--lg-accent) 5%, transparent)
+    color-mix(in srgb, var(--lg-accent) 6%, transparent),
+    color-mix(in srgb, var(--lg-accent) 2%, transparent)
   );
-  box-shadow:
-    inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 32%, transparent),
-    inset 0 0.5px 0 rgba(255, 255, 255, 0.55);
 }
 
 .lg-settings-row[data-on='true']:hover {
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--lg-accent) 19%, transparent),
-    color-mix(in srgb, var(--lg-accent) 7%, transparent)
+    color-mix(in srgb, var(--lg-accent) 8%, transparent),
+    color-mix(in srgb, var(--lg-accent) 3%, transparent)
   );
 }
 
@@ -307,19 +304,6 @@
     box-shadow var(--lg-t-base) var(--lg-ease-out);
 }
 
-.lg-settings-row[data-on='true'] .lg-settings-glyph {
-  background-image: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--lg-accent) 24%, white),
-    color-mix(in srgb, var(--lg-accent) 9%, white)
-  );
-  box-shadow:
-    inset 0 0.5px 0 rgba(255, 255, 255, 0.7),
-    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 30%, transparent),
-    0 1px 3px color-mix(in srgb, var(--lg-accent) 22%, transparent);
-  color: var(--lg-accent-strong);
-}
-
 .lg-settings-copy {
   display: flex;
   flex: 1 1 auto;
@@ -340,13 +324,9 @@
   transition: font-weight var(--lg-t-fast) var(--lg-ease-out);
 }
 
-.lg-settings-row[data-on='true'] .lg-settings-name {
-  font-weight: 600;
-}
-
 .lg-settings-note {
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
   line-height: 17px;
   font-variant-numeric: tabular-nums;
 }
@@ -487,7 +467,8 @@
 }
 
 .lg-settings-utilityRow .lg-settings-note {
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 17px;
 }
 
 /* ---- Model door --------------------------------------------------------
@@ -608,8 +589,8 @@
 
 .lg-settings-viewCount {
   flex: none;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
   line-height: 17px;
   font-variant-numeric: tabular-nums;
 }
@@ -804,9 +785,9 @@
 
 .lg-settings-viewHint {
   margin: 6px 6px 0;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
-  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 17px;
 }
 
 /* ---- Foot --------------------------------------------------------------
@@ -822,8 +803,8 @@
   margin: 0 4px;
   padding: 8px 8px 12px;
   box-shadow: inset 0 0.5px 0 var(--lg-hairline);
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
   line-height: 17px;
 }
 
@@ -870,7 +851,7 @@
   z-index: 1;
   margin: 0;
   padding: 26px 18px 28px;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--dsw-alias-label-secondary);
   font-size: 12.5px;
   line-height: 20px;
   text-align: center;
@@ -927,10 +908,10 @@ body[data-ds-dark-theme] .lg-settings {
   --lg-glyph-fill-top: rgba(255, 255, 255, 0.11);
   --lg-glyph-fill-bottom: rgba(255, 255, 255, 0.045);
   --lg-glyph-ring: rgba(255, 255, 255, 0.12);
-  --lg-glow-1: rgba(123, 147, 255, 0.55);
-  --lg-glow-2: rgba(255, 158, 120, 0.28);
-  --lg-glow-3: rgba(150, 118, 255, 0.36);
-  --lg-grain-opacity: 0.07;
+  --lg-glow-1: rgba(123, 147, 255, 0.28);
+  --lg-glow-2: rgba(255, 158, 120, 0.14);
+  --lg-glow-3: rgba(150, 118, 255, 0.18);
+  --lg-grain-opacity: 0.025;
 }
 
 body[data-ds-dark-theme] .lg-settings-board {
@@ -940,7 +921,7 @@ body[data-ds-dark-theme] .lg-settings-board {
     0 0 0 0.5px rgba(255, 255, 255, 0.09),
     0 2px 8px rgba(0, 0, 0, 0.4),
     0 22px 48px -20px rgba(0, 0, 0, 0.72),
-    0 28px 68px -34px color-mix(in srgb, var(--lg-accent) 55%, transparent);
+    0 28px 68px -34px color-mix(in srgb, var(--lg-accent) 24%, transparent);
 }
 
 body[data-ds-dark-theme] .lg-settings-meter {
@@ -972,37 +953,20 @@ body[data-ds-dark-theme] .lg-settings-row:hover {
     0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
-/* In the dark the wash is measured against the accent at 20%, not 15%: at 15%
-   the plate and the pane are the same value and selection disappears. */
 body[data-ds-dark-theme] .lg-settings-row[data-on='true'] {
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--lg-accent) 22%, transparent),
-    color-mix(in srgb, var(--lg-accent) 7%, transparent)
+    color-mix(in srgb, var(--lg-accent) 8%, transparent),
+    color-mix(in srgb, var(--lg-accent) 3%, transparent)
   );
-  box-shadow:
-    inset 0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 45%, transparent),
-    inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
 }
 
 body[data-ds-dark-theme] .lg-settings-row[data-on='true']:hover {
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--lg-accent) 27%, transparent),
-    color-mix(in srgb, var(--lg-accent) 10%, transparent)
+    color-mix(in srgb, var(--lg-accent) 10%, transparent),
+    color-mix(in srgb, var(--lg-accent) 4%, transparent)
   );
-}
-
-body[data-ds-dark-theme] .lg-settings-row[data-on='true'] .lg-settings-glyph {
-  background-image: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--lg-accent) 30%, transparent),
-    color-mix(in srgb, var(--lg-accent) 10%, transparent)
-  );
-  box-shadow:
-    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
-    0 0 0 0.5px color-mix(in srgb, var(--lg-accent) 38%, transparent);
-  color: #ffffff;
 }
 
 body[data-ds-dark-theme] .lg-settings-glyph {
@@ -1135,12 +1099,20 @@ body[data-ds-dark-theme] .lg-settings-toolSave[data-dirty='true']:hover {
 @media (prefers-reduced-transparency: reduce) {
   .lg-settings-board {
     background-image: none;
-    background-color: var(--lg-glass-solid);
+    background-color: #ffffff;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 
+  body[data-ds-dark-theme] .lg-settings-board {
+    background-color: #181b24;
+  }
+
   .lg-settings-glow {
+    display: none;
+  }
+
+  .lg-settings-board::before {
     display: none;
   }
 
@@ -1149,15 +1121,23 @@ body[data-ds-dark-theme] .lg-settings-toolSave[data-dirty='true']:hover {
   }
 
   .lg-settings-meter {
-    background-color: var(--lg-glass-solid);
+    background-color: #ffffff;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 
+  body[data-ds-dark-theme] .lg-settings-meter {
+    background-color: #181b24;
+  }
+
   .lg-settings-utility {
-    background-color: var(--lg-glass-solid);
+    background-color: #ffffff;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  body[data-ds-dark-theme] .lg-settings-utility {
+    background-color: #181b24;
   }
 }
 

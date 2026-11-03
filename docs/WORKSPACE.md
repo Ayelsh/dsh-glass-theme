@@ -431,3 +431,43 @@ TAPD 的 token 只能由用户本人在 `https://www.tapd.cn/personal_settings/i
 回归：`tools/ws-render.mjs` 新增「a todo list never inherits the CLI default page size of ten」——禁止裸 `attempt('tapd', ['bug'|'story'|'task','todo'])`，要求三种待办都走 `todoAll`、`TODO_PAGE_SIZE = 100`、`--limit`/`--page` 仍在传、翻页有上限。
 
 部署：只改客户端半（`src/host/workspace.js` 未动），走 `node tools/build.mjs` → `npm pack` → 装进 profile 后**刷新页面即生效**，不必重启应用。
+
+## Item detail lifecycle: progress, retry, project-scoped cache (OpenSpec: refine-glass-performance-and-interactions)
+
+Symptom: opening a TAPD work item could leave the detail pane stuck on "loading" forever — the full description never arrived and the pane never reported an error. There was also no way to retry a failed read, and a read started under one project could still be reused (or land) after the user had switched to another project.
+
+Root cause: the detail effect's dependency array contained the whole `details` state object — the very object its body mutated. Publishing the loading entry changed `details`, the effect's cleanup ran (`alive = false`), and when the async `tapd <kind> show` response finally arrived the guard dropped it. The rendered state machine was deciding the request's lifetime.
+
+Fix — the rendered state no longer owns the request:
+
+- **Panel-owned request layer.** A `detailReads` ref holds an in-flight registry and a completed cache, both keyed by `${projectId}|${kind}:${id}` (project + type + id). The `details` state is only a projection of that layer for rendering (`absent` / `loading` / `done` / `error`); publishing "loading" can no longer revoke the read. Each in-flight entry records the project epoch and its own request identity; a response publishes only if both still match.
+- **Project epochs.** Switching projects (explicitly via the project rail/menu, or observed in a later host status read) advances the epoch, clears the active inspector, the in-flight ownership, and the cache, and blocks new reads until the active project is confirmed. A failed switch resumes the confirmed project with an empty request state. Panel unmount invalidates all publication rights — a late response cannot update the view, reopen it, or repopulate the cache.
+- **Retry.** A failed read exposes a Retry action; retrying replaces the error with progress and can end in success. A repeated retry while the same key is still pending is ignored — one outstanding read per key, always.
+- **Revisits.** Reopening a completed item in the same panel + project lifecycle serves the cached record without a new read. Closing and reopening a pending item rejoins the outstanding read; the read settles normally no matter what the earlier view did.
+- **Content handling unchanged where it matters.** Existing summary content stays visible while the complete record loads (never presented as a failure); an empty description settles as an explicit "no description" outcome instead of perpetual loading; non-TAPD item types (WeCom todos, docs) keep the summary-only path and never issue a detail read; rich-content sanitizer, image proxying, and link handling are untouched.
+
+Cache scope, precisely: the detail cache lives **per panel instance and per project lifecycle**. It is not a global cache and it does not survive project switches, externally observed project changes, or panel disposal.
+
+Closing the detail pane is a view-level action: it detaches the view and invalidates its publication rights, but it does **not** guarantee the host-side CLI process (`tapd <kind> show`) is cancelled. The host may let the process run to completion; the response is simply dropped. Do not build UI that assumes host-CLI cancellation.
+
+Regression: `node tools/detail-lifecycle-check.mjs` — first reproduces the original defect through a verbatim copy of the old effect (the regression record: the read resolves and the pane stays `loading`), then drives the fixed implementation through the full evidence list: delayed success after the loading state rendered, A/B responses out of order, same id across projects, close/reopen of a pending item, completed-cache reuse, failure → Retry → success, retry deduplication while pending, failed project switch resume, externally observed project change, unmount invalidation, empty-description outcome, summary retention during load, and the summary-only path for non-TAPD kinds. It runs on real React 18 when resolvable (`./node_modules`, `tools/.react/node_modules`, or `$DSH_TEST_REACT_DIR` containing `react@18` + `react-test-renderer@18`); otherwise it falls back — with a printed notice — to an equivalent lifecycle harness implemented inside the tool (Object.is dependency comparison, cleanups on dep change/unmount, queued state updates flushed into re-renders that only re-run changed effects). `tools/ws-render.mjs` and `tools/ws-rich-check.mjs` remain green.
+
+## Layer coordination & keyboard navigation (OpenSpec: refine-glass-performance-and-interactions)
+
+All interactive floating surfaces in the workspace workbench participate in the unified layer coordinator (`src/layers.js`):
+
+- **Project menu (`.lgwsp-project-menu`)**: Registered as a nonmodal layer. Pressing Escape or clicking outside closes the menu and returns focus to the toolbar project switcher button (`#projectTrigger` / `.lgwsp-project-trigger`).
+- **Item detail inspector (`.lgwsp-inspector`)**:
+  - **Desktop (>900px)**: Registered as a nonmodal named region (`owner: 'workspace.inspector'`). Keyboard users can Tab naturally between the main work item list and the inspector actions (流转, 转派, 复制 ID). Escape or clicking "返回列表" closes the inspector and returns focus to the opener item row.
+  - **Narrow viewport (≤900px)**: Registered as a modal bottom sheet with a backdrop scrim (`.lgwsp-inspector-scrim`). Tab and Shift+Tab navigation is strictly contained within the sheet. Sibling elements across the page (workbench main list, sidebar) are marked `inert`. Pressing Escape, clicking the close button (`.lgwsp-inspector-close`), or clicking the scrim dismisses the sheet, releases the `inert` restriction, and restores focus to the invoking work item row.
+  - **Closed inspector & reduced motion**: The inspector and scrim are completely unmounted when closed (`selectedItem === null`). Under `prefers-reduced-motion: reduce`, defensive CSS rules (`.lgwsp-workspace-shell:not(.lgwsp-has-inspector) .lgwsp-inspector { display: none !important; }`) ensure that even if a node were temporarily retained by an exit animation, it is immediately removed from visual rendering, pointer hit-testing, and Tab navigation. Changing motion preferences mid-interaction does not interrupt active layers or leak focus.
+- **Action dialogs (status transition, owner reassignment)**: Registered as modal dialogs. Focus is trapped inside the dialog form controls, background siblings are inert, and Escape or cancellation closes only the top active dialog and restores focus to the triggering action button.
+
+Regression & verification: `node tools/interaction-check.mjs` verifies the complete layer coordinator suite in headless Chrome with real React 18:
+- Nonmodal project menu Escape dismissal and focus restoration to opener.
+- Desktop nonmodal inspector vs. narrow modal sheet behavior at ≤900 CSS px.
+- Tab containment inside modal dialogs/sheets and sibling inert restoration.
+- Unmounted closed inspector absence from DOM, display, hit testing, and Tab order under normal and reduced motion.
+- Mid-interaction motion preference transitions (`prefers-reduced-motion` toggling while open).
+
+Deployment: client-side only (`src/host/workspace.js` untouched); rebuild with `node tools/build.mjs` and refresh the page.

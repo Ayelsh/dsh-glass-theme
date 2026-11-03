@@ -97,6 +97,10 @@ function createPicker(require, ctx, catalog, shared) {
 	   stored — the cap is an editing rule enforced where the list is edited —
 	   but the number still comes from one place instead of a second literal. */
 	const QUICK_MAX = shared.max;
+/* The skin's layer coordinator (design D4), handed in through the shared
+   opts. Null when the component is driven directly, as in the feedback
+   harness: then dismissal keeps running on the local listeners below. */
+const LAYERS = shared.layers || null;
 	/* Strings only, trimmed, de-duplicated. The mirror is user-writable storage,
 	   so nothing read out of it may be trusted to have the shape it should. */
 	function quickStrings(value) {
@@ -427,6 +431,56 @@ function createPicker(require, ctx, catalog, shared) {
 		const [allOpen, setAllOpen] = React.useState(false);
 		const [allQuery, setAllQuery] = React.useState('');
 		const [allPlacement, setAllPlacement] = React.useState(null);
+		/* The visually active row of each listbox, as a flat index into
+		   the card's filtered options. null = nothing active. The stored
+		   value is CLAMPED against the live list at render time (see
+		   activeMainIdx/activeAllIdx): when the active result disappears
+		   the index moves to a remaining result, or to nothing when the
+		   list is empty — never a dangling reference. */
+		const [activeMain, setActiveMain] = React.useState(null);
+		const [activeAll, setActiveAll] = React.useState(null);
+
+		React.useEffect(() => {
+			if (activeMain === null || typeof document === 'undefined' || !document.getElementById) return;
+			const node = document.getElementById('lg-picker-opt-' + activeMain);
+			if (node && typeof node.scrollIntoView === 'function') {
+				try { node.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+			}
+		}, [activeMain]);
+
+		React.useEffect(() => {
+			if (activeAll === null || typeof document === 'undefined' || !document.getElementById) return;
+			const node = document.getElementById('lg-picker-aopt-' + activeAll);
+			if (node && typeof node.scrollIntoView === 'function') {
+				try { node.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+			}
+		}, [activeAll]);
+
+		/* ---- selection feedback (model-picker-feedback) ---------------------
+		   The confirmed indicator is owned by the HOST snapshot alone. What
+		   activation owns locally is a notice: pending / failed / acknowledged /
+		   unconfirmed, bound to an operation record with everything a late
+		   callback needs to prove it still speaks for the card on screen —
+		   the directory object identity, the session, a monotonic sequence,
+		   and the picker opening generation the card belongs to. */
+		const [feedback, setFeedback] = React.useState(null);
+		const openGenRef = React.useRef(0);
+		const sessionIdRef = React.useRef(sessionId);
+		const directoryRef = React.useRef(directory);
+		const snapshotRef = React.useRef(snapshot);
+		const openRef = React.useRef(open);
+		const opsRef = React.useRef({ seq: 0, live: null });
+		/* Focus restore targets inside the main card: the effort control for
+		   the level a completed operation chose, and the all-providers opener
+		   that started an all-card operation. */
+		const effortButtonsRef = React.useRef({});
+		const allOpenerRef = React.useRef(null);
+		/* Focus return for the trigger: Escape on the main card comes back here. */
+		const triggerRef = React.useRef(null);
+		sessionIdRef.current = sessionId;
+		directoryRef.current = directory;
+		snapshotRef.current = snapshot;
+		openRef.current = open;
 
 		/* The card is `position: fixed` (a popover must escape the composer's
 		   overflow), so it has no anchor of its own: place it above the trigger,
@@ -564,9 +618,16 @@ function createPicker(require, ctx, catalog, shared) {
 		   save". */
 		React.useEffect(() => subscribeQuick(() => setQuick(readQuick())), []);
 
-		/* Close on outside press and on Escape. */
+		/* Dismissal routing (skin-overlay-navigation). With the skin's layer
+		   coordinator the cards register as NONMODAL layers: Escape resolves
+		   top-first (the all-providers card above the main card, one layer per
+		   press), an outside press dismisses without stealing focus from what
+		   the user activated, and Tab order stays natural — a nonmodal panel
+		   never traps. Without a coordinator (the component driven directly,
+		   as in the feedback harness) the same top-first rules run on local
+		   listeners. */
 		React.useEffect(() => {
-			if (!open) return undefined;
+			if (!open || LAYERS !== null) return undefined;
 			const onDown = (event) => {
 				const node = anchor.current;
 				if (node && event.target instanceof Node && node.contains(event.target)) return;
@@ -591,6 +652,103 @@ function createPicker(require, ctx, catalog, shared) {
 				document.removeEventListener('keydown', onKey, true);
 			};
 		}, [open, allOpen]);
+
+		/* Coordinator path: the main card is one nonmodal layer. */
+		React.useEffect(() => {
+			if (!open || LAYERS === null) return undefined;
+			let done = false;
+			const handle = LAYERS.acquire({
+				owner: 'picker.main',
+				kind: 'nonmodal',
+				surface: null,
+				contains: (node) => {
+					const wrap = anchor.current;
+					const card = cardRef.current;
+					return Boolean((wrap && wrap.contains(node)) || (card && card.contains(node)));
+				},
+				onDismiss: (info) => {
+					if (done) return;
+					done = true;
+					setOpen(false);
+					setAllOpen(false);
+					/* Escape is a keyboard act: focus goes back to the trigger.
+					   An outside press leaves focus on what the user activated. */
+					handle.dispose({ focus: info.reason === 'escape' ? triggerRef.current : false });
+				},
+			});
+			return () => {
+				if (!done) {
+					done = true;
+					/* Closed by state (a selection, a completion, the trigger):
+					   the component already placed focus where it belongs. */
+					handle.dispose({ focus: false });
+				}
+			};
+		}, [open]);
+
+		/* Coordinator path: the all-providers card is a second nonmodal layer
+		   ABOVE the main card. */
+		React.useEffect(() => {
+			if (!allOpen || LAYERS === null) return undefined;
+			let done = false;
+			const handle = LAYERS.acquire({
+				owner: 'picker.all',
+				kind: 'nonmodal',
+				surface: allRef.current,
+				onDismiss: (info) => {
+					if (done) return;
+					done = true;
+					setAllOpen(false);
+					setAllQuery('');
+					handle.dispose({ focus: info.reason === 'escape' ? allOpenerRef.current : false });
+				},
+			});
+			return () => {
+				if (!done) {
+					done = true;
+					handle.dispose({ focus: false });
+				}
+			};
+		}, [allOpen]);
+
+		/* Entering a card places focus on its search field: the card declares
+		   role=dialog, and the search field is where a list interaction
+		   starts. It waits for placement — a visibility:hidden card cannot
+		   take focus — and runs once per opening, so a later re-place while
+		   the user is working inside the card never steals focus back. */
+		const enteredRef = React.useRef(false);
+		React.useEffect(() => {
+			if (!open) {
+				enteredRef.current = false;
+				return;
+			}
+			if (enteredRef.current || placement === null) return;
+			const card = cardRef.current;
+			/* Test harnesses hand refs that are not DOM nodes; only a real
+			   card can take focus. */
+			if (card === null || typeof card.querySelector !== 'function') return;
+			const target = card.querySelector('input');
+			if (target !== null && typeof target.focus === 'function') {
+				target.focus();
+				enteredRef.current = true;
+			}
+		}, [open, placement]);
+
+		const allEnteredRef = React.useRef(false);
+		React.useEffect(() => {
+			if (!allOpen) {
+				allEnteredRef.current = false;
+				return;
+			}
+			if (allEnteredRef.current || allPlacement === null) return;
+			const card = allRef.current;
+			if (card === null || typeof card.querySelector !== 'function') return;
+			const target = card.querySelector('input');
+			if (target !== null && typeof target.focus === 'function') {
+				target.focus();
+				allEnteredRef.current = true;
+			}
+		}, [allOpen, allPlacement]);
 
 		const current = snapshot && snapshot.current ? snapshot.current : null;
 		const groups = snapshot && Array.isArray(snapshot.groups) ? snapshot.groups : [];
@@ -655,41 +813,256 @@ function createPicker(require, ctx, catalog, shared) {
 			return activeEffort;
 		})();
 
-		/* `fromAll` marks a pick in the second card. Choosing a model keeps the
-		   picker open either way — the effort ladder that usually follows is
-		   one click away in the same card, and closing here would force the
-		   two-open dance the inline effort control exists to avoid. The
-		   all-card itself closes after a pick from it: its job (reach beyond
-		   the pinned providers) is done, and the main card — with the effort
-		   control — stays behind it. */
-		const select = (group, model, fromAll) => {
-			if (!directory || typeof directory.select !== 'function') return;
-			try {
-				/* Carry the new model's own default effort: `select` otherwise
-				   re-derives it, and passing a stale ladder id from the previous
-				   model is rejected by the host. */
-				const next = model && model.reasoning && model.reasoning.defaultEffort !== undefined ? { reasoningEffort: model.reasoning.defaultEffort } : {};
-				const outcome = directory.select(Object.assign({ provider: group.id, model: model.id }, next));
-				if (outcome && typeof outcome.catch === 'function') outcome.catch(() => {});
-			} catch (error) {
-				/* the failure is already reported by the store */
+		/* ================================================================== *
+		 * Selection operations (model-picker-feedback).
+		 *
+		 * A pick is an OPERATION, not a fire-and-forget: the command's own
+		 * outcome is a fact about the COMMAND, while the confirmed indicator
+		 * only ever moves with the host's published `current`. Locally, an
+		 * activation owns pending → (failed | acknowledged → unconfirmed)
+		 * → completed, and every transition re-proves ownership against the
+		 * operation's directory, session, sequence, and the picker opening
+		 * generation, so a late or stale callback can never close a newer
+		 * card, reopen a dismissed one, steal focus, replace newer feedback,
+		 * or claim a selection for a different session.
+		 * ================================================================== */
+
+		/* The PAIR (provider, model) plus the effort axis is the identity.
+		   The same model id under two providers is a different selection, and
+		   a model change and an effort change are different operations even
+		   when they name the same provider+model. */
+		const sameTarget = (a, b) =>
+			a.kind === b.kind && a.provider === b.provider && a.model === b.model && (a.effort || null) === (b.effort || null);
+
+		/* The default that CONFIRMS is the one the model itself declares. A
+		   model with no declared default confirms nothing on the effort axis:
+		   `undefined === wanted` is false for every real choice, so a missing
+		   projection effort is never read as a default invented on this side. */
+		const declaredDefaultEffort = (provider, modelId) => {
+			const snap = snapshotRef.current;
+			const list = snap && Array.isArray(snap.groups) ? snap.groups : groups;
+			for (const group of list) {
+				if (group.id !== provider) continue;
+				for (const model of group.models || []) {
+					if (model.id === modelId && model.reasoning && model.reasoning.defaultEffort !== undefined) return model.reasoning.defaultEffort;
+				}
 			}
-			if (fromAll) {
-				setAllOpen(false);
-				setAllQuery('');
+			return undefined;
+		};
+
+		/* Does the published snapshot confirm `target`? The pair decides;
+		   effort confirms on the explicit value, or on the model's declared
+		   default when the projection omits it. */
+		const confirmsTarget = (target, snap) => {
+			if (!snap || !snap.current) return false;
+			if (snap.current.provider !== target.provider || snap.current.model !== target.model) return false;
+			const wanted = target.effort == null ? null : target.effort;
+			if (wanted === null) return true;
+			if (snap.current.reasoningEffort === wanted) return true;
+			if (snap.current.reasoningEffort === undefined || snap.current.reasoningEffort === null) {
+				return declaredDefaultEffort(target.provider, target.model) === wanted;
+			}
+			return false;
+		};
+
+		const opSpeaksForNow = (op) =>
+			op !== null &&
+			opsRef.current.live === op &&
+			op.directory === directoryRef.current &&
+			op.sessionId === sessionIdRef.current;
+
+		const clearOpTimer = (op) => {
+			if (op && op.timer !== null) {
+				clearTimeout(op.timer);
+				op.timer = null;
 			}
 		};
 
-		const pickEffort = (level) => {
-			if (!directory || typeof directory.select !== 'function' || current === null) return;
-			try {
-				const outcome = directory.select({ provider: current.provider, model: current.model, reasoningEffort: level });
-				if (outcome && typeof outcome.catch === 'function') outcome.catch(() => {});
-			} catch (error) {
-				/* the failure is already reported by the store */
+		/* Best-effort focus restore: only within the opening that started the
+		   operation, only while the main card is on screen, and only onto a
+		   node still connected to the document. A full focus coordinator is a
+		   later layer; this stays local to the picker. */
+		const focusMainTarget = (op) => {
+			if (op.openGen !== openGenRef.current || !openRef.current) return;
+			const order = [];
+			if (op.target.effort != null && effortButtonsRef.current[op.target.effort]) order.push(effortButtonsRef.current[op.target.effort]);
+			if (allOpenerRef.current) order.push(allOpenerRef.current);
+			for (const node of order) {
+				if (node && node.isConnected === true && typeof node.focus === 'function') {
+					node.focus();
+					return;
+				}
 			}
-			/* The card stays open: the effort control is inline now, and the
-			   pill travelling under the eye IS the confirmation. */
+		};
+
+		/* Completion clears the local notice. The all-providers card closes
+		   ONLY on a successful command outcome AND a matching confirmed
+		   current; a projection that arrives BEFORE the command's own ack is
+		   remembered and closes the card when that ack lands. The main card
+		   always stays open. */
+		const completeOp = (op) => {
+			if (!opSpeaksForNow(op)) return;
+			clearOpTimer(op);
+			if (op.origin === 'all' && op.acked === true) {
+				opsRef.current.live = null;
+				setFeedback(null);
+				setAllOpen(false);
+				setAllQuery('');
+				focusMainTarget(op);
+				return;
+			}
+			if (op.origin === 'all') {
+				op.confirmedEarly = true;
+				setFeedback(null);
+				return;
+			}
+			opsRef.current.live = null;
+			setFeedback(null);
+		};
+
+		const settleOp = (op, result) => {
+			if (!opSpeaksForNow(op)) return;
+			if (result && result.ok === false) {
+				/* A failed command is visible and actionable, and it moves
+				   NOTHING: the confirmed indicator keeps following the host's
+				   current, and the query stays as typed. */
+				clearOpTimer(op);
+				op.state = 'failed';
+				op.error = result.error;
+				setFeedback({ ...op });
+				return;
+			}
+			op.acked = true;
+			op.state = 'acknowledged';
+			if (confirmsTarget(op.target, snapshotRef.current) || op.confirmedEarly === true) {
+				completeOp(op);
+				return;
+			}
+			setFeedback({ ...op });
+			op.timer = setTimeout(() => {
+				op.timer = null;
+				if (!opSpeaksForNow(op)) return;
+				if (confirmsTarget(op.target, snapshotRef.current)) {
+					completeOp(op);
+					return;
+				}
+				/* Eight seconds with an acknowledged command and no matching
+				   projection: say exactly that, keep reflecting the host's
+				   current, offer a manual retry — never roll back silently. A
+				   later matching projection can still resolve it. */
+				op.state = 'unconfirmed';
+				setFeedback({ ...op });
+			}, 8000);
+		};
+
+		const beginSelect = (target, origin) => {
+			if (!directory || typeof directory.select !== 'function') return;
+			/* A duplicate activation of the SAME pending choice submits once;
+			   a different target supersedes whatever was pending before it. */
+			const live = opsRef.current.live;
+			if (live !== null && live.state === 'pending' && sameTarget(live.target, target)) return;
+			if (live !== null) {
+				clearOpTimer(live);
+				opsRef.current.live = null;
+			}
+			const seq = opsRef.current.seq + 1;
+			opsRef.current.seq = seq;
+			const op = {
+				seq: seq,
+				sessionId: sessionId,
+				directory: directory,
+				target: target,
+				origin: origin,
+				openGen: openGenRef.current,
+				acked: false,
+				confirmedEarly: false,
+				state: 'pending',
+				error: undefined,
+				timer: null,
+			};
+			opsRef.current.live = op;
+			setFeedback({ ...op });
+			const selection = { provider: target.provider, model: target.model };
+			if (target.effort != null) selection.reasoningEffort = target.effort;
+			let outcome;
+			try {
+				outcome = directory.select(selection);
+			} catch (error) {
+				/* A synchronous throw is a failed operation like any other. */
+				op.state = 'failed';
+				op.error = error;
+				setFeedback({ ...op });
+				return;
+			}
+			if (outcome && typeof outcome.catch === 'function') {
+				outcome.then(
+					(result) => settleOp(op, result),
+					(error) => settleOp(op, { ok: false, error: error })
+				);
+			} else {
+				settleOp(op, outcome);
+			}
+		};
+
+		const retryFeedback = () => {
+			const live = opsRef.current.live;
+			if (live === null || (live.state !== 'failed' && live.state !== 'unconfirmed')) return;
+			beginSelect(live.target, live.origin);
+		};
+
+		/* The published snapshot outranks every local state: a matching
+		   projection completes the operation in ANY state — it can resolve a
+		   failure notice or an unconfirmed one, because the host is the only
+		   authority on what the session runs. */
+		React.useEffect(() => {
+			const op = opsRef.current.live;
+			if (op === null) return;
+			if (confirmsTarget(op.target, snapshot)) completeOp(op);
+		}, [snapshot, feedback]);
+
+		/* A session switch retires the old operation's local presentation: its
+		   callbacks may still resolve, but they may not claim a selection —
+		   or render a notice — for the new session's card. */
+		React.useEffect(() => {
+			const op = opsRef.current.live;
+			if (op === null) return;
+			if (op.directory !== directory || op.sessionId !== sessionId) {
+				clearOpTimer(op);
+				opsRef.current.live = null;
+				setFeedback(null);
+			}
+		}, [directory, sessionId]);
+
+		/* A dead mount schedules nothing. */
+		React.useEffect(
+			() => () => {
+				const op = opsRef.current.live;
+				opsRef.current.live = null;
+				clearOpTimer(op);
+			},
+			[]
+		);
+
+		/* `fromAll` marks a pick made in the second card. The picker stays
+		   open either way — the effort ladder that usually follows is one
+		   click away in the main card, and closing here would force the
+		   two-open dance the inline effort control exists to avoid. The
+		   all-card itself closes only when the operation completes (see
+		   completeOp): its job (reach beyond the pinned providers) is done
+		   once the host confirms the pick, and the main card — with the
+		   effort control — stays behind it. */
+		const select = (group, model, fromAll) => {
+			/* Carry the new model's own default effort through the command:
+			   `select` otherwise re-derives it, and a stale ladder id from the
+			   previous model is rejected by the host. */
+			const declared =
+				model && model.reasoning && model.reasoning.defaultEffort !== undefined ? model.reasoning.defaultEffort : null;
+			beginSelect({ provider: group.id, model: model.id, effort: declared, kind: 'model' }, fromAll === true ? 'all' : 'main');
+		};
+
+		const pickEffort = (level) => {
+			if (current === null) return;
+			beginSelect({ provider: current.provider, model: current.model, effort: level, kind: 'effort' }, 'main');
 		};
 
 		/* ================================================================== *
@@ -704,7 +1077,9 @@ function createPicker(require, ctx, catalog, shared) {
 				'aria-haspopup': 'dialog',
 				'aria-expanded': open ? 'true' : 'false',
 				'aria-label': '选择模型',
+				ref: triggerRef,
 				onClick: () => {
+					if (!open) openGenRef.current += 1;
 					setOpen((value) => !value);
 					setQuery('');
 					setAllOpen(false);
@@ -738,13 +1113,20 @@ function createPicker(require, ctx, catalog, shared) {
 		const activePrice = current !== null ? price(current.provider) : null;
 		const filtered = query.trim() === '' ? null : normalise(query);
 
-		const sectionFor = (group, models, filterOverride, fromAll) => {
+		const sectionFor = (group, models, filterOverride, fromAll, indexMap) => {
 			const filter = filterOverride === undefined ? filtered : filterOverride;
 			const shown = models.filter((model) => filter === null || normalise(model.name || model.id).indexOf(filter) >= 0);
 			if (shown.length === 0) return null;
 			return React.createElement(
 				'section',
-				{ className: C.section, key: group.id },
+				{
+					className: C.section,
+					key: group.id,
+					/* A labelled group inside the listbox: the heading names
+					   a slice of the list, it is not a control. */
+					role: 'group',
+					'aria-label': group.name || group.id,
+				},
 				/* A provider heading is a LABEL, not a control: the list it names
 				   is always open, so a chevron or a collapse state would promise an
 				   interaction that does not exist. */
@@ -763,6 +1145,18 @@ function createPicker(require, ctx, catalog, shared) {
 					   merged with the badge above. */
 					const bare = splitMultiplier(model.name || model.id);
 					const chosen = isCurrent(group, model);
+					/* Pending marks the row a live operation names; it is NOT a
+					   confirmed state, so aria-checked stays on `chosen` alone. */
+					const pending =
+						feedback !== null &&
+						feedback.state !== 'failed' &&
+						feedback.target.kind === 'model' &&
+						feedback.target.provider === group.id &&
+						feedback.target.model === model.id;
+					/* The flat position of this row in its card's listbox, for
+					   combobox activedescendant + data-lg-active styling. */
+					const flatIndex = indexMap === undefined ? undefined : indexMap.get(group.id + '\u0000' + model.id);
+					const isActive = flatIndex !== undefined && (fromAll === true ? activeAllIdx : activeMainIdx) === flatIndex;
 					return React.createElement(
 						'button',
 						{
@@ -772,8 +1166,13 @@ function createPicker(require, ctx, catalog, shared) {
 							   plus the label. */
 							key: group.id + '\u0000' + model.id + '\u0000' + (model.name || ''),
 							className: C.option,
-							role: 'menuitemradio',
-							'aria-checked': chosen ? 'true' : 'false',
+							role: 'option',
+							'aria-selected': chosen ? 'true' : 'false',
+							id: flatIndex === undefined ? undefined : (fromAll === true ? 'lg-picker-aopt-' : 'lg-picker-opt-') + flatIndex,
+							'data-lg-active': isActive ? 'true' : undefined,
+							'data-lg-provider': group.id,
+							'data-lg-model': model.id,
+							'data-lg-pending': pending ? 'true' : undefined,
 							onClick: () => select(group, model, fromAll === true),
 						},
 						React.createElement(
@@ -785,7 +1184,7 @@ function createPicker(require, ctx, catalog, shared) {
 								return text ? React.createElement('span', { className: C.desc }, text) : null;
 							})()
 						),
-						React.createElement('span', { className: C.check, 'aria-hidden': 'true' }, chosen ? '✓' : '')
+						React.createElement('span', { className: C.check, 'aria-hidden': 'true' }, chosen ? '✓' : pending ? '…' : '')
 					);
 				})
 			);
@@ -823,8 +1222,15 @@ function createPicker(require, ctx, catalog, shared) {
 							opacity: hasActiveEffort ? 1 : 0,
 						},
 					}),
-					effortChoices.map((level) => {
+					effortChoices.map((level, segIndex) => {
 						const chosen = activeEffort === level.id;
+						/* Pending marks the level a live operation names; the thumb
+						   and aria-checked keep following the host's current. */
+						const pending =
+							feedback !== null &&
+							feedback.state !== 'failed' &&
+							feedback.target.kind === 'effort' &&
+							feedback.target.effort === level.id;
 						return React.createElement(
 							'button',
 							{
@@ -833,8 +1239,32 @@ function createPicker(require, ctx, catalog, shared) {
 								className: C.segItem,
 								role: 'radio',
 								'aria-checked': chosen ? 'true' : 'false',
+								'data-lg-effort': level.id,
+								'data-lg-pending': pending ? 'true' : undefined,
 								title: level.description || level.name || level.id,
 								onClick: () => pickEffort(level.id),
+								onKeyDown: (event) => {
+									const count = effortChoices.length;
+									let next = null;
+									if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = Math.min(segIndex + 1, count - 1);
+									else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = Math.max(segIndex - 1, 0);
+									else if (event.key === 'Home') next = 0;
+									else if (event.key === 'End') next = count - 1;
+									if (next === null) return;
+									event.preventDefault();
+									const target = effortChoices[next];
+									pickEffort(target.id);
+									const node = effortButtonsRef.current[target.id];
+									if (node && typeof node.focus === 'function') {
+										try { node.focus(); } catch (e) {}
+									}
+								},
+								/* Kept for the focus restore after an all-card
+								   operation completes. */
+								ref: (node) => {
+									if (node === null) delete effortButtonsRef.current[level.id];
+									else effortButtonsRef.current[level.id] = node;
+								},
 							},
 							level.name || level.id
 						);
@@ -902,6 +1332,195 @@ function createPicker(require, ctx, catalog, shared) {
 		const shownGroups = !hasQuick ? groups.map(wholeGroup) : missingCurrentGroup.map(wholeGroup).concat(pinnedEntries);
 		const allFilter = allQuery.trim() === '' ? null : normalise(allQuery);
 
+		/* Flat lists and index maps for grouped combobox / listbox keyboard
+		   navigation, visible active item tracking, and recovery when results
+		   are filtered or removed. */
+		const flatOf = (entries, filter) => {
+			const flat = [];
+			for (const entry of entries) {
+				for (const model of entry.models || []) {
+					if (filter === null || normalise(model.name || model.id).indexOf(filter) >= 0) {
+						flat.push({ group: entry.group, model });
+					}
+				}
+			}
+			return flat;
+		};
+		const mainFlat = flatOf(shownGroups, filtered);
+		const allFlat = flatOf(groups.map(wholeGroup), allFilter);
+		const mapOf = (flat) => {
+			const map = new Map();
+			for (let i = 0; i < flat.length; i++) {
+				map.set(flat[i].group.id + '\u0000' + flat[i].model.id, i);
+			}
+			return map;
+		};
+		const mainIndexMap = mapOf(mainFlat);
+		const allIndexMap = mapOf(allFlat);
+
+		const clampActive = (value, count) => (value === null || count === 0 ? null : Math.min(value, count - 1));
+		const activeMainIdx = clampActive(activeMain, mainFlat.length);
+		const activeAllIdx = clampActive(activeAll, allFlat.length);
+
+		const mainKey = (event) => {
+			const count = mainFlat.length;
+			if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+				event.preventDefault();
+				if (count === 0) return;
+				if (event.key === 'Home') setActiveMain(0);
+				else if (event.key === 'End') setActiveMain(count - 1);
+				else if (event.key === 'ArrowDown') setActiveMain(activeMainIdx === null ? 0 : Math.min(activeMainIdx + 1, count - 1));
+				else setActiveMain(activeMainIdx === null ? count - 1 : Math.max(activeMainIdx - 1, 0));
+				return;
+			}
+			if (event.key === 'Enter' && activeMainIdx !== null && mainFlat[activeMainIdx]) {
+				event.preventDefault();
+				const pick = mainFlat[activeMainIdx];
+				select(pick.group, pick.model, false);
+			}
+		};
+
+		const allKey = (event) => {
+			const count = allFlat.length;
+			if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+				event.preventDefault();
+				if (count === 0) return;
+				if (event.key === 'Home') setActiveAll(0);
+				else if (event.key === 'End') setActiveAll(count - 1);
+				else if (event.key === 'ArrowDown') setActiveAll(activeAllIdx === null ? 0 : Math.min(activeAllIdx + 1, count - 1));
+				else setActiveAll(activeAllIdx === null ? count - 1 : Math.max(activeAllIdx - 1, 0));
+				return;
+			}
+			if (event.key === 'Enter' && activeAllIdx !== null && allFlat[activeAllIdx]) {
+				event.preventDefault();
+				const pick = allFlat[activeAllIdx];
+				select(pick.group, pick.model, true);
+			}
+		};
+
+		/* ------------------------------------------------------------------ *
+		 * Selection feedback note: failure and unconfirmed states are
+		 * visible, actionable, and name their target. Pending and
+		 * acknowledged states mark the rows themselves instead — a waiting
+		 * state is not a fact worth interrupting the list for.
+		 * ------------------------------------------------------------------ */
+		const errorText = (error) => {
+			if (error == null) return '未知错误';
+			if (typeof error === 'string') return error;
+			if (error.message !== undefined && error.message !== null) return String(error.message);
+			try {
+				return JSON.stringify(error);
+			} catch (failed) {
+				return String(error);
+			}
+		};
+		const modelLabel = (providerId, modelId) => {
+			for (const group of groups) {
+				if (group.id !== providerId) continue;
+				for (const model of group.models || []) if (model.id === modelId) return model.name || model.id;
+			}
+			return modelId;
+		};
+		const feedbackNote = (() => {
+			if (feedback === null) return null;
+			if (feedback.state !== 'failed' && feedback.state !== 'unconfirmed') return null;
+			const targetName =
+				feedback.target.kind === 'effort'
+					? '思考强度「' + (feedback.target.effort == null ? '' : feedback.target.effort) + '」'
+					: '「' + modelLabel(feedback.target.provider, feedback.target.model) + '」';
+			const whereNow = current === null ? '未选择' : '「' + currentLabel + '」';
+			const text =
+				feedback.state === 'failed'
+					? '未能切换到' + targetName + '：' + errorText(feedback.error) + '。当前仍为' + whereNow + '。'
+					: '切换到' + targetName + '的请求已发送，但 8 秒内未得到确认。当前仍为' + whereNow + '。';
+			return React.createElement(
+				'div',
+				{ className: 'lg-picker-note', role: 'alert', 'data-lg-note': feedback.state },
+				React.createElement('span', null, text),
+				React.createElement('button', { type: 'button', className: 'lg-picker-note-action', onClick: retryFeedback }, '重试')
+			);
+		})();
+
+		/* ---- catalog states, all read from the public snapshot ------------ *
+		 * loading | empty | error | partial | filtered no-match. Partial
+		 * failures describe AVAILABILITY of catalog providers: an
+		 * explanatory note, never a block — and never a retry affordance,
+		 * because the host may serve load() from an already-ready catalog's
+		 * cache, so a "refresh" here would promise a re-probe that may not
+		 * happen. */
+		const catalogEmpty = (() => {
+			if (groups.length > 0) return null;
+			const loading =
+				snapshot === null ||
+				snapshot.pending === true ||
+				snapshot.status === undefined ||
+				snapshot.status === null ||
+				snapshot.status === 'loading';
+			if (loading) return React.createElement('div', { className: C.empty, 'data-lg-note': 'loading' }, '正在读取模型…');
+			if (snapshot && snapshot.error) {
+				return React.createElement(
+					'div',
+					{ className: C.empty, 'data-lg-note': 'error' },
+					React.createElement('span', null, '模型列表读取失败：' + errorText(snapshot.error)),
+					React.createElement(
+						'button',
+						{
+							type: 'button',
+							className: 'lg-picker-note-action',
+							onClick: () => {
+								try {
+									if (directory && typeof directory.load === 'function') directory.load();
+								} catch (error) {
+									/* the store reports its own failures */
+								}
+							},
+						},
+						'重试'
+					)
+				);
+			}
+			return React.createElement('div', { className: C.empty, 'data-lg-note': 'empty' }, '暂无可用模型');
+		})();
+		const partialNote = (() => {
+			if (groups.length === 0) return null;
+			const failures = snapshot && snapshot.failures && typeof snapshot.failures === 'object' ? Object.keys(snapshot.failures) : [];
+			if (failures.length === 0) return null;
+			return React.createElement(
+				'div',
+				{ className: 'lg-picker-note lg-picker-note-catalog', 'data-lg-note': 'partial' },
+				'部分供应商暂不可用（' + failures.join('、') + '），以下为当前可用模型。'
+			);
+		})();
+		const matchesAny = (entries, filter) =>
+			filter === null ||
+			entries.some((entry) => entry.models.some((model) => normalise(model.name || model.id).indexOf(filter) >= 0));
+		const noneMatch =
+			groups.length > 0 && shownGroups.length > 0 && filtered !== null && !matchesAny(shownGroups, filtered)
+				? React.createElement(
+						'div',
+						{ className: C.empty, 'data-lg-note': 'nomatch' },
+						React.createElement('span', null, '没有匹配“' + query.trim() + '”的模型'),
+						React.createElement(
+							'button',
+							{ type: 'button', className: 'lg-picker-note-action', onClick: () => setQuery('') },
+							'清除搜索'
+						)
+					)
+				: null;
+		const allNoneMatch =
+			groups.length > 0 && allFilter !== null && !matchesAny(groups.map(wholeGroup), allFilter)
+				? React.createElement(
+						'div',
+						{ className: C.empty, 'data-lg-note': 'nomatch' },
+						React.createElement('span', null, '没有匹配“' + allQuery.trim() + '”的模型'),
+						React.createElement(
+							'button',
+							{ type: 'button', className: 'lg-picker-note-action', onClick: () => setAllQuery('') },
+							'清除搜索'
+						)
+					)
+				: null;
+
 		/* The card's footer holds only the catalog door. It lives OUTSIDE the
 		   scrolling body: an entry that only appears after scrolling a 28-row
 		   list is an entry most users never see. The effort control moved up
@@ -914,7 +1533,7 @@ function createPicker(require, ctx, catalog, shared) {
 					{ className: 'lg-picker-foot' },
 					React.createElement(
 						'button',
-						{ type: 'button', className: C.more, onClick: () => setAllOpen(true) },
+						{ type: 'button', className: C.more, onClick: () => setAllOpen(true), ref: allOpenerRef },
 						React.createElement('span', null, '所有供应商'),
 						React.createElement('span', { className: C.count }, groups.length),
 						React.createElement('span', { className: C.chevron, 'aria-hidden': 'true' }, React.createElement('svg', { viewBox: '0 0 12 12', width: 12, height: 12 }, React.createElement('path', { d: 'M4.5 3 7.5 6l-3 3', fill: 'none', stroke: 'currentColor', strokeWidth: '1.4', strokeLinecap: 'round', strokeLinejoin: 'round' })))
@@ -940,7 +1559,13 @@ function createPicker(require, ctx, catalog, shared) {
 							placeholder: '搜索模型',
 							value: query,
 							onChange: (event) => setQuery(event.target.value),
+							onKeyDown: mainKey,
 							'aria-label': '搜索模型',
+							role: 'combobox',
+							'aria-expanded': 'true',
+							'aria-controls': 'lg-picker-list',
+							'aria-autocomplete': 'list',
+							'aria-activedescendant': activeMainIdx === null ? undefined : 'lg-picker-opt-' + activeMainIdx,
 						}),
 						/* The rate chip states the SELECTED provider's own clock:
 						   DeepSeek prices, 智谱 quota, and nothing at all for a
@@ -961,12 +1586,18 @@ function createPicker(require, ctx, catalog, shared) {
 					   not at the card's foot: it is a property of the selected
 					   model, on screen at the same time as the rows. */
 					effortSeg,
+					feedbackNote,
 					groups.length === 0
-						? React.createElement('div', { className: C.empty }, snapshot && snapshot.status === 'loading' ? '正在读取模型…' : '暂无可用模型')
+						? catalogEmpty
 						: React.createElement(
 							'div',
-							{ className: 'lg-picker-body' },
-							shownGroups.map((entry) => sectionFor(entry.group, entry.models))
+							{
+								className: 'lg-picker-body',
+								role: 'listbox',
+								'aria-label': '模型列表',
+								id: 'lg-picker-list',
+							},
+							partialNote, noneMatch !== null ? noneMatch : shownGroups.map((entry) => sectionFor(entry.group, entry.models, undefined, false, mainIndexMap))
 						),
 					foot
 				);
@@ -992,16 +1623,29 @@ function createPicker(require, ctx, catalog, shared) {
 							placeholder: '搜索全部模型',
 							value: allQuery,
 							onChange: (event) => setAllQuery(event.target.value),
+							onKeyDown: allKey,
 							'aria-label': '搜索全部模型',
+							role: 'combobox',
+							'aria-expanded': 'true',
+							'aria-controls': 'lg-picker-alist',
+							'aria-autocomplete': 'list',
+							'aria-activedescendant': activeAllIdx === null ? undefined : 'lg-picker-aopt-' + activeAllIdx,
 						})
 					),
 					React.createElement(
 						'div',
-						{ className: 'lg-picker-body' },
-						/* A pick made here closes this card and leaves the main
-						   one behind — `fromAll` carries that intent into
-						   select(). */
-						groups.map((group) => sectionFor(group, group.models || [], allFilter, true))
+						{
+							className: 'lg-picker-body',
+							role: 'listbox',
+							'aria-label': '全部模型列表',
+							id: 'lg-picker-alist',
+						},
+						/* A pick made here closes this card when the operation
+						   completes confirmed — `fromAll` carries that intent
+						   into select() and completeOp(). */
+						allNoneMatch !== null ? null : groups.map((group) => sectionFor(group, group.models || [], allFilter, true, allIndexMap)),
+						partialNote,
+						allNoneMatch
 					)
 			  )
 			: null;

@@ -404,9 +404,9 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   padding: 5px 6px 3px;
   background-color: var(--lg-glass-3);
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 560;
-  line-height: 16px;
+  line-height: 17px;
   letter-spacing: 0.01em;
 }
 
@@ -434,9 +434,10 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
 }
 
 .lg-picker-count {
-  color: var(--dsw-alias-label-caption);
+  color: var(--dsw-alias-label-secondary);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 17px;
 }
 
 /* The door to the rest of the catalog: a "one more level" entry at the foot of
@@ -501,41 +502,50 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
 }
 
 .lg-picker-option:hover,
-.lg-picker-option:focus-visible {
+.lg-picker-option:focus-visible,
+.lg-picker-option[data-lg-active='true'] {
   background-color: var(--lg-hairline);
 }
 
-.lg-picker-option:focus-visible {
+.lg-picker-option:focus-visible,
+.lg-picker-option[data-lg-active='true'] {
   outline: 2px solid var(--lg-accent-ring);
   outline-offset: -2px;
 }
 
 /* The selection: a filled plate, one per card. Hover on the selected row
    DEEPENS the fill rather than washing it away — the row stays claimed. */
-.lg-picker-option[aria-checked='true'] {
+.lg-picker-option[aria-checked='true'],
+.lg-picker-option[aria-selected='true'] {
   background-color: var(--lg-selection-fill);
 }
 
-.lg-picker-option[aria-checked='true']:hover {
+.lg-picker-option[aria-checked='true']:hover,
+.lg-picker-option[aria-selected='true']:hover,
+.lg-picker-option[aria-selected='true'][data-lg-active='true'] {
   background-color: var(--lg-selection-fill-hover);
 }
 
-.lg-picker-option[aria-checked='true'] .lg-picker-name {
+.lg-picker-option[aria-checked='true'] .lg-picker-name,
+.lg-picker-option[aria-selected='true'] .lg-picker-name {
   color: var(--lg-selection-label);
   font-weight: 560;
 }
 
-.lg-picker-option[aria-checked='true'] .lg-picker-desc {
-  color: color-mix(in srgb, var(--lg-selection-label) 72%, transparent);
+.lg-picker-option[aria-checked='true'] .lg-picker-desc,
+.lg-picker-option[aria-selected='true'] .lg-picker-desc {
+  color: var(--lg-selection-label);
 }
 
-.lg-picker-option[aria-checked='true'] .lg-picker-check {
+.lg-picker-option[aria-checked='true'] .lg-picker-check,
+.lg-picker-option[aria-selected='true'] .lg-picker-check {
   color: var(--lg-selection-label);
 }
 
 /* The reseller ratio plate rides along on the filled row as a translucent
    white chip, so it survives the accent fill instead of fighting it. */
-.lg-picker-option[aria-checked='true'] .lg-picker-mult {
+.lg-picker-option[aria-checked='true'] .lg-picker-mult,
+.lg-picker-option[aria-selected='true'] .lg-picker-mult {
   background-color: color-mix(in srgb, var(--lg-selection-label) 16%, transparent);
   color: var(--lg-selection-label);
 }
@@ -567,19 +577,19 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   padding: 0 4px;
   border-radius: var(--lg-r-xs);
   background-color: var(--lg-hairline);
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 10px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
   font-weight: 500;
-  line-height: 15px;
+  line-height: 17px;
   font-variant-numeric: tabular-nums;
   vertical-align: 1px;
 }
 
 .lg-picker-desc {
   overflow: hidden;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
-  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 17px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -591,7 +601,7 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   place-items: center;
   flex: 0 0 14px;
   color: var(--lg-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -649,4 +659,61 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   .lg-picker-card {
     width: min(300px, calc(100vw - 24px));
   }
+}
+
+/* ---- Selection feedback notes (model-picker-feedback) ---------------------
+   Failure and unconfirmed states are quiet inline notes inside the card:
+   they name the target, they offer a retry, and they never displace the
+   list. Pending states mark the row itself (`data-lg-pending`) with the
+   waiting glyph the check cell already renders. */
+.lg-picker-note {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 12px 4px;
+  padding: 6px 10px;
+  border-radius: var(--lg-r-sm);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.lg-picker-note[data-lg-note='failed'] {
+  color: rgb(204, 43, 48);
+  background-color: rgba(204, 43, 48, 0.08);
+}
+
+.lg-picker-note[data-lg-note='unconfirmed'] {
+  color: rgb(176, 116, 8);
+  background-color: rgba(191, 132, 0, 0.1);
+}
+
+/* Availability note (partial provider failures): informational only — no
+   retry affordance, because the host may serve load() from cache. */
+.lg-picker-note-catalog {
+  color: var(--dsw-alias-label-secondary);
+  background-color: transparent;
+  opacity: 0.85;
+}
+
+.lg-picker-note-action {
+  flex: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lg-picker-option[data-lg-pending='true'] {
+  opacity: 0.68;
+}
+
+.lg-picker-seg-item[data-lg-pending='true'] {
+  opacity: 0.68;
 }

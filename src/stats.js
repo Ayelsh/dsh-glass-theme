@@ -26,10 +26,15 @@
  * Injected by tools/build.mjs over the literal `/*__STATS__*​/null`, so this
  * file is authored as a bare function expression, never as a module.
  */
-function createStats(require, ctx, catalog) {
+function createStats(require, ctx, catalog, shared) {
 	const React = require('react');
 	const ReactDOM = require('react-dom/client');
 	const ReactDOMShared = require('react-dom');
+
+	/* The skin's layer coordinator (design D4), handed in through the shared
+	   opts. Null when the component is driven directly; then dismissal keeps
+	   running on the local listeners below. */
+	const LAYERS = (shared && shared.layers) || null;
 
 	const C = {
 		root: 'lg-stats',
@@ -223,23 +228,79 @@ function createStats(require, ctx, catalog) {
 			return () => window.removeEventListener('resize', place);
 		}, [open]);
 
+		/* Dismissal routing (skin-overlay-navigation). With the skin's layer
+		   coordinator the panel is one NONMODAL layer: Escape returns focus
+		   to the trigger, an outside press keeps focus on what the user
+		   activated, and Tab order stays natural. Without a coordinator the
+		   same rules run on local listeners. */
 		React.useEffect(() => {
 			if (!open) return undefined;
-			const onDown = (event) => {
-				if (anchor.current && event.target instanceof Node && anchor.current.contains(event.target)) return;
-				if (panelRef.current && event.target instanceof Node && panelRef.current.contains(event.target)) return;
-				setOpen(false);
-			};
-			const onKey = (event) => {
-				if (event.key === 'Escape') setOpen(false);
-			};
-			document.addEventListener('pointerdown', onDown, true);
-			document.addEventListener('keydown', onKey, true);
+			if (LAYERS === null || typeof LAYERS.acquire !== 'function') {
+				const onDown = (event) => {
+					if (anchor.current && event.target instanceof Node && anchor.current.contains(event.target)) return;
+					if (panelRef.current && event.target instanceof Node && panelRef.current.contains(event.target)) return;
+					setOpen(false);
+				};
+				const onKey = (event) => {
+					if (event.key === 'Escape') setOpen(false);
+				};
+				document.addEventListener('pointerdown', onDown, true);
+				document.addEventListener('keydown', onKey, true);
+				return () => {
+					document.removeEventListener('pointerdown', onDown, true);
+					document.removeEventListener('keydown', onKey, true);
+				};
+			}
+			let done = false;
+			const handle = LAYERS.acquire({
+				owner: 'stats.panel',
+				kind: 'nonmodal',
+				surface: panelRef.current,
+				contains: (node) => {
+					const wrap = anchor.current;
+					const panel = panelRef.current;
+					return Boolean((wrap && wrap.contains(node)) || (panel && panel.contains(node)));
+				},
+				onDismiss: (info) => {
+					if (done) return;
+					done = true;
+					setOpen(false);
+					/* Escape is a keyboard act: focus goes back to the trigger.
+					   An outside press leaves focus on what the user activated. */
+					const wrap = anchor.current;
+					const home = wrap && typeof wrap.querySelector === 'function' ? wrap.querySelector('button') : wrap;
+					handle.dispose({ focus: info.reason === 'escape' ? home : false });
+				},
+			});
 			return () => {
-				document.removeEventListener('pointerdown', onDown, true);
-				document.removeEventListener('keydown', onKey, true);
+				if (!done) {
+					done = true;
+					/* Closed by state (the trigger): the component already
+					   placed focus where it belongs. */
+					handle.dispose({ focus: false });
+				}
 			};
 		}, [open]);
+
+		/* Entering the panel places focus on the panel itself (tabindex=-1):
+		   it is a readout, not a form, so the surface — not a phantom first
+		   control — is the meaningful focus. It waits for placement, because
+		   a visibility:hidden panel cannot take focus, and runs once per
+		   opening so a later re-place never steals focus back. */
+		const enteredRef = React.useRef(false);
+		React.useEffect(() => {
+			if (!open) {
+				enteredRef.current = false;
+				return;
+			}
+			if (enteredRef.current || placement === null) return;
+			const panel = panelRef.current;
+			/* Test harnesses hand refs that are not DOM nodes; only a real
+			   panel can take focus. */
+			if (panel === null || typeof panel.focus !== 'function') return;
+			panel.focus();
+			enteredRef.current = true;
+		}, [open, placement]);
 
 		/* Nothing to say until the session has a projection; an empty pill that
 		   appears and disappears is worse than no pill. This return is AFTER
@@ -253,7 +314,6 @@ function createStats(require, ctx, catalog) {
 			{
 				type: 'button',
 				className: C.trigger,
-				ref: anchor,
 				'aria-haspopup': 'dialog',
 				'aria-expanded': open ? 'true' : 'false',
 				'aria-label': '上下文与用量',
@@ -290,6 +350,7 @@ function createStats(require, ctx, catalog) {
 				role: 'dialog',
 				'aria-label': '上下文与用量',
 				ref: panelRef,
+				tabIndex: -1,
 				style: placement === null ? { visibility: 'hidden' } : { top: placement.top + 'px', left: placement.left + 'px' },
 			},
 			React.createElement(

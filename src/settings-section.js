@@ -126,13 +126,29 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 		}, []);
 
 		/* The directory can still be loading when the page opens; a settings page
-		   that says "no providers" on a slow start is a settings page that lies. */
+		   that says "no providers" on a slow start is a settings page that lies.
+		   Subscribing to the store (when available) updates instantly on directory changes. */
 		React.useEffect(() => {
 			const read = () => setList(providers());
 			read();
-			if (typeof setInterval !== 'function') return undefined;
+			let unsubStore = null;
+			try {
+				const ui = ctx.get('uiSession');
+				const value = ui && ui.current ? ui.current.value : null;
+				let sid = null;
+				if (value) sid = value.key !== undefined ? value.key : value.sessionId;
+				const directories = ctx.get('modelDirectories');
+				const dir = directories && typeof directories.directoryFor === 'function' ? directories.directoryFor(sid) : null;
+				if (dir && dir.store && typeof dir.store.subscribe === 'function') {
+					unsubStore = dir.store.subscribe(read);
+				}
+			} catch (e) {}
+			if (typeof setInterval !== 'function') return unsubStore || undefined;
 			const timer = setInterval(read, 2000);
-			return () => clearInterval(timer);
+			return () => {
+				if (unsubStore) unsubStore();
+				clearInterval(timer);
+			};
 		}, []);
 
 		const commit = (next) => {
@@ -209,11 +225,14 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 
 		/* Returning from the drill-down puts the keyboard back on the control
 		   that opened it, so the back affordance does not strand focus on a row
-		   that no longer exists. */
-		const opener = React.useRef(null);
+		   that no longer exists. Storing the provider ID rather than retaining
+		   the old DOM node ensures focus is restored to the newly rendered
+		   provider control after commit/view change, with safe heading fallback
+		   if the provider disappeared. */
+		const returnProviderId = React.useRef(null);
 		const boardRef = React.useRef(null);
 		const openModels = (provider, element) => {
-			opener.current = element || null;
+			returnProviderId.current = provider ? provider.id : null;
 			/* The draft starts as a copy of the saved entry, so the view always
 			   opens on the persisted truth, never on a previous unsaved visit. */
 			setDraft({ id: provider.id, value: copyEntry(chosen(selection, provider.id)) });
@@ -222,16 +241,47 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 		const closeModels = () => {
 			setView(null);
 			setDraft(null);
-			const node = opener.current;
-			opener.current = null;
-			if (node && typeof node.focus === 'function') {
-				try {
-					node.focus();
-				} catch (error) {
-					/* the row went away with the view */
+		};
+
+		/* View change focus management:
+		   - Entering drill-down: focus the back button or view title.
+		   - Returning to board: focus the newly rendered provider control for returnProviderId,
+		     or fall back to the board heading if the provider disappeared. */
+		React.useLayoutEffect(() => {
+			const board = boardRef.current;
+			if (!board || typeof board.querySelector !== 'function') return;
+
+			if (view !== null) {
+				// We entered a provider's drill-down
+				const backBtn = board.querySelector('.lg-settings-back');
+				if (backBtn && typeof backBtn.focus === 'function') {
+					try { backBtn.focus(); } catch (e) {}
+				}
+			} else if (returnProviderId.current !== null) {
+				// We returned to the main provider board
+				const targetId = returnProviderId.current;
+				returnProviderId.current = null;
+				const row = board.querySelector(`li.lg-settings-row[data-provider-id="${targetId}"]`)
+					|| Array.from(board.querySelectorAll('li.lg-settings-row')).find((el) => el.getAttribute('data-provider-id') === targetId);
+				const targetControl = row
+					? (row.querySelector('.lg-settings-modelDoor:not([disabled])')
+						|| row.querySelector('.lg-settings-switch')
+						|| row.querySelector('.lg-settings-modelDoor')
+						|| row)
+					: null;
+				if (targetControl && typeof targetControl.focus === 'function') {
+					try { targetControl.focus(); return; } catch (e) {}
+				}
+				// Provider disappearance fallback: focus settings heading or first row
+				const fallback = board.querySelector('.lg-settings-title')
+					|| (board.parentElement && board.parentElement.querySelector('.lg-settings-title'))
+					|| document.querySelector('.lg-settings-title')
+					|| board.querySelector('.lg-settings-switch');
+				if (fallback && typeof fallback.focus === 'function') {
+					try { fallback.focus(); } catch (e) {}
 				}
 			}
-		};
+		}, [view]);
 
 		/* A view swap keeps the scroller's offset; the new view has to start at
 		   its own top, or a 25-model list opens halfway down and reads as a list
@@ -311,7 +361,23 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 		);
 
 		const modelList = () => {
-			if (current === null) return null;
+			if (current === null) {
+				return h(
+					'div',
+					{ className: 'lg-settings-view' },
+					h(
+						'div',
+						{ className: 'lg-settings-viewHead' },
+						h(
+							'button',
+							{ type: 'button', className: 'lg-settings-back', onClick: closeModels, 'aria-label': '返回供应商列表' },
+							h('span', { className: 'lg-settings-backMark', 'aria-hidden': 'true' }, '‹'),
+							'供应商'
+						)
+					),
+					h('p', { className: 'lg-settings-empty' }, '该供应商已不可用。')
+				);
+			}
 			const saved = chosen(selection, current.id);
 			const entry = draft === null ? saved : draft.value;
 			const dirty = draft === null ? false : !sameEntry(draft.value, saved);
@@ -455,6 +521,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 							{
 								className: 'lg-settings-row',
 								key: provider.id,
+								'data-provider-id': provider.id,
 								style: { '--lg-row-index': index },
 								'data-on': on ? 'true' : 'false',
 								'data-blocked': blocked ? 'true' : 'false',
@@ -528,7 +595,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 				? h(
 						'div',
 						{ className: 'lg-settings-head' },
-						h('h2', { className: 'lg-settings-title' }, '快捷供应商'),
+						h('h2', { className: 'lg-settings-title', tabIndex: -1 }, '快捷供应商'),
 						meter
 					)
 				: null,

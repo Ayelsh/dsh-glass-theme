@@ -21,9 +21,10 @@
  *
  * Spliced into lib/client.js by tools/build.mjs; edit here, never there.
  */
-function createWorkspace(require, ctx, catalog) {
+function createWorkspace(require, ctx, catalog, shared) {
 	const React = require('react');
 	const h = React.createElement;
+	const LAYERS = (shared && shared.layers) || null;
 
 	const PANEL_ID = 'lg-workspace';
 	const PANEL_LABEL = '工作空间';
@@ -610,13 +611,33 @@ function createWorkspace(require, ctx, catalog) {
 	 * ================================================================ */
 
 	function Dialog({ title, onClose, children, wide }) {
+		const dialogRef = React.useRef(null);
+		const openerRef = React.useRef(typeof document !== 'undefined' ? document.activeElement : null);
+
 		React.useEffect(() => {
-			const onKey = (event) => {
-				if (event.key === 'Escape') onClose();
-			};
-			document.addEventListener('keydown', onKey);
-			return () => document.removeEventListener('keydown', onKey);
-		}, [onClose]);
+			if (LAYERS === null) {
+				const onKey = (event) => {
+					if (event.key === 'Escape') onClose();
+				};
+				document.addEventListener('keydown', onKey);
+				return () => document.removeEventListener('keydown', onKey);
+			}
+			const layer = LAYERS.acquire({
+				owner: 'workspace.dialog',
+				kind: 'modal',
+				title: title || '对话框',
+				surface: dialogRef.current,
+				onDismiss: () => {
+					try {
+						onClose();
+					} finally {
+						layer.dispose({ focus: openerRef.current });
+					}
+				},
+			});
+			return () => layer.dispose({ focus: openerRef.current });
+		}, [onClose, title]);
+
 		return h(
 			'div',
 			{ className: 'lgws-dialogScrim', onPointerDown: (event) => {
@@ -624,7 +645,13 @@ function createWorkspace(require, ctx, catalog) {
 			} },
 			h(
 				'div',
-				{ className: `lgws-dialog${wide ? ' lgws-dialogWide' : ''}`, role: 'dialog', 'aria-modal': 'true' },
+				{
+					ref: dialogRef,
+					className: `lgws-dialog${wide ? ' lgws-dialogWide' : ''}`,
+					role: 'dialog',
+					'aria-modal': 'true',
+					'aria-label': title,
+				},
 				h(
 					'div',
 					{ className: 'lgws-dialogHead' },
@@ -1266,8 +1293,9 @@ function createWorkspace(require, ctx, catalog) {
 		 * item object, and a held reference would freeze the panel on stale
 		 * status. */
 		const [inspectorKey, setInspectorKey] = React.useState('');
-		/* 每个打开过的详情的完整记录（`tapd <kind> show`），按 `kind:id`
-		 * 缓存：列表行经常不带描述，详情只在第一次打开时取一次。 */
+		/* 每个打开过的详情的渲染状态（loading/done/error），按 `kind:id`
+		 * 键存放。它只是下方 detailReads 请求层的投影：请求的生命周期不由
+		 * 这份渲染状态决定，项目切换时整体清空。 */
 		const [details, setDetails] = React.useState({});
 		const [rowQuery, setRowQuery] = React.useState('');
 		const [bugSync, setBugSync] = React.useState({ phase: 'idle', at: null, error: null });
@@ -1278,6 +1306,10 @@ function createWorkspace(require, ctx, catalog) {
 		const bugSyncSeq = React.useRef(0);
 		const toastTimer = React.useRef(null);
 		const projectControlRef = React.useRef(null);
+		const projectMenuRef = React.useRef(null);
+		const inspectorRef = React.useRef(null);
+		const inspectorScrimRef = React.useRef(null);
+		const inspectorOpenerRef = React.useRef(null);
 		const segRef = React.useRef(null);
 		const plateRef = React.useRef(null);
 		const richRef = React.useRef(null);
@@ -1297,6 +1329,9 @@ function createWorkspace(require, ctx, catalog) {
 		const live = { tapd: clis?.tapd?.available === true, wecom: clis?.wecom?.available === true };
 		const demoTapd = clis !== null && !live.tapd;
 		const demoWecom = clis !== null && !live.wecom;
+		/* 详情读取的缓存与在途请求都按项目记账（见下方 detailReads 块），
+		 * 项目 id 在渲染早期就要可用。 */
+		const projectId = String(clis?.tapd?.auth?.workspace?.id ?? '');
 
 		const load = React.useCallback(async () => {
 			setRefreshing(true);
@@ -1607,12 +1642,16 @@ function createWorkspace(require, ctx, catalog) {
 								log: [],
 							},
 						}));
+						/* 失败的切换回到已确认项目：请求状态整体清空，新的
+						 * epoch 里不残留旧项目的在途读。 */
+						invalidateDetailReads();
 					}
 				} catch (error) {
 					setAuthFlow((prev) => ({
 						...prev,
 						tapd: { phase: 'failed', method: 'token', qr: null, message: String(error?.message ?? error), log: [] },
 					}));
+					invalidateDetailReads();
 				} finally {
 					setWorkspaceBusy(false);
 				}
@@ -1660,10 +1699,10 @@ function createWorkspace(require, ctx, catalog) {
 			}
 		}, [clis, live.tapd, showToast]);
 
-		/* Escape closes the nearest layer (menu, then detail); a click outside
-		 * the project control closes the menu. Both listeners are attached only
-		 * while something is open, so the page is inert the rest of the time. */
+		/* Escape and outside interactions are delegated to the layer coordinator
+		 * (or fallback event listeners when LAYERS is null). */
 		React.useEffect(() => {
+			if (LAYERS !== null) return undefined;
 			if (projectMenuOpen === false && inspectorKey === '') return undefined;
 			const onKey = (event) => {
 				if (event.key !== 'Escape') return;
@@ -1685,6 +1724,59 @@ function createWorkspace(require, ctx, catalog) {
 				document.removeEventListener('pointerdown', onDown, true);
 			};
 		}, [projectMenuOpen, inspectorKey]);
+
+		/* Project menu coordinator layer */
+		React.useEffect(() => {
+			if (LAYERS === null || !projectMenuOpen) return undefined;
+			const layer = LAYERS.acquire({
+				owner: 'workspace.projectMenu',
+				kind: 'nonmodal',
+				surface: projectMenuRef.current,
+				contains: (node) => {
+					const root = projectControlRef.current;
+					return (root !== null && root.contains(node)) || (projectMenuRef.current !== null && projectMenuRef.current.contains(node));
+				},
+				onDismiss: (info) => {
+					setProjectMenuOpen(false);
+					if (info.reason === 'escape') {
+						const trigger = projectControlRef.current?.querySelector?.('#projectTrigger') || projectControlRef.current;
+						layer.dispose({ focus: trigger });
+					} else {
+						layer.dispose({ focus: false });
+					}
+				},
+			});
+			return () => layer.dispose({ focus: false });
+		}, [projectMenuOpen]);
+
+		/* Inspector coordinator layer */
+		React.useEffect(() => {
+			if (LAYERS === null || inspectorKey === '') return undefined;
+			const isNarrow = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+				? window.matchMedia('(max-width: 900px)').matches
+				: false;
+			const currentOpener = inspectorOpenerRef.current;
+			const layer = LAYERS.acquire({
+				owner: 'workspace.inspector',
+				kind: isNarrow ? 'modal' : 'nonmodal',
+				title: '页面内详情',
+				surface: inspectorRef.current,
+				contains: (node) => {
+					if (inspectorRef.current !== null && inspectorRef.current.contains(node)) return true;
+					if (inspectorScrimRef.current !== null && inspectorScrimRef.current.contains(node)) return true;
+					return false;
+				},
+				onDismiss: (info) => {
+					setInspectorKey('');
+					if (info.reason === 'escape') {
+						layer.dispose({ focus: currentOpener });
+					} else {
+						layer.dispose({ focus: false });
+					}
+				},
+			});
+			return () => layer.dispose({ focus: false });
+		}, [inspectorKey]);
 
 		/* The segmented control's sliding plate is positioned from the live
 		 * button geometry, so it survives font loading, zoom, and a width the
@@ -1732,32 +1824,105 @@ function createWorkspace(require, ctx, catalog) {
 		}, [tapdAuthorized, loadedAt]);
 
 		/* 打开详情时补齐完整记录：`todo` 列表经常不带描述字段，详情面板首次
-		 * 打开时拉一次 `tapd <kind> show <id>`，结果按 key 缓存（每个工作项
-		 * 最多取一次；列表刷新不重取——描述不是状态，不会自己变化）。 */
+		 * 打开时拉一次 `tapd <kind> show <id>`。请求归面板所有（design
+		 * Decision 2）：`details` 只是请求状态的渲染投影，不能反过来决定
+		 * 请求的生死——0.3.9 之前的写法把 `details` 放进依赖又在函数体里
+		 * 写入 loading，自己的 cleanup 恰好作废了在途读，结果永远停在
+		 * “正在从 TAPD 读取完整描述…”。缓存与在途注册表按 `项目|类型|ID`
+		 * 记账：同一项目内关掉再打开会合流到同一个在途读，已完成的直接复
+		 * 用；项目切换或面板卸载推进 epoch，迟到的结果失去发布权。 */
+		const detailReads = React.useRef({ epoch: 0, seq: 0, inflight: new Map(), cache: new Map() });
+
+		/* 项目切换 / 面板卸载 / 外部观察到的项目变化共用的一次作废：旧项目
+		 * 的在途读与缓存整体清空，详情视图关闭，新读取要等项目确认后才会
+		 * 发出。只闭包稳定引用（setDetails、setInspectorKey、detailReads），
+		 * 每次渲染拿到的副本都等价。 */
+		const invalidateDetailReads = () => {
+			detailReads.current.epoch += 1;
+			detailReads.current.inflight.clear();
+			detailReads.current.cache.clear();
+			setDetails({});
+			setInspectorKey('');
+		};
+
+		const startDetailRead = (kind, id) => {
+			const state = detailReads.current;
+			const viewKey = `${kind}:${id}`;
+			const fullKey = `${projectId}|${viewKey}`;
+			const epoch = state.epoch;
+			const seq = ++state.seq;
+			state.inflight.set(fullKey, { epoch, seq });
+			/* 发布 loading 只是渲染层投影，不会作废这次读。 */
+			setDetails((prev) => ({ ...prev, [viewKey]: { phase: 'loading', raw: null } }));
+			void (async () => {
+				const run = await attempt('tapd', [kind, 'show', id], 30000);
+				const now = detailReads.current;
+				const owner = now.inflight.get(fullKey);
+				/* 发布权三重校验：注册表里还是这一次请求（重试会换 seq），
+				 * 且它所属的 epoch 仍然有效（切换/卸载会推进 epoch）。 */
+				if (owner === undefined || owner.seq !== seq || owner.epoch !== epoch || now.epoch !== epoch) return;
+				now.inflight.delete(fullKey);
+				const entry =
+					run.error !== undefined
+						? { phase: 'error', error: String(run.error), raw: null }
+						: { phase: 'done', raw: detailFromShow(run.value, id) };
+				now.cache.set(fullKey, entry);
+				setDetails((prev) => ({ ...prev, [viewKey]: entry }));
+			})();
+		};
+
+		/* 详情读取的唯一入口。依赖里只有 inspector key 与读取闸门（tapd
+		 * 可用、项目已确认、不在切换中）——loading 状态的发布不会再把请求
+		 * 一起带走。 */
 		React.useEffect(() => {
 			if (inspectorKey === '' || !live.tapd) return undefined;
+			if (projectId === '' || workspaceBusy) return undefined;
 			const sep = inspectorKey.indexOf(':');
 			const kind = inspectorKey.slice(0, sep);
 			const id = inspectorKey.slice(sep + 1);
 			if (!isTapdKind(kind) || id === '') return undefined;
-			if (details[inspectorKey] !== undefined) return undefined;
-			let alive = true;
-			setDetails((prev) =>
-				prev[inspectorKey] === undefined ? { ...prev, [inspectorKey]: { phase: 'loading', raw: null } } : prev
-			);
-			void (async () => {
-				const run = await attempt('tapd', [kind, 'show', id], 30000);
-				if (!alive) return;
-				if (run.error !== undefined) {
-					setDetails((prev) => ({ ...prev, [inspectorKey]: { phase: 'error', error: String(run.error), raw: null } }));
-					return;
-				}
-				setDetails((prev) => ({ ...prev, [inspectorKey]: { phase: 'done', raw: detailFromShow(run.value, id) } }));
-			})();
+			const state = detailReads.current;
+			const fullKey = `${projectId}|${inspectorKey}`;
+			/* 同一 key 在途（关掉再打开、重复重试）直接合流；已落地的条目
+			 * （done 或 error）留在缓存里——失败等用户点重试，不自动重读。 */
+			if (state.inflight.has(fullKey) || state.cache.has(fullKey)) return undefined;
+			startDetailRead(kind, id);
+		}, [inspectorKey, live.tapd, projectId, workspaceBusy]);
+
+		/* 失败重试：同一 key 已有在途读时忽略（一个 key 同时最多一个
+		 * 读），丢弃失败缓存后重新发起。 */
+		const retryDetailRead = (kind, id) => {
+			const state = detailReads.current;
+			const fullKey = `${projectId}|${kind}:${id}`;
+			if (state.inflight.has(fullKey)) return;
+			state.cache.delete(fullKey);
+			startDetailRead(kind, id);
+		};
+
+		/* 面板卸载：一切在途读失去发布权——迟到的结果既不能上屏，也不能
+		 * 重新打开任何东西。宿主 CLI 进程是否被取消不在保证范围内。 */
+		React.useEffect(() => {
 			return () => {
-				alive = false;
+				detailReads.current.epoch += 1;
+				detailReads.current.inflight.clear();
 			};
-		}, [inspectorKey, live.tapd, details]);
+		}, []);
+
+		/* 宿主侧的项目也可能绕过本面板切换（别的入口直接改配置），之后的
+		 * 状态读会带回新的 workspace id。selectSpace 已显式作废，这里兜
+		 * 住外部变化：projectId 变化即证据。 */
+		const observedProjectRef = React.useRef(null);
+		React.useEffect(() => {
+			if (observedProjectRef.current === null) {
+				observedProjectRef.current = projectId;
+				return;
+			}
+			if (observedProjectRef.current === projectId) return;
+			const previous = observedProjectRef.current;
+			observedProjectRef.current = projectId;
+			/* '' → 具体 id 是首次拿到宿主状态（含演示态转正），不算变化。 */
+			if (previous !== '') invalidateDetailReads();
+		}, [projectId]);
 
 		/* 描述里是净化过的外部 HTML，所以用两个容器级守卫代替逐节点绑定：
 		 * 捕获阶段的 error 监听把加载失败的 <img> 换成指向原图的链接；点击
@@ -2347,7 +2512,6 @@ function createWorkspace(require, ctx, catalog) {
 		 * returns `{id,name}` pairs, so fall back to the id while the list is
 		 * still loading (or when the project is not in it). */
 		const projectRows = projects !== null ? projects : tapdWorkspaces;
-		const projectId = String(clis?.tapd?.auth?.workspace?.id ?? '');
 		const projectName = (() => {
 			if (clis?.tapd?.available !== true) return '';
 			if (projectId === '') return tapdWorkspaceMissing ? '选择项目' : '未连接';
@@ -2394,11 +2558,13 @@ function createWorkspace(require, ctx, catalog) {
 			if (id === projectId) return;
 			setProjectMenuOpen(false);
 			setProjectQuery('');
-			setInspectorKey('');
 			setRowQuery('');
 			setTab('overview');
 			bugSyncSeq.current += 1;
 			setBugSync({ phase: 'idle', at: null, error: null });
+			/* 详情请求与缓存按项目记账：切换即作废——在途读失去发布权、
+			 * 缓存清空、详情关闭，确认新项目之前不再发起新读。 */
+			invalidateDetailReads();
 			void chooseTapdWorkspace(id);
 		};
 
@@ -2483,7 +2649,12 @@ function createWorkspace(require, ctx, catalog) {
 				? null
 				: h(
 						'div',
-						{ className: 'lgwsp-project-menu', role: 'listbox', 'aria-label': '切换项目空间' },
+						{
+							className: 'lgwsp-project-menu',
+							role: 'listbox',
+							'aria-label': '切换项目空间',
+							ref: projectMenuRef,
+						},
 						h('div', { className: 'lgwsp-menu-heading' }, '切换项目空间'),
 						h('input', {
 							className: 'lgwsp-menu-search',
@@ -2604,7 +2775,18 @@ function createWorkspace(require, ctx, catalog) {
 			return pool.find((item) => `${item.kind}:${item.id}` === inspectorKey) ?? null;
 		})();
 
-		const openItem = (item) => setInspectorKey(`${item.kind}:${item.id}`);
+		const openItem = (item, openerNode) => {
+			const evTarget = typeof window !== 'undefined' && window.event && window.event.target && typeof window.event.target.closest === 'function'
+				? window.event.target.closest('button')
+				: null;
+			const candidate = openerNode || evTarget || (typeof document !== 'undefined' ? document.activeElement : null);
+			if (candidate && candidate !== (typeof document !== 'undefined' ? document.body : null) && typeof candidate.focus === 'function') {
+				inspectorOpenerRef.current = candidate;
+			} else {
+				inspectorOpenerRef.current = null;
+			}
+			setInspectorKey(`${item.kind}:${item.id}`);
+		};
 		const closeItem = () => setInspectorKey('');
 
 		const skeletonRows = (count) =>
@@ -2878,6 +3060,9 @@ function createWorkspace(require, ctx, catalog) {
 						/* 描述优先用 `show` 补齐的完整记录；`show` 还没回来（或失败）
 						 * 就退回列表自带的那份。 */
 						const detail = details[`${selectedItem.kind}:${selectedItem.id}`];
+						/* 显式机器可读的详情阶段（absent/loading/done/error），
+						 * 回归脚本靠它断言状态机的每一步。 */
+						const detailPhase = detail === undefined ? 'absent' : detail.phase;
 						const raw = detail?.raw ?? selectedItem.raw ?? {};
 						const descriptionHtml = descriptionToRichHtml(firstOf(raw, ['description', 'desc', 'description_text', 'remark']));
 						const detailNote =
@@ -2904,7 +3089,11 @@ function createWorkspace(require, ctx, catalog) {
 						].filter((entry) => entry !== null);
 						return h(
 							'aside',
-							{ className: 'lgwsp-inspector', 'aria-label': '页面内详情' },
+							{
+								className: 'lgwsp-inspector',
+								'aria-label': '页面内详情',
+								ref: inspectorRef,
+							},
 							h(
 								'div',
 								{ className: 'lgwsp-inspector-head' },
@@ -2964,9 +3153,9 @@ function createWorkspace(require, ctx, catalog) {
 												? h('div', {
 														className: 'lgwsp-detail-rich',
 														ref: richRef,
-														dangerouslySetInnerHTML: { __html: descriptionHtml },
+														dangerouslySetInnerHTML: { __html: descriptionHtml }, 'data-detail-phase': detailPhase,
 													})
-												: h('p', { className: 'lgwsp-detail-description' }, detailNote),
+												: h('p', { className: 'lgwsp-detail-description', 'data-detail-phase': detailPhase }, detailNote),
 											h(
 												'div',
 												{ className: 'lgwsp-detail-grid' },
@@ -2991,7 +3180,7 @@ function createWorkspace(require, ctx, catalog) {
 											),
 											h(
 												'div',
-												{ className: 'lgwsp-detail-actions' },
+												{ className: 'lgwsp-detail-actions' }, detail !== undefined && detail.phase === 'error' ? h('button', { id: 'detailRetry', className: 'lgwsp-detail-action', onClick: () => retryDetailRead(selectedItem.kind, selectedItem.id) }, '重试读取') : null,
 												selectedItem.kind === 'bug' || selectedItem.kind === 'story' || selectedItem.kind === 'task'
 													? h('button', { className: 'lgwsp-detail-action', onClick: () => setDialog({ kind: 'transition', item: selectedItem }) }, '流转状态')
 													: null,
@@ -3130,7 +3319,12 @@ function createWorkspace(require, ctx, catalog) {
 						)
 					)
 				),
-				selectedItem === null ? null : h('button', { className: 'lgwsp-inspector-scrim', onClick: closeItem, 'aria-label': '关闭详情' }),
+				selectedItem === null ? null : h('button', {
+					className: 'lgwsp-inspector-scrim',
+					onClick: closeItem,
+					'aria-label': '关闭详情',
+					ref: inspectorScrimRef,
+				}),
 				inspector
 			),
 			toast === '' ? null : h('div', { className: 'lgwsp-toast', role: 'status' }, toast),
