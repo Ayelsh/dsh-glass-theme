@@ -240,7 +240,8 @@
   align-items: center;
   gap: 12px;
   padding: 9px 10px;
-  border-radius: 16px;
+  /* Concentric with the board: 24px outer radius - 6px inset = 18px. */
+  border-radius: calc(var(--lg-r-xl) - 6px);
   transition:
     background-color var(--lg-t-fast) var(--lg-ease-out),
     background-image var(--lg-t-fast) var(--lg-ease-out),
@@ -391,7 +392,7 @@
     0 0 0 0.5px rgba(16, 22, 40, 0.08),
     inset 0 0.5px 0 rgba(255, 255, 255, 0.9);
   transition:
-    transform var(--lg-t-base) var(--lg-ease-spring),
+    transform var(--lg-t-base) var(--lg-ease-settle),
     width 140ms var(--lg-ease-out);
 }
 
@@ -704,7 +705,8 @@
   margin: 0;
   padding: 7px 10px;
   border: 0;
-  border-radius: 13px;
+  /* Concentric with the board: 24px outer radius - 6px view inset = 18px. */
+  border-radius: calc(var(--lg-r-xl) - 6px);
   background-color: transparent;
   color: var(--dsw-alias-label-primary);
   font: inherit;
@@ -860,6 +862,50 @@
 /* ---- Entrance ----------------------------------------------------------
    Short, stagger-limited, and never on a gesture path: the page is entered by
    navigation, so travel is allowed here and stops at 6px. */
+/* Drill-down: the model checklist arrives from the right (forward), the
+   provider list returns from the left (back). Horizontal slide-and-fade only,
+   settling without overshoot. */
+@keyframes lg-settings-slide-forward {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes lg-settings-slide-back {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.lg-settings-view[data-lg-direction='forward'] {
+  animation: lg-settings-slide-forward 280ms var(--lg-ease-settle) both;
+}
+
+.lg-settings-list[data-lg-direction='back'] {
+  animation: lg-settings-slide-back 280ms var(--lg-ease-settle) both;
+}
+
+/* Inside the host settings modal the modal shell already samples the
+   backdrop (blur 34px). A second blur here is glass-on-glass, so the nested
+   surfaces become raised, tinted, non-blurred fills and the ambient glow and
+   grain are dropped. Standalone boards keep their own material. */
+[class~='AnXs9G_panel'] :is(.lg-settings-board, .lg-settings-utility, .lg-settings-meter) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[class~='AnXs9G_panel'] .lg-settings-board {
+  background-image: none;
+  background-color: var(--lg-glass-tint);
+}
+
+[class~='AnXs9G_panel'] :is(.lg-settings-utility, .lg-settings-meter) {
+  background-color: var(--lg-surface-raised);
+}
+
+[class~='AnXs9G_panel'] .lg-settings-glow,
+[class~='AnXs9G_panel'] .lg-settings-board::after {
+  display: none;
+}
+
 @keyframes lg-settings-board-in {
   from {
     opacity: 0;
@@ -1063,7 +1109,9 @@ body[data-ds-dark-theme] .lg-settings-toolSave[data-dirty='true']:hover {
   .lg-settings-board,
   .lg-settings-glow,
   .lg-settings-row,
-  .lg-settings-model {
+  .lg-settings-model,
+  .lg-settings-view[data-lg-direction],
+  .lg-settings-list[data-lg-direction] {
     animation: none;
   }
 

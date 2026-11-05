@@ -397,6 +397,22 @@ function createWorkspace(require, ctx, catalog, shared) {
 	}
 
 	const severityIsHigh = (severity) => Object.prototype.hasOwnProperty.call(SEVERITY_RANK, severity);
+	/* Semantic status chip colours, derived from the workflow code/name so the
+	 * chip carries meaning (done / blocked / in flight / neutral) instead of an
+	 * unset --chip-bg that falls through to transparent. */
+	const chipTone = (label) => {
+		const text = String(label ?? '').toLowerCase();
+		if (/关闭|完成|已解决|resolved|closed|done|finished|verified/.test(text)) return 'success';
+		if (/拒绝|驳回|挂起|reject|suspend|hold|blocked|reopen/.test(text)) return 'error';
+		if (/进行|处理|开发|测试|review|progress|doing|developing|testing/.test(text)) return 'info';
+		return 'neutral';
+	};
+	const chipStyle = (tone) => {
+		if (tone === 'success') return { '--chip-bg': 'color-mix(in srgb, var(--dsw-alias-state-success-primary) 16%, transparent)', '--chip-color': 'var(--dsw-alias-state-success-primary)' };
+		if (tone === 'error') return { '--chip-bg': 'color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent)', '--chip-color': 'var(--dsw-alias-state-error-primary)' };
+		if (tone === 'info') return { '--chip-bg': 'var(--lg-accent-soft)', '--chip-color': 'var(--lg-accent)' };
+		return { '--chip-bg': 'var(--lg-glass-tint)', '--chip-color': 'var(--dsw-alias-label-secondary)' };
+	};
 	const isOverdue = (item) => item.due !== null && item.due < Date.now() - 86_400_000;
 	const needsAttention = (item) => severityIsHigh(item.severity) || isOverdue(item);
 
@@ -1192,7 +1208,7 @@ function createWorkspace(require, ctx, catalog, shared) {
 						{ className: 'lgwsp-item-meta' },
 						item.id === '' ? null : h('span', { className: 'lgwsp-item-id' }, item.id),
 						item.status === '' ? null : h('span', { className: 'lgwsp-item-meta-sep', 'aria-hidden': 'true' }, '·'),
-						item.status === '' ? null : h('span', { className: 'lgwsp-item-chip' }, statusLabel(item.kind, item.status)),
+						item.status === '' ? null : h('span', { className: 'lgwsp-item-chip', 'data-lg-tone': chipTone(statusLabel(item.kind, item.status)), style: chipStyle(chipTone(statusLabel(item.kind, item.status))) }, statusLabel(item.kind, item.status)),
 						due === '' ? null : h('span', { className: `lgwsp-item-due${overdue ? ' lgwsp-is-overdue' : ''}` }, overdue ? `逾期 · ${due}` : due)
 					)
 				)
@@ -1232,7 +1248,7 @@ function createWorkspace(require, ctx, catalog, shared) {
 						{ className: 'lgwsp-item-meta' },
 						doc.owner === '' ? null : h('span', { className: 'lgwsp-item-id' }, doc.owner),
 						doc.owner === '' ? null : h('span', { className: 'lgwsp-item-meta-sep', 'aria-hidden': 'true' }, '·'),
-						h('span', { className: 'lgwsp-item-chip' }, '企微文档')
+						h('span', { className: 'lgwsp-item-chip', 'data-lg-tone': 'doc', style: { '--chip-bg': KIND_META.doc.bg, '--chip-color': KIND_META.doc.color } }, '企微文档')
 					)
 				)
 			),
@@ -2710,7 +2726,7 @@ function createWorkspace(require, ctx, catalog, shared) {
 				'button',
 				{
 					type: 'button',
-					className: 'lgwsp-project-trigger',
+					className: `lgwsp-project-trigger${projectMenuOpen ? ' lgwsp-is-open' : ''}`,
 					id: 'projectTrigger',
 					'aria-haspopup': 'listbox',
 					'aria-expanded': projectMenuOpen,
@@ -2904,9 +2920,10 @@ function createWorkspace(require, ctx, catalog, shared) {
 			h('h2', { className: 'lgwsp-list-section-title' }, '企微协作'),
 			h(
 				'div',
-				{ className: 'lgws-searchRow' },
+				{ className: 'lgwsp-search-row' },
 				h('input', {
-					className: 'lgws-input lgws-searchInput',
+					className: 'lgwsp-input',
+					'aria-label': '企微文档关键词',
 					value: docQuery,
 					placeholder: '文档关键词，空格分隔',
 					onChange: (event) => setDocQuery(event.target.value),
@@ -2914,9 +2931,9 @@ function createWorkspace(require, ctx, catalog, shared) {
 						if (event.key === 'Enter') void searchDocs();
 					},
 				}),
-				h('button', { className: 'lgws-buttonPrimary', onClick: () => void searchDocs(), disabled: docQuery.trim() === '' }, '搜索')
+				h('button', { className: 'lgwsp-primary-button', onClick: () => void searchDocs(), disabled: docQuery.trim() === '' }, '搜索')
 			),
-			demoWecom ? h('div', { className: 'lgws-demoNote' }, '演示模式 — 安装 wecom-cli 后可搜索真实文档') : null,
+			demoWecom ? h('div', { className: 'lgwsp-note' }, '演示模式 — 安装 wecom-cli 后可搜索真实文档') : null,
 			docError === null ? null : h(ErrorNote, { error: docError }),
 			wecomRows === null
 				? null
@@ -2951,15 +2968,16 @@ function createWorkspace(require, ctx, catalog, shared) {
 			h('p', { className: 'lgwsp-section-note' }, '执行成功会刷新各列表；命令原文与输出都会保留在下面。'),
 			h(
 				'div',
-				{ className: 'lgws-searchRow' },
+				{ className: 'lgwsp-search-row' },
 				h(
 					'div',
-					{ className: 'lgws-consoleCli' },
-					h('button', { className: `lgws-consoleCliBtn${consoleCli === 'tapd' ? ' lgws-consoleCliOn' : ''}`, onClick: () => setConsoleCli('tapd') }, 'tapd'),
-					h('button', { className: `lgws-consoleCliBtn${consoleCli === 'wecom' ? ' lgws-consoleCliOn' : ''}`, onClick: () => setConsoleCli('wecom') }, 'wecom-cli')
+					{ className: 'lgwsp-cli-switch', role: 'group', 'aria-label': '选择 CLI' },
+					h('button', { className: `lgwsp-cli-option${consoleCli === 'tapd' ? ' lgwsp-is-active' : ''}`, 'aria-pressed': consoleCli === 'tapd', onClick: () => setConsoleCli('tapd') }, 'tapd'),
+					h('button', { className: `lgwsp-cli-option${consoleCli === 'wecom' ? ' lgwsp-is-active' : ''}`, 'aria-pressed': consoleCli === 'wecom', onClick: () => setConsoleCli('wecom') }, 'wecom-cli')
 				),
 				h('input', {
-					className: 'lgws-input lgws-searchInput lgws-mono',
+					className: 'lgwsp-input lgwsp-mono',
+					'aria-label': 'CLI 命令',
 					value: consoleInput,
 					placeholder: consoleCli === 'tapd' ? 'bug todo' : 'doc search --keywords 周报 --limit 5',
 					onChange: (event) => setConsoleInput(event.target.value),
@@ -2967,7 +2985,7 @@ function createWorkspace(require, ctx, catalog, shared) {
 						if (event.key === 'Enter') void runConsole();
 					},
 				}),
-				h('button', { className: 'lgws-buttonPrimary', onClick: () => void runConsole(), disabled: consoleBusy || consoleInput.trim() === '' }, consoleBusy ? '执行中…' : '执行')
+				h('button', { className: 'lgwsp-primary-button', onClick: () => void runConsole(), disabled: consoleBusy || consoleInput.trim() === '' }, consoleBusy ? '执行中…' : '执行')
 			),
 			consoleResult === null
 				? null
@@ -2975,7 +2993,7 @@ function createWorkspace(require, ctx, catalog, shared) {
 					? h(ErrorNote, { error: consoleResult.error })
 					: h(
 							'pre',
-							{ className: 'lgws-consoleOut' },
+							{ className: 'lgwsp-console-out' },
 							typeof consoleResult.value === 'string' && consoleResult.value === ''
 								? consoleResult.stderr ||
 										(consoleResult.exitCode === 0
@@ -3075,10 +3093,6 @@ function createWorkspace(require, ctx, catalog, shared) {
 										: live.tapd && isTapdKind(selectedItem.kind)
 											? '这条工作项没有描述内容。'
 											: '这条记录没有描述内容。';
-						const source =
-							selectedItem.kind === 'doc' || selectedItem.kind === 'wecom-todo'
-								? 'wecom://workspace'
-								: `tapd://workspace/${projectId}/${selectedItem.kind}/${selectedItem.id}`;
 						const created = String(firstOf(raw, ['created', 'created_time', 'created_at', 'createdDate']) ?? '');
 						const modified = String(firstOf(raw, ['modified', 'modified_time', 'updated_at', 'modifiedDate']) ?? '');
 						const activity = [
@@ -3114,19 +3128,6 @@ function createWorkspace(require, ctx, catalog, shared) {
 									h(
 										'div',
 										{ className: 'lgwsp-embedded-frame', role: 'document', 'aria-label': `${meta.label}详情页面内预览` },
-										h(
-											'div',
-											{ className: 'lgwsp-frame-toolbar' },
-											h(
-												'span',
-												{ className: 'lgwsp-frame-dots', 'aria-hidden': 'true' },
-												h('i', { className: 'lgwsp-frame-dot' }),
-												h('i', { className: 'lgwsp-frame-dot' }),
-												h('i', { className: 'lgwsp-frame-dot' })
-											),
-											h('span', { className: 'lgwsp-frame-address' }, source),
-											h('span', { 'aria-hidden': 'true' }, '↗')
-										),
 										h(
 											'div',
 											{ className: 'lgwsp-frame-content' },
@@ -3263,7 +3264,7 @@ function createWorkspace(require, ctx, catalog, shared) {
 								h(
 									'div',
 									{ className: 'lgwsp-status-pills' },
-									h('span', { className: 'lgwsp-status-pill' }, h('span', { className: 'lgwsp-status-dot' }), demoTapd || demoWecom ? '演示数据' : '实时数据'),
+									h('span', { className: 'lgwsp-status-pill' }, h('span', { className: `lgwsp-status-dot${demoTapd || demoWecom ? '' : ' lgwsp-is-live'}` }), demoTapd || demoWecom ? '演示数据' : '实时数据'),
 									h('span', { className: 'lgwsp-status-pill' }, syncText)
 								)
 							),

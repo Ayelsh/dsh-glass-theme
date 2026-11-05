@@ -83,13 +83,13 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
   border-radius: var(--lg-r-xs);
   background-color: var(--lg-hairline);
   color: var(--dsw-alias-label-secondary);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -166,6 +166,26 @@
   }
 }
 
+/* The card grows out of the trigger it hangs from: the corner it scales from
+   follows data-lg-placement (set by placement in src/*.js), so a card that fell
+   below its trigger, or hangs off the left edge, does not scale from the one
+   corner that was only right for above-and-right-aligned. */
+.lg-picker-card[data-lg-placement='above-start'] {
+  transform-origin: 0% 100%;
+}
+
+.lg-picker-card[data-lg-placement='below-start'] {
+  transform-origin: 0% 0%;
+}
+
+.lg-picker-card[data-lg-placement='above-end'] {
+  transform-origin: 100% 100%;
+}
+
+.lg-picker-card[data-lg-placement='below-end'] {
+  transform-origin: 100% 0%;
+}
+
 /* ---- Search + rate ------------------------------------------------------
    One row, two facts: what you are filtering by, and what the selected
    provider's clock says right now. The hairline separates the header from the
@@ -221,7 +241,7 @@
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 0.5px var(--lg-hairline);
   color: var(--dsw-alias-label-tertiary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
@@ -317,7 +337,7 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   box-shadow:
     inset 0 0.5px 0 var(--lg-edge-top),
     var(--lg-shadow-1);
-  transition: transform 240ms var(--lg-ease-spring);
+  transition: transform 240ms var(--lg-ease-settle);
 }
 
 .lg-picker-seg-item {
@@ -452,7 +472,8 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   margin-top: 2px;
   padding: 5px 7px;
   border: 0;
-  border-radius: var(--lg-r-sm);
+  /* Concentric: 18px card rim - 6px body inset = 12px. */
+  border-radius: calc(var(--lg-r-lg) - 6px);
   background-color: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;
@@ -493,7 +514,8 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   min-height: 34px;
   padding: 5px 7px;
   border: none;
-  border-radius: var(--lg-r-sm);
+  /* Concentric: 18px card rim - 6px body inset = 12px. */
+  border-radius: calc(var(--lg-r-lg) - 6px);
   background-color: transparent;
   color: inherit;
   text-align: left;
@@ -612,6 +634,32 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
   text-align: center;
 }
 
+/* ---- Press ---------------------------------------------------------------
+   The control answers the finger before the action lands: 60ms, a few percent
+   of scale. Release returns on the normal transition. */
+.lg-picker-trigger,
+.lg-picker-option,
+.lg-picker-more,
+.lg-picker-seg-item {
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+.lg-picker-trigger:active,
+.lg-picker-option:active,
+.lg-picker-more:active,
+.lg-picker-seg-item:active {
+  transform: scale(0.97);
+  transition-duration: 60ms;
+}
+
+.lg-picker-option:active,
+.lg-picker-more:active {
+  transform: scale(0.985);
+}
+
 /* ---- Reduced-motion / transparency / contrast answers -------------------- */
 @media (prefers-reduced-motion: reduce) {
   .lg-picker-card {
@@ -625,6 +673,12 @@ body[data-ds-dark-theme] .lg-picker-badge[data-lg-tone='peak'] b {
      it just does not narrate the trip. */
   .lg-picker-seg-thumb {
     transition: none;
+  }
+  .lg-picker-trigger:active,
+  .lg-picker-option:active,
+  .lg-picker-more:active,
+  .lg-picker-seg-item:active {
+    transform: none;
   }
 }
 

@@ -1,7 +1,7 @@
 # Presentation QA Record
 
-**Date**: 2026-11-03  
-**Plugin**: `dsh-liquid-glass` (refine-glass-performance-and-interactions)  
+**Date**: 2026-11-04  
+**Plugin**: `dsh-liquid-glass` (`align-apple-design-and-liquid-glass-redraw`)  
 **Host Environment**: DeepSeek Harness Nightly / Electron 44.7.0 / Chromium  
 **Operating System**: Windows 11 Home Build 26300 (System DPI: 96 / 100%)  
 **Automated Verification**: `node tools/presentation-check.mjs` (20 passed, 0 failed)  
@@ -123,7 +123,27 @@ Computed bounding boxes of text labels, secondary descriptions, model multiplier
 
 ---
 
-## 7. Verification Command
+## 7. Apple Fluid Design & Liquid Glass Alignment
+
+Verified under `align-apple-design-and-liquid-glass-redraw`:
+1. **Fluid Motion Curves**:
+   - Critically damped settling curve `--lg-ease-settle: cubic-bezier(0.22, 1, 0.36, 1)` (0% overshoot) active on `.lg-settings-knob`, `.lg-picker-seg-thumb`, `.lgwsp-segmented-plate`, `.lgws-tabPlate`, and modal entrance `AnXs9G_panel`.
+   - Calibrated spring curve `--lg-ease-spring: cubic-bezier(0.24, 1.06, 0.38, 1)` (<= 4% micro-settle).
+   - Instantaneous 60ms-70ms `:active` tactile feedback with subtle compress scale (`scale(0.97)` to `scale(0.99)`) across buttons, triggers, options, and segmented items.
+2. **Material Layering & Scoped Demotion**:
+   - Single-backdrop rule in host settings modal: `[class~='AnXs9G_panel'] :is(.lg-settings-board, .lg-settings-utility, .lg-settings-meter)` demoted to non-blurred raised/tinted surfaces (`backdrop-filter: none`), glow and noise grain hidden to eliminate double-blur muddiness.
+   - Demoted Workspace space rail (`.lgwsp-space-rail`) to quiet subordinate surface (`--lg-glass-tint`, no blur), automatically collapsed in hosted `[data-slot='main']` viewports (`max-width: 1559px`).
+3. **Spatial Navigation & Anchoring**:
+   - Model picker card and usage stats popovers dynamically anchor `transform-origin` to trigger quadrant (`above-start`, `below-start`, `above-end`, `below-end`) via `data-lg-placement`.
+   - Settings drill-down uses directional horizontal slide transitions (`data-lg-direction="forward"` on entry, `"back"` on return).
+4. **Honest Native Chrome**:
+   - Replaced decorative browser window dots, address bar, and non-functional glyphs in Workspace detail inspector with an honest native inspector header.
+5. **Concentric Geometry**:
+   - Row and card corner radii strictly follow concentric geometry: `border-radius: calc(var(--outer-r) - inset)` (e.g. 24px - 6px = 18px for `.lg-settings-row`).
+
+---
+
+## 8. Verification Command
 
 To re-run the presentation and contrast test suite:
 

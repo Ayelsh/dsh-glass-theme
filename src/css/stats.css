@@ -126,6 +126,26 @@ html[data-lg-stats] [data-composer-dock] {
   animation: lg-stats-in 150ms var(--lg-ease-out);
 }
 
+/* The panel grows out of the trigger it hangs from: the corner it scales from
+   follows data-lg-placement (set by placement in src/stats.js), so a panel that
+   fell below its trigger, or hangs off the left edge, does not scale from the
+   one corner that was only right for above-and-right-aligned. */
+.lg-stats-panel[data-lg-placement='above-start'] {
+  transform-origin: 0% 100%;
+}
+
+.lg-stats-panel[data-lg-placement='below-start'] {
+  transform-origin: 0% 0%;
+}
+
+.lg-stats-panel[data-lg-placement='above-end'] {
+  transform-origin: 100% 100%;
+}
+
+.lg-stats-panel[data-lg-placement='below-end'] {
+  transform-origin: 100% 0%;
+}
+
 @keyframes lg-stats-in {
   from {
     opacity: 0;
@@ -144,7 +164,7 @@ html[data-lg-stats] [data-composer-dock] {
   align-items: baseline;
   gap: 5px;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -234,7 +254,7 @@ html[data-lg-stats] [data-composer-dock] {
 
 .lg-stats-section-title {
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -257,7 +277,7 @@ html[data-lg-stats] [data-composer-dock] {
 
 .lg-stats-item .lg-stats-label {
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 16px;
 }
 
@@ -276,6 +296,19 @@ html[data-lg-stats] [data-composer-dock] {
   .lg-stats-panel {
     background-color: var(--lg-glass-solid);
   }
+}
+
+/* Press: 60ms tactile answer on the trigger (the panel itself is not pressable). */
+.lg-stats-trigger {
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform var(--lg-t-fast) var(--lg-ease-out);
+}
+
+.lg-stats-trigger:active {
+  transform: scale(0.97);
+  transition-duration: 60ms;
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -302,5 +335,9 @@ html[data-lg-stats] [data-composer-dock] {
   .lg-stats-segment,
   .lg-stats-trigger {
     transition: none;
+  }
+
+  .lg-stats-trigger:active {
+    transform: none;
   }
 }

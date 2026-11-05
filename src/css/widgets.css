@@ -166,9 +166,8 @@
   letter-spacing: -0.002em;
 }
 
-[class~='EEnIVa_meta'],
 [class~='EEnIVa_meta'] {
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-caption);
 }
@@ -190,7 +189,6 @@
 
 /* ---- File previews -------------------------------------------------- */
 [class~='_3R73eq_preview'],
-[class~='lLdGaq_document'],
 [class~='CsSxCG_frame'],
 [class~='bQZhyq_frame'],
 [class~='NYOO6G_code'],
@@ -206,12 +204,6 @@
   font-size: 12.5px;
   line-height: 1.65;
   text-autospace: no-autospace;
-}
-
-[class~='lLdGaq_document'] {
-  font-size: 14px;
-  line-height: 1.7;
-  letter-spacing: -0.003em;
 }
 
 [class~='uo9WDW_surface'] {
@@ -474,7 +466,7 @@
   background-color: var(--dsw-alias-markdown-code-block-banner);
   border-bottom: 0.5px solid var(--lg-hairline);
   padding: 5px 12px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--dsw-alias-label-tertiary);
@@ -549,7 +541,7 @@
   background-color: var(--lg-accent-soft);
   color: var(--lg-accent);
   padding: 0 5px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -711,34 +703,12 @@
 }
 
 /* ---- Ask-question card -------------------------------------------- */
-[class~='ZG377q_card'] {
-  border-radius: var(--lg-r-lg);
-  background-color: var(--lg-surface-raised);
-  box-shadow:
-    inset 0 0 0 0.5px var(--lg-hairline),
-    0 1px 3px rgba(16, 22, 40, 0.05);
-}
-
 [class~='ZG377q_item'] {
   border-radius: var(--lg-r-md);
   transition: background-color var(--lg-t-fast) var(--lg-ease-out);
 }
 
 [class~='ZG377q_item']:hover {
-  background-color: var(--dsw-alias-interactive-bg-hover);
-}
-
-/* ---- Goal bar / status line --------------------------------------- */
-[class~='Gc24Bq_bar'] {
-  border-radius: var(--lg-r-md);
-}
-
-[class~='Gc24Bq_iconBtn'] {
-  border-radius: var(--lg-r-sm);
-  transition: background-color var(--lg-t-fast) var(--lg-ease-out);
-}
-
-[class~='Gc24Bq_iconBtn']:hover {
   background-color: var(--dsw-alias-interactive-bg-hover);
 }
 
@@ -758,5 +728,19 @@
   [class~='EEnIVa_card']:active,
   [class~='NOA9Ua_chip']:active {
     transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [class~='acoR2W_panel'][data-sidebar-right-open] [class~='acoR2W_panelBody'],
+  [class~='bZwPEG_toolbar'] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  [class~='bZwPEG_toolbar'] {
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
   }
 }

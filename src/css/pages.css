@@ -147,7 +147,7 @@
 }
 
 [class~='Wsg8iW_groupHead'] {
-  font: var(--dsw-font-xxxs-strong-11);
+  font: var(--dsw-font-xxs-strong-12);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--dsw-alias-label-tertiary);
@@ -189,7 +189,7 @@
 
 [class~='Wsg8iW_cardId'] {
   font-family: var(--dsw-font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -206,7 +206,7 @@
   border-radius: var(--lg-r-xs);
   background-color: var(--dsw-alias-state-error-tertiary);
   color: var(--dsw-alias-state-error-primary);
-  font: var(--dsw-font-xxxs-strong-11);
+  font: var(--dsw-font-xxs-strong-12);
 }
 
 [class~='Wsg8iW_viewerCode'] {
@@ -254,7 +254,7 @@
   border-color: var(--lg-hairline);
   background-color: var(--lg-glass-tint);
   color: var(--dsw-alias-label-secondary);
-  font: var(--dsw-font-xxxs-11);
+  font: var(--dsw-font-xxs-12);
 }
 
 [class~='jrmgQW_credentialDot'] {
@@ -505,13 +505,16 @@
   border-radius: var(--lg-r-md);
   background-color: var(--lg-surface-sunken);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
+  font-size: 14px;
+  line-height: 1.7;
+  letter-spacing: -0.003em;
 }
 
 [class~='C7Zcma_chip'] {
   border-radius: var(--lg-r-sm);
   background-color: var(--dsw-alias-state-business-tertiary);
   color: var(--dsw-alias-state-business-primary);
-  font: var(--dsw-font-xxxs-strong-11);
+  font: var(--dsw-font-xxs-strong-12);
 }
 
 /* ---- Schedules / tasks ------------------------------------------------
@@ -628,10 +631,6 @@
   border-radius: var(--lg-r-pill);
 }
 
-[class~='Luqt-a_row'] {
-  border-radius: var(--lg-r-sm);
-}
-
 [class~='Luqt-a_title'] {
   font: var(--dsw-font-xs-strong-13);
 }
@@ -706,7 +705,7 @@
 
 [class~='xeixwq_kindTag'] {
   border-radius: var(--lg-r-xs);
-  font: var(--dsw-font-xxxs-strong-11);
+  font: var(--dsw-font-xxs-strong-12);
 }
 
 [class~='xeixwq_details'] {
@@ -752,10 +751,6 @@
 [class~='tzG23a_selection'] {
   background-color: color-mix(in srgb, var(--lg-accent) 22%, transparent);
   border-radius: var(--lg-r-xs);
-}
-
-[class~='Wd4N7W_root'] {
-  border-bottom-color: var(--lg-hairline);
 }
 
 [class~='Wd4N7W_searchInput'] {
@@ -840,7 +835,7 @@
 
 [class~='Fu0XRq_rowId'] {
   font-family: var(--dsw-font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -876,13 +871,6 @@
 }
 
 /* ---- Skill rows ------------------------------------------------------- */
-[class~='iJmaOG_card'] {
-  border-radius: var(--lg-r-md);
-  border-width: 1px;
-  border-color: var(--lg-hairline);
-  background-color: var(--lg-surface-raised);
-}
-
 [class~='iJmaOG_row'] {
   border-radius: var(--lg-r-sm);
 }
@@ -919,22 +907,6 @@
    Sits in the composer dock and states the session objective. It is chrome
    over content, so it is glass, and it is quiet until hovered because the
    objective is reference, not a call to action. */
-[class~='Gc24Bq_bar'],
-[class~='Gc24Bq_dock'] {
-  border-radius: var(--lg-r-md);
-  background-color: var(--lg-glass-tint);
-  box-shadow: inset 0 0 0 1px var(--lg-hairline);
-}
-
-[class~='Gc24Bq_objective'] {
-  font: var(--dsw-font-xxs-12);
-  color: var(--dsw-alias-label-secondary);
-}
-
-[class~='Gc24Bq_iconBtn'] {
-  border-radius: var(--lg-r-xs);
-}
-
 [class~='rhSLKq_bubble'] {
   border-radius: var(--lg-r-md);
   background-color: var(--lg-glass-tint);
@@ -968,7 +940,7 @@
   background-color: var(--lg-glass-tint);
   box-shadow: inset 0 0 0 1px var(--lg-hairline);
   font-family: var(--ds-font-family-code);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* The session-log upload row is one row in a list of rows, not a card. Giving it
@@ -1106,5 +1078,32 @@
   [class~='Iwzhua_themeCube']:active,
   [class~='Wsg8iW_card']:active {
     transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [class~='Wsg8iW_dialog'],
+  [class~='J8V0KW_dialog'],
+  [class~='Zf6DNq_card'],
+  [class~='Z17U9a_panel'],
+  [class~='js5r2G_root'],
+  [class~='xeixwq_details'],
+  [class~='St8tea_dialog'],
+  [class~='-4GESq_menu'] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  [class~='Wsg8iW_dialog'],
+  [class~='J8V0KW_dialog'],
+  [class~='Zf6DNq_card'],
+  [class~='Z17U9a_panel'],
+  [class~='js5r2G_root'],
+  [class~='xeixwq_details'],
+  [class~='St8tea_dialog'],
+  [class~='-4GESq_menu'] {
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
   }
 }

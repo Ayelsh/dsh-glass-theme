@@ -158,7 +158,7 @@ await check('the project spaces are switchable from the rail and from the toolba
 	// The banner folds away once a project is configured, so a picker that only
 	// lived there disappeared exactly when switching became interesting.
 	if (!/className: 'lgwsp-space-rail'/.test(src)) throw new Error('no project rail');
-	if (!/className: 'lgwsp-project-trigger'/.test(src)) throw new Error('no toolbar project control');
+	if (!/className: [`']lgwsp-project-trigger/.test(src)) throw new Error('no toolbar project control');
 	if (!/id: 'projectTrigger'/.test(src)) throw new Error('the toolbar control has no stable id');
 	if (!/void chooseTapdWorkspace\(id\)/.test(src)) throw new Error('picking a project does not switch');
 	// One action, two surfaces: the rail and the menu both go through

@@ -216,7 +216,15 @@ function createStats(require, ctx, catalog, shared) {
 				   and the clamps only engage near the window's own margin. */
 				let left = a.right - panelWidth;
 				left = Math.max(margin, Math.min(left, window.innerWidth - margin - panelWidth));
-				setPlacement({ top: Math.round(Math.max(margin, Math.min(top, window.innerHeight - panelHeight - margin))), left: Math.round(left) });
+				const finalTop = Math.round(Math.max(margin, Math.min(top, window.innerHeight - panelHeight - margin)));
+
+				/* Which corner the card grows out of: the side of the trigger it landed
+				   on, and the edge it hangs from. CSS turns this into a
+				   transform-origin so the open/close scale reads as emerging FROM the
+				   trigger instead of from one fixed corner. */
+				const vertical = finalTop + panelHeight <= a.top ? 'above' : 'below';
+				const horizontal = Math.abs(left - a.left) < Math.abs(left + panelWidth - a.right) ? 'start' : 'end';
+				setPlacement({ top: finalTop, left: Math.round(left), side: vertical + '-' + horizontal });
 			};
 			place();
 			/* The first pass measures while the panel is still materialising —
@@ -351,6 +359,7 @@ function createStats(require, ctx, catalog, shared) {
 				'aria-label': '上下文与用量',
 				ref: panelRef,
 				tabIndex: -1,
+				'data-lg-placement': placement === null ? undefined : placement.side,
 				style: placement === null ? { visibility: 'hidden' } : { top: placement.top + 'px', left: placement.left + 'px' },
 			},
 			React.createElement(

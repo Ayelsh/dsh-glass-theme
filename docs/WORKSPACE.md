@@ -80,12 +80,14 @@ wecom-cli auth init      # 首次授权
 
 ## 视觉与动效（遵循 apple-design / apple-liquid-glass）
 
-- **材料层次**：阅读面（卡片、列表）用实底 `--lg-surface-raised` + 0.5px 发丝线；只有浮起物（对话框）是真玻璃——`--lg-glass-3` + `blur(30px) saturate(190%)` + 三层阴影 + 顶缘高光。玻璃不叠玻璃。
-- **分段标签**：单一游标滑板随选中项平移（`var(--lg-t-base) var(--lg-ease-spring)` 弹簧），文字只变色——"selection travels"。
+- **材料层次**：阅读面（卡片、列表）用实底 `--lg-surface-raised` + 0.5px 发丝线；只有浮起物（对话框）是真玻璃——`--lg-glass-3` + `blur(30px) saturate(190%)` + 三层阴影 + 顶缘高光。空间轨（`.lgwsp-space-rail`）降级为从属的弱底表面（`--lg-glass-tint`，不叠 `blur` 滤镜），并在宿主 `[data-slot="main"]` 环境下折叠（<= 1559px），由顶栏空间选择胶囊（`#projectTrigger`）承载切换，避免双侧边栏打架；空间激活打勾指示居中对齐。玻璃不叠玻璃。
+- **分段标签**：单一游标滑板随选中项平移，采用临界阻尼 `--lg-ease-settle` 动效（0% 过冲），文字只变色——"selection travels"。
+- **诚实的原生检查器**：内页详情（`.lgwsp-inspector`）移除伪装成浏览器的装饰件（红黄绿点、假地址栏与无交互斜箭头），采用诚实的原生检查器头栏，保留全部真实会话与流转动作。
+- **统一控件语汇**：`企微协作`（`docs`）与`执行 CLI`（`console`）标签页中的搜索框、CLI 切换器、主要操作按钮均统合于 `.lgwsp-*` 语汇；状态药丸通过语义 `--chip-bg` 与 `--chip-color` 着色；聚焦卡定义语义 `--card-color`；实时数据状态绿点与演示/未连接状态空心圈明确区分。
 - **列表**：iOS 分组列表语法——容器圆角卡 + 行 hover + 0.5px 分隔线；关注条目的警示是其左缘 2px 插入条，不是整行变红（状态≠故障）。
-- **数字**：聚焦卡计数用 tabular-nums + -0.02em 字距；缺陷计数着 error 色、关注着 warn 色，卡片本身保持中性。
-- **指针反馈**：按钮 pointer-down 即时 scale(0.96) 收缩；spinner 是页面唯一常动元素且仅在加载时出现。
-- **三条无障碍线独立作答**：`prefers-reduced-motion`（滑板/对话框动画降为 1ms、按压反馈移除）、`prefers-reduced-transparency`（对话框改实底去 blur）、`prefers-contrast: more`（关键容器加 1px currentColor 内描边）。
+- **数字与文字下限**：聚焦卡计数用 tabular-nums + -0.02em 字距；缺陷计数着 error 色、关注着 warn 色，卡片本身保持中性。全局字体下限保持 >= 12px、行高 >= 17px。
+- **指针反馈**：按钮 pointer-down 即时 60ms scale(0.96) ~ scale(0.98) 触觉压缩收缩；spinner 是页面唯一常动元素且仅在加载时出现。
+- **三条无障碍线独立作答**：`prefers-reduced-motion`（滑板/对话框动画降为 1ms、按压反馈移除）、`prefers-reduced-transparency`（对话框改实底去 blur）、`prefers-contrast: more`（关键容器加 1px currentColor 内描边）。全局样式作用域严格限制在 `.lgwsp-workspace-page` 内。
 
 ## 代码落点
 

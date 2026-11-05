@@ -57,6 +57,7 @@
 [class~='V68kMG_selector'],
 [class~='_9r0rkG_cell'],
 [class~='AnXs9G_close'],
+[class~='pc3rQa_item'],
 [class~='hNGZaa_pill'] {
   transition-duration: var(--lg-t-fast);
   transition-timing-function: var(--lg-ease-out);
@@ -87,8 +88,12 @@
    that, because on release the base rule takes over.
    -------------------------------------------------------------------------- */
 [class~='wtg9ga_newSession']:active,
+[class~='wtg9ga_panelRow']:active,
 [class~='wnFoaW_sessionRow']:active,
 [class~='wnFoaW_projectRow']:active,
+[class~='AnXs9G_navCell']:active,
+[class~='pc3rQa_item']:active,
+[class~='GRgSLq_primary']:active:not(:disabled),
 [class~='EEnIVa_card']:active,
 [class~='NOA9Ua_chip']:active,
 [class~='V7pFBG_row']:active,
@@ -98,8 +103,11 @@
 }
 
 [class~='wtg9ga_newSession'],
+[class~='wtg9ga_panelRow'],
 [class~='wnFoaW_sessionRow'],
 [class~='wnFoaW_projectRow'],
+[class~='AnXs9G_navCell'],
+[class~='pc3rQa_item'],
 [class~='EEnIVa_card'],
 [class~='NOA9Ua_chip'],
 [class~='V7pFBG_row'],
@@ -155,17 +163,12 @@
 
 /* --------------------------------------------------------------------------
    4. The travelling indicator.
+   --------------------------------------------------------------------------
+   Travelling indicators are managed on plugin-owned segmented controls
+   (.lg-picker-seg-thumb, .lgwsp-segmented-plate) using --lg-ease-settle so
+   thumbs settle smoothly inside bounded tracks without overshoot. Host-owned
+   sidebar rows render solid filled selection plates directly.
    -------------------------------------------------------------------------- */
-/* A selection plate that cross-fades between positions reads as two plates
-   blinking. One plate that slides reads as a single object that moved, and the
-   eye tracks it. This is the only place in the skin where a longer duration is
-   correct: the travel has to be slow enough to be followed. */
-[class~='wtg9ga_panelActive']::before,
-[class~='wnFoaW_selected']::before {
-  transition:
-    transform var(--lg-t-base) var(--lg-ease-spring),
-    opacity var(--lg-t-fast) var(--lg-ease-out);
-}
 
 /* --------------------------------------------------------------------------
    5. Reduced motion — a real answer, not a blanket kill.
@@ -192,8 +195,11 @@
   /* No element may translate or scale on interaction. Colour and shadow carry
      the feedback instead, which is what the surfaces above already provide. */
   [class~='wtg9ga_newSession']:active,
+  [class~='wtg9ga_panelRow']:active,
   [class~='wnFoaW_sessionRow']:active,
   [class~='wnFoaW_projectRow']:active,
+  [class~='AnXs9G_navCell']:active,
+  [class~='pc3rQa_item']:active,
   [class~='EEnIVa_card']:active,
   [class~='NOA9Ua_chip']:active,
   [class~='V7pFBG_row']:active,
@@ -214,11 +220,6 @@
   [class~='GRgSLq_card']:focus-within,
   [class~='V4vHZW_toBottom']:hover {
     transform: none;
-  }
-
-  [class~='wtg9ga_panelActive']::before,
-  [class~='wnFoaW_selected']::before {
-    transition-duration: 1ms;
   }
 
   /* The running-state sheen and the live-session breath are the only looping

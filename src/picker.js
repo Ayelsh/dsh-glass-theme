@@ -512,7 +512,14 @@ const LAYERS = shared.layers || null;
 				if (left < margin) left = margin;
 				if (left + bWidth > window.innerWidth - margin) left = window.innerWidth - margin - bWidth;
 				top = Math.max(margin, Math.min(top, window.innerHeight - bHeight - margin));
-				setPlacement({ top: Math.round(top), left: Math.round(left) });
+
+				/* Which corner the card grows out of: the side of the trigger it landed
+				   on, and the edge it hangs from. CSS turns this into a
+				   transform-origin so the open/close scale reads as emerging FROM the
+				   trigger instead of from one fixed corner. */
+				const vertical = top + bHeight <= a.top ? 'above' : 'below';
+				const horizontal = Math.abs(left - a.left) < Math.abs(left + bWidth - a.right) ? 'start' : 'end';
+				setPlacement({ top: Math.round(top), left: Math.round(left), side: vertical + '-' + horizontal });
 				/* The sub-card opens to the LEFT of the card it extends, the way a
 				   submenu opens away from the edge it is anchored to. If there is
 				   no room it opens to the right instead of going off-screen.
@@ -1549,6 +1556,7 @@ const LAYERS = shared.layers || null;
 						role: 'dialog',
 						'aria-label': '模型',
 						ref: cardRef,
+						'data-lg-placement': placement === null ? undefined : placement.side,
 						style: placement === null ? { visibility: 'hidden' } : { top: placement.top + 'px', left: placement.left + 'px' },
 					},
 					React.createElement(

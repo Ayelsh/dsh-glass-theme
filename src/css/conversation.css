@@ -330,7 +330,7 @@
 }
 
 [class~='hKdVjq_ioLabel'] {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -658,7 +658,7 @@
 
 [class~='LOmM4q_turnErrorCode'] {
   font-family: var(--ds-font-family-code);
-  font-size: 11.5px;
+  font-size: 12px;
   border-radius: var(--lg-r-xs);
   padding: 1px 6px;
   background-color: color-mix(in srgb, var(--dsw-alias-state-error-primary) 14%, transparent);
@@ -669,5 +669,21 @@
     animation: none;
     background-image: linear-gradient(90deg, transparent, var(--lg-accent), transparent);
     background-size: 100% 100%;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [class~='V4vHZW_toBottom'],
+  [class~='SNx2jG_frame'],
+  [class~='SNx2jG_preview'] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  [class~='V4vHZW_toBottom'],
+  [class~='SNx2jG_frame'] {
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
   }
 }

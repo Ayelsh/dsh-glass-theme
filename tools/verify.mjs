@@ -160,7 +160,7 @@ for (const file of files) {
 // The skin's own executable half spans more than one source file (the picker,
 // the stats panel and the catalog are spliced into the bundle at build time), so
 // an attribute is "set by the skin" when ANY authored source emits it.
-const ownSources = ['client.js', 'picker.js', 'stats.js', 'settings-section.js', 'catalog.js']
+const ownSources = ['client.js', 'picker.js', 'stats.js', 'settings-section.js', 'catalog.js', 'workspace.js']
   .map((name) => {
     try {
       return readFileSync(resolve(here, '..', 'src', name), 'utf8')

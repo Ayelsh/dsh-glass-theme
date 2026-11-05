@@ -55,7 +55,6 @@ const markdownSample = [
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>${tokens}</style><style>${workspace}</style>
 <style>body { margin: 0; padding: 28px; background: #0b0e16; } .wrap { width: 430px; }</style></head>
 <body><div class="wrap"><div class="lgwsp-embedded-frame" role="document">
-<div class="lgwsp-frame-toolbar"><span class="lgwsp-frame-dots"><i class="lgwsp-frame-dot"></i><i class="lgwsp-frame-dot"></i><i class="lgwsp-frame-dot"></i></span><span class="lgwsp-frame-address">tapd://workspace/45368483/bug/1145368483001012673</span><span>↗</span></div>
 <div class="lgwsp-frame-content">
 <div class="lgwsp-detail-type" style="--item-color:#c0392b"><span class="lgwsp-detail-type-mark" style="--item-bg:rgba(192,57,43,.12)">BUG</span>缺陷</div>
 <h2 class="lgwsp-detail-title">【领导人列表】多城市群 AM（CNVTABCITYS），成长研讨会的 预估达成 数据 与 列表不一致</h2>

@@ -231,7 +231,12 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 		   if the provider disappeared. */
 		const returnProviderId = React.useRef(null);
 		const boardRef = React.useRef(null);
+		/* Which way the last view change travelled: 'forward' into a provider's
+		   model list, 'back' to the provider list. Emitted as data-lg-direction so
+		   the incoming view slides in from the matching side. */
+		const directionRef = React.useRef(null);
 		const openModels = (provider, element) => {
+			directionRef.current = 'forward';
 			returnProviderId.current = provider ? provider.id : null;
 			/* The draft starts as a copy of the saved entry, so the view always
 			   opens on the persisted truth, never on a previous unsaved visit. */
@@ -239,6 +244,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			setView(provider.id);
 		};
 		const closeModels = () => {
+			directionRef.current = 'back';
 			setView(null);
 			setDraft(null);
 		};
@@ -364,7 +370,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			if (current === null) {
 				return h(
 					'div',
-					{ className: 'lg-settings-view' },
+					{ className: 'lg-settings-view', 'data-lg-direction': 'forward' },
 					h(
 						'div',
 						{ className: 'lg-settings-viewHead' },
@@ -412,7 +418,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 						);
 			return h(
 				'div',
-				{ className: 'lg-settings-view' },
+				{ className: 'lg-settings-view', 'data-lg-direction': 'forward' },
 				h(
 					'div',
 					{ className: 'lg-settings-viewHead' },
@@ -502,7 +508,11 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			return [
 				h(
 					'ul',
-					{ className: 'lg-settings-list', key: 'list' },
+					{
+						className: 'lg-settings-list',
+						key: 'list',
+						'data-lg-direction': directionRef.current === 'back' ? 'back' : undefined,
+					},
 					list.map((provider, index) => {
 						const on = pinned.indexOf(provider.id) >= 0;
 						const entry = chosen(selection, provider.id);

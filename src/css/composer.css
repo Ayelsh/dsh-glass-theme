@@ -137,7 +137,7 @@
 }
 
 [class~='GRgSLq_primary']:active:not(:disabled) {
-  transform: translateY(-1px) scale(0.94);
+  transform: scale(0.95);
 }
 
 [class~='GRgSLq_primary']:disabled {
@@ -309,7 +309,7 @@
   padding: 0 6px;
   background-color: var(--lg-accent-soft);
   color: var(--lg-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -343,5 +343,21 @@
 @media (prefers-reduced-motion: reduce) {
   [class~='GRgSLq_primary']:active:not(:disabled) {
     transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [class~='GRgSLq_card']::before,
+  [class~='F07MqG_panel'],
+  [class~='F07MqG_dock'] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  [class~='F07MqG_panel'],
+  [class~='F07MqG_dock'] {
+    box-shadow: inset 0 0 0 1px var(--lg-hairline);
   }
 }

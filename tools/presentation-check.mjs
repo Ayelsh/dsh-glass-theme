@@ -352,6 +352,7 @@ const pageHtml = (names) => `<!doctype html>
 				let currentSelection = options.selection || { providers: ['prov-a'], models: {} };
 				const prefListeners = new Set();
 				const prefs = {
+					max: 4,
 					selection: () => currentSelection,
 					get: (key) => (options.prefs ? options.prefs[key] : true),
 					set: () => {},
