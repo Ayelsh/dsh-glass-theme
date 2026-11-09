@@ -53,6 +53,15 @@ var SIDEBAR_LAYOUTS = [SIDEBAR_LAYOUT_RELAXED, SIDEBAR_LAYOUT_COMPACT];
 var ONGOING_INDICATOR_BREATHE = "breathe";
 var ONGOING_INDICATOR_RING = "ring";
 var ONGOING_INDICATORS = [ONGOING_INDICATOR_BREATHE, ONGOING_INDICATOR_RING];
+var TEAM_FEATURE_PALETTE = "palette";
+var TEAM_FEATURE_MEMORY = "memory";
+var TEAM_FEATURE_SIDE_CHAT = "sideChat";
+var TEAM_FEATURE_HANDOFF = "handoff";
+var TEAM_FEATURES = [TEAM_FEATURE_PALETTE, TEAM_FEATURE_MEMORY, TEAM_FEATURE_SIDE_CHAT, TEAM_FEATURE_HANDOFF];
+var TEAM_FEATURES_DEFAULT = [TEAM_FEATURE_PALETTE, TEAM_FEATURE_MEMORY, TEAM_FEATURE_SIDE_CHAT, TEAM_FEATURE_HANDOFF];
+var TEAM_AUTONOMY_OBSERVE = "observe";
+var TEAM_AUTONOMY_AUTO = "auto";
+var TEAM_AUTONOMY_MODES = [TEAM_AUTONOMY_OBSERVE, TEAM_AUTONOMY_AUTO];
 var CHAT_ANIMATIONS_OFF = "off";
 var STATS_POSITION_INLINE = "inline";
 var STATS_POSITION_CONTEXT = "context";
@@ -128,6 +137,16 @@ var PREFS = {
   permissionsControl: { type: "boolean", default: true },
   statsPosition: { type: "choice", values: STATS_POSITIONS, default: STATS_POSITION_CONTEXT },
   workspaceView: { type: "boolean", default: true },
+  /** 团队 sidebar: master switch for the team surface. */
+  teamSidebar: { type: "boolean", default: true },
+  /** 团队 sidebar: which features the panel shows (palette, memory, sideChat, handoff). */
+  teamFeatures: { type: "list", default: TEAM_FEATURES_DEFAULT, max: TEAM_FEATURES.length, entryMax: 16 },
+  /** 团队 sidebar: autonomy mode ('observe' default vs 'auto'). */
+  teamAutonomyMode: { type: "choice", values: TEAM_AUTONOMY_MODES, default: TEAM_AUTONOMY_OBSERVE },
+  /** 团队 sidebar: external watchdog evaluation loop. */
+  teamWatchdog: { type: "boolean", default: true },
+  /** 团队 sidebar: whether the team panel is stowed (view state, not part of reset). */
+  teamCollapsed: { type: "boolean", default: true },
   dockCards: { type: "boolean", default: true },
   sidebarSearch: { type: "boolean", default: true },
   searchStyle: { type: "choice", values: SEARCH_STYLES, default: SEARCH_STYLE_OVERLAY },
@@ -197,5 +216,8 @@ function registerSettings(ctx) {
 }
 export {
   Config,
-  registerSettings
+  registerSettings,
+  TEAM_AUTONOMY_OBSERVE,
+  TEAM_AUTONOMY_AUTO,
+  TEAM_AUTONOMY_MODES
 };

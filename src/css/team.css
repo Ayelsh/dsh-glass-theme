@@ -1,0 +1,776 @@
+/* ==================================================================
+ * Team sidebar — the team panel that lives in the app sidebar.
+ *
+ * The team surface claims a seat inside the sidebar's region area
+ * (sidebar.workspaces slot): while `data-lg-team-open` holds on the
+ * document element, the session browser yields and the team host
+ * fills the region; the moment the attribute clears, the browser
+ * returns. No floating column, no push margins — the sidebar keeps
+ * its own width, collapse and rhythm. Everything here draws from the
+ * shared tokens (tokens.css) and the app's alias vars — no raw
+ * colors, same discipline as the other sheets.
+ * ================================================================== */
+
+/* Swap, never coexist: open state hides the browser entries and shows
+ * only the team host. The hashed regionArea class is matched loosely
+ * (substring) so a build hash change cannot break the swap. The shell
+ * wraps every slot entry in its own `div[data-slot]` (display:contents),
+ * so the suppressor works at the wrapper layer: a wrapper that does not
+ * carry the team host yields, and stray direct children yield too.
+ * `:has` is available in the app's Chromium. */
+.lg-team-regionHost {
+	display: none;
+	min-height: 0;
+}
+[data-lg-team-open='true'] .lg-team-regionHost,
+[data-lg-team-open='true'] [class~='wtg9ga_regionArea'] .lg-team-regionHost,
+[data-lg-team-open='true'] [class*='regionArea'] .lg-team-regionHost {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+}
+[data-lg-team-open='true'] [class~='wtg9ga_regionArea'] > [data-slot]:not(:has(> .lg-team-regionHost)),
+[data-lg-team-open='true'] [class*='regionArea'] > [data-slot]:not(:has(> .lg-team-regionHost)),
+[data-lg-team-open='true'] [class~='wtg9ga_regionArea'] > :not([data-slot]):not(.lg-team-regionHost),
+[data-lg-team-open='true'] [class*='regionArea'] > :not([data-slot]):not(.lg-team-regionHost) {
+	display: none;
+}
+
+.lg-team-root {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	color: var(--dsw-alias-label-primary);
+	font-size: 12px;
+	line-height: 1.45;
+	overflow: hidden;
+}
+
+.lg-team-root[hidden] {
+	display: none;
+}
+
+/* Collapsed (收纳): the whole host yields to the session browser via
+ * the open attribute; these rules only matter for the frames between
+ * a toggle and the attribute sync. */
+.lg-team-root[data-collapsed='true'] .lg-team-head,
+.lg-team-root[data-collapsed='true'] .lg-team-scroll,
+.lg-team-root[data-collapsed='true'] .lg-team-foot,
+.lg-team-root[data-collapsed='true'] .lg-team-panel,
+.lg-team-root[data-collapsed='true'] .lg-team-newBox,
+.lg-team-root[data-collapsed='true'] .lg-team-confirm {
+	display: none;
+}
+
+/* Footer toggle (sidebar.footer.action slot): the always-visible stow
+ * switch that lives beside the browser's own controls. */
+.lg-team-sideToggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	border: none;
+	border-radius: var(--lg-r-pill);
+	background-color: transparent;
+	color: var(--dsw-alias-label-secondary);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 5px 10px;
+	cursor: pointer;
+	transition: background-color var(--lg-t-fast) var(--lg-ease-out), color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-sideToggle:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+	color: var(--dsw-alias-label-primary);
+}
+.lg-team-sideToggle[aria-pressed='true'] {
+	background-color: var(--lg-accent-soft);
+	color: var(--dsw-alias-label-primary);
+}
+
+/* Head */
+.lg-team-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 12px 14px 8px;
+}
+.lg-team-title {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--dsw-alias-label-primary);
+}
+
+/* Scroll body */
+.lg-team-scroll {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0 12px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.lg-team-label {
+	margin: 10px 4px 4px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--dsw-alias-label-tertiary);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+/* Roster rows */
+.lg-team-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 7px 9px;
+	border-radius: var(--lg-r-md);
+	cursor: pointer;
+	transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-row:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+}
+.lg-team-row.is-lead .lg-team-name {
+	font-weight: 600;
+}
+.lg-team-row.is-focused {
+	background-color: var(--lg-selection-fill);
+}
+.lg-team-row.is-focused .lg-team-name,
+.lg-team-row.is-focused .lg-team-role {
+	color: var(--lg-selection-label);
+}
+.lg-team-row.is-focused .lg-team-dot {
+	border-color: color-mix(in srgb, var(--lg-selection-label) 60%, transparent);
+}
+.lg-team-rowMain {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-width: 0;
+}
+.lg-team-avatarBox {
+	width: 26px;
+	height: 26px;
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--lg-r-sm);
+	overflow: hidden;
+	background-color: var(--lg-glass-tint);
+	border: 0.5px solid var(--lg-hairline);
+}
+.lg-team-avatar,
+.lg-team-identicon {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+.lg-team-avatar object-fit {
+	object-fit: cover;
+}
+.lg-team-rowText {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+.lg-team-name {
+	font-size: 12px;
+	color: var(--dsw-alias-label-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.lg-team-role {
+	font-size: 10.5px;
+	color: var(--dsw-alias-label-tertiary);
+}
+.lg-team-rowMeta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: none;
+}
+
+/* Presence dot */
+.lg-team-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: var(--lg-r-pill);
+	border: 0.5px solid var(--lg-hairline-strong);
+	background-color: var(--dsw-alias-label-caption);
+	flex: none;
+	transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-dot[data-presence='working'] {
+	background-color: var(--lg-accent);
+	box-shadow: 0 0 0 3px var(--lg-accent-soft);
+	animation: lg-breathe 2.4s var(--lg-ease-in-out) infinite;
+}
+
+/* Badges: unread count, mention marker outranks (spec: @ beats plain). */
+.lg-team-badge {
+	min-width: 17px;
+	height: 15px;
+	padding: 0 4px;
+	border-radius: var(--lg-r-pill);
+	background-color: var(--dsw-alias-label-secondary);
+	color: var(--lg-selection-label);
+	font-size: 9.5px;
+	font-weight: 600;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.lg-team-badge.is-mention {
+	background-color: var(--lg-accent);
+	box-shadow: 0 0 0 2px var(--lg-accent-soft);
+}
+
+/* Rooms */
+.lg-team-room {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 7px 9px;
+	border-radius: var(--lg-r-md);
+	cursor: pointer;
+	transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-room:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+}
+.lg-team-roomHead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+}
+.lg-team-goal {
+	margin: 0;
+	font-size: 10.5px;
+	color: var(--dsw-alias-label-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.lg-team-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+}
+.lg-team-chip {
+	padding: 1px 6px;
+	border-radius: var(--lg-r-pill);
+	background-color: var(--lg-glass-tint);
+	border: 0.5px solid var(--lg-hairline);
+	font-size: 9.5px;
+	color: var(--dsw-alias-label-tertiary);
+}
+
+/* Footer tools */
+.lg-team-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 8px 10px;
+	border-top: 0.5px solid var(--lg-hairline);
+}
+
+/* Buttons */
+.lg-team-btn {
+	border: 0.5px solid var(--lg-hairline);
+	border-radius: var(--lg-r-md);
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-primary);
+	font-size: 11px;
+	padding: 4px 8px;
+	cursor: pointer;
+	transition:
+		background-color var(--lg-t-fast) var(--lg-ease-out),
+		color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-btn:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+}
+.lg-team-btn:focus-visible {
+	outline: 1.5px solid var(--lg-selection-label);
+	box-shadow: 0 0 0 3px var(--lg-accent-soft);
+}
+
+/* Empty states and hints */
+.lg-team-empty {
+	margin: 2px 6px;
+	font-size: 11px;
+	color: var(--dsw-alias-label-caption);
+}
+.lg-team-hint {
+	margin: 4px 2px 0;
+	font-size: 10.5px;
+	color: var(--dsw-alias-label-caption);
+}
+
+/* Member panel */
+.lg-team-panel {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 12px 12px 10px;
+	background-color: var(--lg-glass-solid);
+	backdrop-filter: blur(26px) saturate(180%);
+	-webkit-backdrop-filter: blur(26px) saturate(180%);
+	overflow-y: auto;
+}
+.lg-team-panelHead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	margin-bottom: 4px;
+}
+.lg-team-panelTitle {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--dsw-alias-label-primary);
+}
+.lg-team-section {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 8px;
+}
+.lg-team-card {
+	border: 0.5px solid var(--lg-hairline);
+	border-radius: var(--lg-r-md);
+	background-color: var(--lg-glass-tint);
+	padding: 7px 9px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+.lg-team-cardText {
+	margin: 0;
+	font-size: 11.5px;
+	color: var(--dsw-alias-label-primary);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+.lg-team-cardRow {
+	display: flex;
+	gap: 5px;
+}
+.lg-team-memList,
+.lg-team-ckptList {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.lg-team-memItem {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	border-radius: var(--lg-r-md);
+	background-color: var(--lg-glass-tint);
+	border: 0.5px solid var(--lg-hairline);
+	padding: 6px 8px;
+}
+.lg-team-memText {
+	margin: 0;
+	font-size: 11.5px;
+	color: var(--dsw-alias-label-primary);
+	word-break: break-word;
+}
+
+/* Side chat transcript */
+.lg-team-sideLog {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.lg-team-sideMsg {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	border-radius: var(--lg-r-md);
+	padding: 5px 8px;
+	border: 0.5px solid var(--lg-hairline);
+	background-color: var(--lg-glass-tint);
+}
+.lg-team-sideMsg.is-me {
+	align-self: stretch;
+}
+.lg-team-sideTime {
+	font-size: 9px;
+	color: var(--dsw-alias-label-caption);
+}
+.lg-team-sideText {
+	margin: 0;
+	font-size: 11.5px;
+	color: var(--dsw-alias-label-primary);
+	word-break: break-word;
+}
+
+/* Composers */
+.lg-team-composer {
+	display: flex;
+	gap: 5px;
+}
+.lg-team-composerInput,
+.lg-team-newInput {
+	flex: 1;
+	min-width: 0;
+	border: 0.5px solid var(--lg-hairline);
+	border-radius: var(--lg-r-md);
+	background-color: var(--dsw-alias-bg-layer-1);
+	color: var(--dsw-alias-label-primary);
+	font-size: 11.5px;
+	padding: 5px 8px;
+}
+.lg-team-composerInput:focus-visible,
+.lg-team-newInput:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px var(--lg-accent-ring);
+}
+.lg-team-composer textarea.lg-team-newInput,
+textarea.lg-team-newInput {
+	resize: vertical;
+}
+
+/* New member / room box */
+.lg-team-newBox {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin: 4px 2px;
+	padding: 9px;
+	border: 0.5px solid var(--lg-hairline);
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lg-glass-2);
+	box-shadow: var(--lg-shadow-1);
+}
+
+/* Destructive-action confirmation card */
+.lg-team-confirm {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 4px 2px;
+	padding: 9px;
+	border: 0.5px solid var(--lg-hairline-strong, var(--lg-hairline));
+	border-radius: var(--lg-r-lg);
+	background-color: var(--lg-glass-2);
+	box-shadow: var(--lg-shadow-1);
+}
+.lg-team-btn.lg-team-danger {
+	color: var(--dsw-alias-label-primary);
+	background-color: var(--lg-accent-soft);
+}
+
+/* Context menu */
+.lg-team-menu {
+	position: fixed;
+	z-index: 80;
+	min-width: 140px;
+	display: flex;
+	flex-direction: column;
+	padding: 4px;
+	border-radius: var(--lg-r-md);
+	border: 0.5px solid var(--lg-hairline);
+	background-color: var(--lg-glass-solid);
+	backdrop-filter: blur(26px) saturate(180%);
+	-webkit-backdrop-filter: blur(26px) saturate(180%);
+	box-shadow:
+		inset 0 0.5px 0 var(--lg-edge-top),
+		var(--lg-shadow-1);
+}
+.lg-team-menuItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	border: 0;
+	background-color: transparent;
+	color: var(--dsw-alias-label-primary);
+	font-size: 11.5px;
+	text-align: left;
+	padding: 6px 9px;
+	border-radius: var(--lg-r-sm);
+	cursor: pointer;
+	transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-menuItem:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+}
+.lg-team-menuItem.is-disabled {
+	color: var(--dsw-alias-label-caption);
+	cursor: default;
+}
+.lg-team-menuItem.is-disabled:hover {
+	background-color: transparent;
+}
+.lg-team-menuItem.is-danger {
+	color: var(--lg-accent-strong);
+}
+.lg-team-menuHint {
+	font-size: 9.5px;
+	color: var(--dsw-alias-label-caption);
+}
+
+/* Command palette */
+.lg-team-palette {
+	position: fixed;
+	z-index: 90;
+	top: 18vh;
+	left: 50%;
+	transform: translateX(-50%);
+	width: min(420px, 86vw);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 10px;
+	border-radius: var(--lg-r-lg);
+	border: 0.5px solid var(--lg-hairline);
+	background-color: var(--lg-glass-solid);
+	backdrop-filter: blur(26px) saturate(180%);
+	-webkit-backdrop-filter: blur(26px) saturate(180%);
+	box-shadow:
+		inset 0 0.5px 0 var(--lg-edge-top),
+		var(--lg-shadow-1);
+}
+.lg-team-paletteInput {
+	border: 0.5px solid var(--lg-hairline);
+	border-radius: var(--lg-r-md);
+	background-color: var(--dsw-alias-bg-layer-1);
+	color: var(--dsw-alias-label-primary);
+	font-size: 12.5px;
+	padding: 7px 10px;
+}
+.lg-team-paletteInput:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px var(--lg-accent-ring);
+}
+.lg-team-paletteList {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 320px;
+	overflow-y: auto;
+}
+.lg-team-paletteItem {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	border: 0;
+	background-color: transparent;
+	color: var(--dsw-alias-label-primary);
+	font-size: 12px;
+	text-align: left;
+	padding: 7px 9px;
+	border-radius: var(--lg-r-md);
+	cursor: pointer;
+	transition: background-color var(--lg-t-fast) var(--lg-ease-out);
+}
+.lg-team-paletteItem:hover {
+	background-color: var(--dsw-alias-interactive-bg-hover);
+}
+.lg-team-paletteItem.is-active {
+	background-color: var(--lg-selection-fill);
+	color: var(--lg-selection-label);
+}
+.lg-team-paletteItem.is-active .lg-team-paletteCaption {
+	color: color-mix(in srgb, var(--lg-selection-label) 74%, transparent);
+}
+.lg-team-paletteLabel {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.lg-team-paletteCaption {
+	font-size: 10.5px;
+	color: var(--dsw-alias-label-caption);
+	flex: none;
+}
+.lg-team-paletteEmpty {
+	padding: 10px 6px;
+	font-size: 11px;
+	color: var(--dsw-alias-label-caption);
+}
+
+/* Reduced motion: the team column moves instantly, presence keeps state. */
+@media (prefers-reduced-motion: reduce) {
+	.lg-team-root,
+	.lg-team-row,
+	.lg-team-room,
+	.lg-team-btn,
+	.lg-team-menuItem,
+	.lg-team-paletteItem {
+		transition: none;
+	}
+	.lg-team-dot[data-presence='working'] {
+		animation: none;
+	}
+}
+
+/* --- Super-agent: autonomy, tickets, pass-through, and recall ------------- */
+
+.lg-team-modeBtn {
+	cursor: pointer;
+	border: 0.5px solid var(--lg-hairline);
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-secondary);
+	padding: 2px 7px;
+	border-radius: var(--lg-r-pill);
+	font-size: 10px;
+	transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lg-team-modeBtn[data-mode='auto'] {
+	background-color: var(--dsw-alias-accent);
+	color: var(--dsw-alias-label-invert);
+	border-color: transparent;
+}
+.lg-team-modeBtn:hover {
+	background-color: var(--lg-surface-hover);
+}
+
+.lg-team-roleBadge {
+	font-size: 9.5px;
+	padding: 1px 4px;
+	border-radius: var(--lg-r-sm);
+	color: var(--dsw-alias-label-secondary);
+}
+.lg-team-roleBadge.is-lead {
+	color: var(--dsw-alias-accent);
+	font-weight: 500;
+}
+
+.lg-team-ticketBadge {
+	background-color: var(--lg-glass-tint);
+	border: 0.5px solid var(--lg-hairline);
+	color: var(--dsw-alias-label-primary);
+	font-size: 9.5px;
+}
+
+.lg-team-passPill,
+.lg-team-passChip {
+	background-color: color-mix(in srgb, var(--dsw-alias-accent) 18%, transparent);
+	color: var(--dsw-alias-accent);
+	border: 0.5px solid color-mix(in srgb, var(--dsw-alias-accent) 30%, transparent);
+	font-size: 9px;
+}
+
+.lg-team-quickApprove {
+	padding: 2px 6px;
+	font-size: 9.5px;
+	background-color: var(--dsw-alias-accent);
+	color: var(--dsw-alias-label-invert);
+	border-color: transparent;
+}
+
+.lg-team-btnXs {
+	padding: 2px 6px;
+	font-size: 10px;
+	line-height: 1.2;
+}
+
+.lg-team-chipsSelect {
+	margin-top: 4px;
+	margin-bottom: 6px;
+}
+.lg-team-chipsSelect .lg-team-chip {
+	cursor: pointer;
+	border: 0.5px solid var(--lg-hairline);
+	background-color: var(--lg-glass-tint);
+	color: var(--dsw-alias-label-secondary);
+	padding: 2px 8px;
+	border-radius: var(--lg-r-pill);
+	font-size: 10.5px;
+	transition: all 140ms ease;
+}
+.lg-team-chipsSelect .lg-team-chip.is-selected {
+	background-color: var(--dsw-alias-accent);
+	color: var(--dsw-alias-label-invert);
+	border-color: transparent;
+}
+
+.lg-team-recallSection {
+	margin-top: 10px;
+}
+.lg-team-ticketList {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.lg-team-ticketCard {
+	border-left: 2.5px solid var(--lg-hairline);
+	padding: 6px 8px;
+}
+.lg-team-ticketCard.is-observed {
+	border-left-color: var(--dsw-alias-warning, #f59e0b);
+}
+.lg-team-ticketCard.is-working,
+.lg-team-ticketCard.is-queued {
+	border-left-color: var(--dsw-alias-accent);
+}
+.lg-team-ticketCard.is-ready,
+.lg-team-ticketCard.is-merged {
+	border-left-color: var(--dsw-alias-success, #10b981);
+}
+.lg-team-ticketCard.is-stalled {
+	border-left-color: var(--dsw-alias-danger, #ef4444);
+}
+
+.lg-team-cardHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+}
+.lg-team-ticketTitle {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--dsw-alias-label-primary);
+}
+.lg-team-ticketSummary {
+	font-size: 10.5px;
+	color: var(--dsw-alias-label-secondary);
+	margin: 4px 0;
+	line-height: 1.35;
+}
+.lg-team-recallRefs {
+	margin: 4px 0;
+}
+.lg-team-spillDetails {
+	margin-top: 6px;
+	padding: 6px;
+	background-color: var(--lg-surface-hover);
+	border-radius: var(--lg-r-sm);
+	overflow-x: auto;
+}
+.lg-team-pre {
+	margin: 0;
+	font-size: 10px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	white-space: pre-wrap;
+	word-break: break-all;
+	color: var(--dsw-alias-label-secondary);
+}

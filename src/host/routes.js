@@ -13,6 +13,8 @@ var BRAND_PATH = `${ROUTE_PREFIX}/brand`;
 var BRAND_MARK_PATH = `${ROUTE_PREFIX}/brand/mark`;
 var BRAND_WORDMARK_PATH = `${ROUTE_PREFIX}/brand/wordmark`;
 var PEAKRATE_PATH = `${ROUTE_PREFIX}/peakrate`;
+var TEAM_PATH = `${ROUTE_PREFIX}/team`;
+var TEAM_BODY_MAX = 64 * 1024;
 
 // packages/host/src/routes.ts
 import { existsSync as existsSync2, readFileSync as readFileSync2, readdirSync, realpathSync, rmSync, statSync } from "node:fs";
@@ -170,6 +172,8 @@ import { createHdslAccount } from "./hdsl.js";
 import { packageRoot } from "./package-root.js";
 import { createPeakRate } from "./peakrate.js";
 import { QUERY_MAX, createSessionSearch } from "./search.js";
+import { createTeamLive } from "./team-live.js";
+import { createTeamStore } from "./team-store.js";
 import { createUsage } from "./usage.js";
 var COPY_FILE = "model-descriptions.json";
 var FONT_FILES = {
@@ -272,6 +276,8 @@ function registerRoutes(ctx, scope) {
     const hdsl = createHdslAccount(ctx);
     const sessionSearch = createSessionSearch(ctx);
     const peakrate = createPeakRate(ctx);
+    const team = createTeamStore(ctx);
+    const teamLive = createTeamLive(ctx, () => team.snapshot().profiles.map((profile) => profile.name));
     const register = (label, route) => {
       try {
         const dispose = server.register(route);
@@ -425,11 +431,55 @@ function registerRoutes(ctx, scope) {
         sendPayload(res, answer);
       }
     });
+    register("team", {
+      kind: "exact",
+      path: TEAM_PATH,
+      handler: (req, res) => {
+        if (methodRefused(req, res, ["GET", "POST"])) return;
+        if (fenceRefused(ctx, req, res)) return;
+        if (req.method === "POST") {
+          void (async () => {
+            const raw = await readRequestBody(req, TEAM_BODY_MAX);
+            if (raw === null) {
+              sendJson(res, 413, { ok: false, error: "team request too large" });
+              return;
+            }
+            let request = null;
+            try {
+              request = JSON.parse(raw.toString("utf8"));
+            } catch {
+              request = null;
+            }
+            const kind = request !== null && typeof request === "object" && typeof request.kind === "string" ? request.kind : "";
+            if (kind === "") {
+              sendJson(res, 400, { ok: false, error: "team mutation needs a kind" });
+              return;
+            }
+            const result = team.apply(kind, request);
+            if (!result.ok) {
+              sendJson(res, 400, { ok: false, error: String(result.error ?? "team mutation refused") });
+              return;
+            }
+            sendJson(res, 200, { ok: true, team: team.snapshot() });
+          })().catch((error) => {
+            if (res.headersSent) res.destroy();
+            else sendJson(res, 500, { ok: false, error: String(error?.message ?? String(error)) });
+          });
+          return;
+        }
+        const settled = teamLive.refresh();
+        sendPayload(res, settled.then(() => {
+          const state = team.snapshot();
+          return { team: state, live: teamLive.snapshot().payload(state.seen) };
+        }));
+      }
+    });
     for (const { label, route } of brandRoutes(ctx)) register(label, route);
     return () => {
       usage.dispose();
       peakrate.dispose();
       sessionSearch.dispose();
+      teamLive.dispose();
       for (const dispose of disposers) {
         try {
           dispose();

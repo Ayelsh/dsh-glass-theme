@@ -59,6 +59,9 @@ window.__ModuleLoader__.load({
 		/** @type {Function} — inlined from src/layers.js at build time. */
 		const createLayers = /*__LAYERS__*/null;
 
+		/** @type {Function} — inlined from src/team.js at build time. */
+		const createTeam = /*__TEAM__*/null;
+
 		/** Build stamp, inlined at build time. */
 		const built = /*__BUILT__*/"";
 
@@ -1405,11 +1408,17 @@ window.__ModuleLoader__.load({
 				selection() {
 					return copySelection(state);
 				},
-				/** Write one scalar preference through the host entry. */
+				/** Write one scalar preference through the host entry. Some builds
+				 *  of the config form only expose the batched `mutate` ops (the
+				 *  same channel the quick-provider picker uses), so fall back
+				 *  to it when the scalar helper is missing — otherwise every
+				 *  scalar write would silently no-op. */
 				async write(field, value) {
 					if (form === null) return false;
 					try {
-						return await form.set(field, value);
+						if (typeof form.set === 'function') return await form.set(field, value);
+						const accepted = await form.mutate([{ op: 'set', path: [field], value }]);
+						return accepted !== false;
 					} catch (error) {
 						return false;
 					}
@@ -1855,6 +1864,68 @@ window.__ModuleLoader__.load({
 				});
 			} catch (error) {
 				console.error('dsh-glass-theme: could not install the workspace panel', error);
+			}
+
+			/* The 团队 sidebar: one fixed glass column next to the app sidebar —
+			   roster, rooms, member surfaces. Facts come from the host team
+			   route; the column pushes the chat through --lg-team-width and
+			   never touches the app's tree. Like the workspace panel it owns a
+			   single switch (`teamSidebar`), plus form/width/features
+			   preferences it re-reads on every prefs echo. Mounted in its own
+			   effect so a team failure cannot take the skin down (spec:
+			   containment). */
+			try {
+				ctx.effect(() => {
+					const team = createTeam(require, ctx, catalog, shared, prefs);
+					let handle = null;
+					const open = () => {
+						if (handle !== null) return;
+						try {
+							handle = team.register();
+							if (handle !== null && typeof handle.start === 'function') handle.start();
+						} catch (error) {
+							console.error('dsh-glass-theme: could not register the team sidebar', error);
+							handle = null;
+						}
+					};
+					const close = () => {
+						if (handle === null) return;
+						const current = handle;
+						handle = null;
+						try {
+							current.stop();
+						} catch (error) {
+							/* already stopped */
+						}
+					};
+					const wanted = () => {
+						if (prefs === null) return true;
+						const value = prefs.get('teamSidebar');
+						return value === undefined ? true : value !== false;
+					};
+					if (wanted()) open();
+					let stopWatch = null;
+					if (prefs !== null) {
+						try {
+							stopWatch = prefs.subscribe(() => {
+								if (wanted()) open();
+								else close();
+							});
+						} catch (error) {
+							stopWatch = null;
+						}
+					}
+					return () => {
+						try {
+							stopWatch && stopWatch();
+						} catch (error) {
+							/* already stopped */
+						}
+						close();
+					};
+				});
+			} catch (error) {
+				console.error('dsh-glass-theme: could not install the team sidebar', error);
 			}
 
 			try {

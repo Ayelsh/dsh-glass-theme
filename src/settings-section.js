@@ -109,6 +109,23 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			const value = prefs.get('workspaceView');
 			return value === undefined ? true : value !== false;
 		});
+		/* The team group mirrors the host prefs the same way: undefined until the
+		   host speaks means the default, and every control writes through the
+		   adapter so the team panel follows instantly. */
+		const [team, setTeam] = React.useState(() => ({ on: true, features: null, autonomyMode: 'observe', watchdog: true }));
+		const readTeam = () => {
+			if (!prefs) return;
+			const on = prefs.get('teamSidebar');
+			const features = prefs.get('teamFeatures');
+			const autonomyMode = prefs.get('teamAutonomyMode');
+			const watchdog = prefs.get('teamWatchdog');
+			setTeam({
+				on: on === undefined ? true : on !== false,
+				features: Array.isArray(features) ? features : null,
+				autonomyMode: autonomyMode === 'auto' ? 'auto' : 'observe',
+				watchdog: watchdog === undefined ? true : watchdog !== false,
+			});
+		};
 
 		/* The adapter is the single source of truth for both preferences: the page
 		   re-renders from its published state, not from a local copy, so a write
@@ -120,6 +137,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 				setSelection(prefs.selection());
 				const value = prefs.get('workspaceView');
 				setWorkspace(value === undefined ? true : value !== false);
+				readTeam();
 			};
 			read();
 			return prefs.subscribe(read);
@@ -366,6 +384,113 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			)
 		);
 
+		/* The 团队 group: the same honesty as the workspace switch. The switch
+		   removes the whole team surface; the sub-controls below only exist while
+		   it is on, and every one of them writes the matching host preference.
+		   The feature checkboxes name the four surfaces the panel can grow. */
+		const TEAM_FEATURE_ITEMS = [
+			{ id: 'palette', label: '⌘K 面板' },
+			{ id: 'memory', label: '记忆' },
+			{ id: 'sideChat', label: '旁聊' },
+			{ id: 'handoff', label: '交接' },
+		];
+		const featureOn = (id) => (team.features === null ? true : team.features.indexOf(id) >= 0);
+		const toggleTeamFeature = (id) => {
+			if (!prefs) return;
+			const base = team.features === null ? TEAM_FEATURE_ITEMS.map((item) => item.id) : team.features;
+			const next = base.indexOf(id) >= 0 ? base.filter((value) => value !== id) : base.concat(id);
+			prefs.set('teamFeatures', next);
+		};
+		const teamRow = h(
+			'div',
+			{ className: 'lg-settings-utility' + (team.on && prefs ? ' has-features' : '') },
+			h(
+				'div',
+				{ className: 'lg-settings-utilityRow' },
+				h('span', { className: 'lg-settings-utilityGlyph', 'aria-hidden': 'true' }, '团'),
+				h(
+					'span',
+					{ className: 'lg-settings-copy' },
+					h('span', { className: 'lg-settings-name' }, '团队'),
+					h('span', { className: 'lg-settings-note' }, '侧栏团队面板：默认收纳保持会话列表，展开时替换侧栏内容')
+				),
+				h(
+					'button',
+					{
+						type: 'button',
+						className: 'lg-settings-switch',
+						role: 'switch',
+						'aria-checked': team.on ? 'true' : 'false',
+						'aria-label': '团队',
+						'data-on': team.on ? 'true' : 'false',
+						onClick: () => {
+							if (prefs) prefs.set('teamSidebar', !team.on);
+						},
+					},
+					h('span', { className: 'lg-settings-knob' })
+				)
+			),
+			team.on && prefs
+				? h(
+						'div',
+						{ className: 'lg-settings-formRow' },
+						TEAM_FEATURE_ITEMS.map((item) =>
+							h(
+								'button',
+								{
+									type: 'button',
+									key: item.id,
+									className: 'lg-settings-teamFeature',
+									role: 'checkbox',
+									'aria-checked': featureOn(item.id) ? 'true' : 'false',
+									'data-on': featureOn(item.id) ? 'true' : 'false',
+									onClick: () => toggleTeamFeature(item.id),
+								},
+								h('span', { className: 'lg-settings-checkMark', 'aria-hidden': 'true' }, featureOn(item.id) ? '✓' : ''),
+								item.label
+							)
+						),
+						h(
+							'button',
+							{
+								type: 'button',
+								className: 'lg-settings-teamFeature',
+								'data-on': team.autonomyMode === 'auto' ? 'true' : 'false',
+								title: '切换自治模式: 观察 (待批) / 自动 (直派)',
+								onClick: () => prefs.set('teamAutonomyMode', team.autonomyMode === 'auto' ? 'observe' : 'auto'),
+							},
+							team.autonomyMode === 'auto' ? '自动模式' : '观察模式'
+						),
+						h(
+							'button',
+							{
+								type: 'button',
+								className: 'lg-settings-teamFeature',
+								'data-on': team.watchdog !== false ? 'true' : 'false',
+								title: '看门狗异常检测',
+								onClick: () => prefs.set('teamWatchdog', team.watchdog === false),
+							},
+							h('span', { className: 'lg-settings-checkMark', 'aria-hidden': 'true' }, team.watchdog !== false ? '✓' : ''),
+							'看门狗'
+						),
+						h(
+							'button',
+							{
+								type: 'button',
+								className: 'lg-settings-reset',
+								onClick: () => {
+									prefs.set('teamSidebar', true);
+									prefs.set('teamFeatures', TEAM_FEATURE_ITEMS.map((item) => item.id));
+									prefs.set('teamAutonomyMode', 'observe');
+									prefs.set('teamWatchdog', true);
+								},
+							},
+							'恢复默认'
+						)
+				  )
+				: null
+		);
+
 		const modelList = () => {
 			if (current === null) {
 				return h(
@@ -601,6 +726,7 @@ function createSettingsSection(require, ctx, catalog, prefs) {
 			'div',
 			{ className: 'lg-settings' },
 			workspaceRow,
+			teamRow,
 			view === null
 				? h(
 						'div',

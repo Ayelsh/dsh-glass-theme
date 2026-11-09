@@ -472,6 +472,106 @@
   line-height: 17px;
 }
 
+/* ---- Team group --------------------------------------------------------
+   The sub-controls that appear under the 团队 switch while it is on:
+   feature toggle chips and the reset-to-defaults button.
+   Unified into the same utility card with a subtle separator. */
+.lg-settings-utility:has(.lg-settings-formRow),
+.lg-settings-utility.has-features {
+  border-radius: 18px;
+  padding: 3px 3px 8px 3px;
+}
+
+.lg-settings-formRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px 4px 40px;
+  border-top: 0.5px solid var(--lg-edge-bottom, rgba(16, 22, 40, 0.08));
+  margin-top: 2px;
+}
+
+body[data-ds-dark-theme] .lg-settings-formRow {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.lg-settings-teamFeature {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: auto;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 10px;
+  border: 0.5px solid rgba(16, 22, 40, 0.12);
+  border-radius: var(--lg-r-pill);
+  background-color: rgba(16, 22, 40, 0.04);
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  transition:
+    background-color var(--lg-t-fast) var(--lg-ease-out),
+    border-color var(--lg-t-fast) var(--lg-ease-out),
+    color var(--lg-t-fast) var(--lg-ease-out),
+    transform 90ms var(--lg-ease-out);
+}
+
+.lg-settings-teamFeature:hover {
+  background-color: rgba(16, 22, 40, 0.08);
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-settings-teamFeature:active {
+  transform: scale(0.96);
+}
+
+.lg-settings-teamFeature[data-on='true'] {
+  background-color: var(--lg-accent-soft, rgba(0, 122, 255, 0.15));
+  border-color: var(--lg-accent-solid, rgba(0, 122, 255, 0.45));
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-ds-dark-theme] .lg-settings-teamFeature {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+body[data-ds-dark-theme] .lg-settings-teamFeature:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body[data-ds-dark-theme] .lg-settings-teamFeature[data-on='true'] {
+  background-color: rgba(0, 122, 255, 0.22);
+  border-color: rgba(0, 122, 255, 0.6);
+}
+
+.lg-settings-teamFeature .lg-settings-checkMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lg-settings-teamFeature[data-on='true'] .lg-settings-checkMark {
+  background-color: var(--lg-accent-solid, #007aff);
+  border-color: var(--lg-accent-solid, #007aff);
+  color: #fff;
+}
+
+.lg-settings-formRow .lg-settings-reset {
+  margin-left: auto;
+  font-size: 11.5px;
+}
+
 /* ---- Model door --------------------------------------------------------
    The affordance that opens one provider's model list. It is a DOOR, not a
    checkbox: the row's switch says whether the provider is in the quick list,

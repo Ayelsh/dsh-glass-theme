@@ -36,6 +36,7 @@ const SHEETS = [
   ['settings', 'settings.css'],
   ['pages', 'pages.css'],
   ['workspace', 'workspace.css'],
+  ['team', 'team.css'],
   ['widgets', 'widgets.css'],
   ['motion', 'motion.css'],
 ]
@@ -104,6 +105,7 @@ const statsSource = spliceFunction('stats.js')
 const settingsSectionSource = spliceFunction('settings-section.js')
 const workspaceSource = spliceFunction('workspace.js')
 const layersSource = spliceFunction('layers.js')
+const teamSource = spliceFunction('team.js')
 
 const literal = (value) => JSON.stringify(value, null, 0)
 
@@ -115,6 +117,7 @@ const out = template
   .replace('/*__SETTINGS_SECTION__*/null', () => settingsSectionSource)
   .replace('/*__WORKSPACE__*/null', () => workspaceSource)
   .replace('/*__LAYERS__*/null', () => layersSource)
+  .replace('/*__TEAM__*/null', () => teamSource)
   .replace('/*__BUILT__*/""', () => literal(new Date().toISOString()))
 
 mkdirSync(resolve(root, 'lib'), { recursive: true })
