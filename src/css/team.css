@@ -325,55 +325,70 @@
 	color: var(--dsw-alias-label-caption);
 }
 
-/* Member inspector & Slide-Over Drawer */
+/* Member inspector panel — cleanly lives inside the team sidebar without overlapping chat */
 .lg-team-inspector,
 .lg-team-panel {
-	position: fixed;
-	top: 0;
-	bottom: 0;
-	left: 260px;
-	width: clamp(380px, 32vw, 440px);
-	max-width: calc(100vw - 280px);
-	z-index: 100;
+	position: absolute;
+	inset: 0;
+	z-index: 10;
 	display: flex;
 	flex-direction: column;
 	gap: 0;
 	padding: 0;
-	background-color: var(--lg-glass-2);
+	background-color: var(--lg-surface-raised);
 	backdrop-filter: blur(var(--lg-blur-panel)) saturate(var(--lg-saturate-panel));
 	-webkit-backdrop-filter: blur(var(--lg-blur-panel)) saturate(var(--lg-saturate-panel));
-	box-shadow: inset 0 0.5px 0 var(--lg-edge-top), var(--lg-shadow-popover);
+	box-shadow: inset 0 0.5px 0 var(--lg-edge-top);
 	border: 0.5px solid var(--lg-hairline);
 	border-radius: var(--lg-r-panel);
 	overflow: hidden;
-	transition: transform 320ms var(--lg-ease-spring), opacity 240ms ease;
+	transition: opacity 200ms ease;
 }
 .lg-team-inspectorHead,
 .lg-team-panelHead {
 	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 12px;
+	border-bottom: 0.5px solid var(--lg-hairline);
+	background: var(--lg-surface-raised);
+	flex-shrink: 0;
+}
+.lg-team-inspectorHeadTop {
+	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
-	padding: 12px 14px 10px;
-	border-bottom: 0.5px solid var(--lg-hairline);
-	background: var(--lg-surface-raised);
+	min-width: 0;
 }
 .lg-team-inspectorHeadMain {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	min-width: 0;
+	flex: 1;
 }
 .lg-team-inspectorHeadActions {
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	flex-wrap: wrap;
+}
+.lg-team-backBtn {
+	padding: 2px 7px;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1;
+	border-radius: var(--lg-r-sm);
 }
 .lg-team-panelTitle {
 	margin: 0;
 	font-size: 13px;
 	font-weight: 600;
 	color: var(--dsw-alias-label-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .lg-team-sessionSelect {
 	font-size: 10.5px;
@@ -381,9 +396,10 @@
 	border-radius: var(--lg-r-sm);
 	border: 0.5px solid var(--lg-hairline);
 	background: var(--lg-surface);
-	color: var(--dsw-alias-label-secondary);
+	color: var(--dsw-alias-label-primary);
 	outline: none;
-	max-width: 130px;
+	max-width: 140px;
+	flex: 1;
 }
 .lg-team-seg {
 	position: relative;
@@ -391,8 +407,9 @@
 	background-color: var(--lg-surface-sunken);
 	border-radius: var(--lg-r-pill);
 	padding: 2px;
-	margin: 10px 14px;
+	margin: 8px 12px;
 	border: 0.5px solid var(--lg-hairline);
+	flex-shrink: 0;
 }
 .lg-team-segBtn {
 	position: relative;
@@ -400,17 +417,25 @@
 	z-index: 2;
 	border: none;
 	background: transparent;
-	padding: 5px 8px;
+	padding: 5px 4px;
 	font-size: 11px;
 	font-weight: 500;
-	color: var(--dsw-alias-label-secondary);
+	color: var(--dsw-alias-label-primary);
+	opacity: 0.65;
 	cursor: pointer;
 	text-align: center;
 	border-radius: var(--lg-r-pill);
-	transition: color 180ms ease;
+	transition: opacity 180ms ease, color 180ms ease;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.lg-team-segBtn:hover {
+	opacity: 0.85;
 }
 .lg-team-segBtn.is-active {
 	color: var(--dsw-alias-label-primary);
+	opacity: 1;
 	font-weight: 600;
 }
 .lg-team-segPill {

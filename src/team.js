@@ -599,7 +599,16 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 
 		// Header
 		const head = el('header', 'lg-team-inspectorHead lg-team-panelHead');
+		const headTop = el('div', 'lg-team-inspectorHeadTop');
 		const headMain = el('div', 'lg-team-inspectorHeadMain');
+
+		const backBtn = el('button', 'lg-team-btn lg-team-btnXs lg-team-backBtn', '‹');
+		backBtn.type = 'button';
+		backBtn.setAttribute('aria-label', '返回团队列表');
+		backBtn.setAttribute('title', '返回团队列表');
+		backBtn.dataset.action = 'panel-close';
+		headMain.appendChild(backBtn);
+
 		const avatarBox = el('span', 'lg-team-avatarBox');
 		avatarBox.innerHTML = avatarHtml(member);
 		headMain.appendChild(avatarBox);
@@ -608,7 +617,15 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		titleGroup.appendChild(el('h3', 'lg-team-panelTitle', member.name));
 		titleGroup.appendChild(el('span', `lg-team-role lg-team-roleBadge is-${member.role}`, member.role === 'lead' ? '主控 (Router)' : '成员 (Worker)'));
 		headMain.appendChild(titleGroup);
-		head.appendChild(headMain);
+		headTop.appendChild(headMain);
+
+		// Close button
+		const close = el('button', 'lg-team-btn lg-team-btnXs lg-team-closeBtn', '×');
+		close.type = 'button';
+		close.setAttribute('aria-label', '关闭面板');
+		close.dataset.action = 'panel-close';
+		headTop.appendChild(close);
+		head.appendChild(headTop);
 
 		const headActions = el('div', 'lg-team-inspectorHeadActions');
 
@@ -645,13 +662,6 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		canvasBtn.title = '在主工作区展开/收起全景 Mission Control';
 		canvasBtn.dataset.action = 'workbench-toggle';
 		headActions.appendChild(canvasBtn);
-
-		// Close button
-		const close = el('button', 'lg-team-btn lg-team-btnXs lg-team-closeBtn', '×');
-		close.type = 'button';
-		close.setAttribute('aria-label', '关闭面板');
-		close.dataset.action = 'panel-close';
-		headActions.appendChild(close);
 
 		head.appendChild(headActions);
 		node.appendChild(head);
