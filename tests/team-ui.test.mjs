@@ -192,7 +192,12 @@ function createMockElement(tagName = 'div', className = '') {
 			if (el._parent) el._parent.dispatchEvent(event);
 		},
 		click() {
-			el.dispatchEvent({ type: 'click', target: el });
+			el.dispatchEvent({
+				type: 'click',
+				target: el,
+				preventDefault() {},
+				stopPropagation() {},
+			});
 		},
 		focus() {},
 		setSelectionRange() {},
@@ -285,9 +290,24 @@ test('createTeam UI renders Router Card, Isolated Workers, and Slide-Over Drawer
 		body: docBody,
 		activeElement: null,
 	};
+	const windowListeners = {};
 	globalThis.window = {
 		document: globalThis.document,
 		__DSH_AGENT_TEAM__: null,
+		addEventListener(type, fn) {
+			if (!windowListeners[type]) windowListeners[type] = [];
+			windowListeners[type].push(fn);
+		},
+		removeEventListener(type, fn) {
+			if (windowListeners[type]) {
+				windowListeners[type] = windowListeners[type].filter((f) => f !== fn);
+			}
+		},
+		dispatchEvent(event) {
+			if (windowListeners[event.type]) {
+				for (const fn of windowListeners[event.type]) fn(event);
+			}
+		},
 	};
 	globalThis.React = {
 		Component: class Component {},
@@ -465,11 +485,31 @@ test('createTeam UI renders Router Card, Isolated Workers, and Slide-Over Drawer
 	assert.ok(overlay, 'Workbench overlay element must exist in document.body');
 	assert.ok(overlay.textContent.includes('Super-agent Mission Control'), 'Workbench must have Super-agent Mission Control title');
 
-	// Close Workbench
-	__lg.toggleWorkbench();
-	assert.equal(__lg.state.workbenchOpen, false, 'Workbench should be closed');
+	// Verify close buttons exist in overlay header
+	const collapseBtn = overlay.querySelector('.lg-team-workbenchCollapseBtn');
+	assert.ok(collapseBtn, 'Workbench must have a collapse/close button');
+	assert.equal(collapseBtn.dataset.action, 'workbench-toggle', 'Collapse button must trigger workbench-toggle');
+
+	const navBtn = overlay.querySelector('.lg-team-workbenchNavBtn');
+	assert.ok(navBtn, 'Workbench must have a nav/stow button to collapse all');
+	assert.equal(navBtn.dataset.action, 'workbench-collapse-all', 'Nav button must trigger workbench-collapse-all');
+
+	// Close Workbench via clicking the close button on overlay
+	collapseBtn.click();
+	assert.equal(__lg.state.workbenchOpen, false, 'Workbench should be closed after clicking close button');
 	const closedOverlay = docBody.querySelector('#lg-team-workbench-overlay');
 	assert.equal(closedOverlay, null, 'Workbench overlay must be removed when closed');
+
+	// Open again and test closing via Escape key
+	__lg.toggleWorkbench(true);
+	assert.equal(__lg.state.workbenchOpen, true, 'Workbench should be open again');
+	globalThis.window.dispatchEvent({
+		type: 'keydown',
+		key: 'Escape',
+		preventDefault() {},
+		stopPropagation() {},
+	});
+	assert.equal(__lg.state.workbenchOpen, false, 'Workbench should be closed after Escape key');
 
 	teamApi.stop();
 });

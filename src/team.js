@@ -1523,6 +1523,7 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		renderPanel();
 		renderNewBox();
 		renderConfirm();
+		if (state.workbenchOpen) renderWorkbench();
 	};
 
 	/* --- actions ------------------------------------------------------------ */
@@ -1776,7 +1777,7 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			return;
 		}
 		if (action === 'router-dispatch') {
-			const card = root ? root.querySelector('.lg-team-routerCard') : null;
+			const card = (event && event.target && event.target.closest('.lg-team-routerCard')) || (root ? root.querySelector('.lg-team-routerCard') : null);
 			const input = card ? card.querySelector('.lg-team-routerInput') : null;
 			const select = card ? card.querySelector('.lg-team-routerTarget') : null;
 			const text = input ? String(input.value ?? '').trim() : '';
@@ -1820,10 +1821,17 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			toggleWorkbench();
 			return;
 		}
+		if (action === 'workbench-collapse-all') {
+			toggleWorkbench(false);
+			if (!collapsedPref()) toggleCollapsed();
+			return;
+		}
 	};
 
-	const toggleWorkbench = () => {
-		state.workbenchOpen = !state.workbenchOpen;
+	let workbenchKeyHandler = null;
+
+	const toggleWorkbench = (forceOpen) => {
+		state.workbenchOpen = typeof forceOpen === 'boolean' ? forceOpen : !state.workbenchOpen;
 		renderWorkbench();
 		renderPanel();
 	};
@@ -1831,32 +1839,87 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 	const renderWorkbench = () => {
 		let overlay = typeof document !== 'undefined' ? document.getElementById('lg-team-workbench-overlay') : null;
 		if (!state.workbenchOpen) {
-			if (overlay && overlay.parentElement) overlay.parentElement.removeChild(overlay);
+			if (overlay && overlay.parentElement) {
+				overlay.parentElement.removeChild(overlay);
+			}
+			if (workbenchKeyHandler !== null && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+				window.removeEventListener('keydown', workbenchKeyHandler, true);
+				workbenchKeyHandler = null;
+			}
 			return;
 		}
 		if (typeof document === 'undefined') return;
 		if (overlay === null) {
 			overlay = el('div', 'lg-team-workbench lg-team-workbenchOverlay');
 			overlay.id = 'lg-team-workbench-overlay';
-			overlay.style.position = 'fixed';
-			overlay.style.top = '0';
-			overlay.style.left = '0';
-			overlay.style.right = '0';
-			overlay.style.bottom = '0';
-			overlay.style.zIndex = '999';
-			overlay.style.backgroundColor = 'var(--lg-surface)';
-			overlay.style.display = 'flex';
-			overlay.style.flexDirection = 'column';
 			document.body.appendChild(overlay);
+
+			overlay.addEventListener('click', (event) => {
+				if (event.target === null || typeof event.target.closest !== 'function') return;
+				const target = event.target.closest('[data-action]');
+				if (target === null) return;
+				const action = target.dataset.action;
+				const arg = target.dataset.arg || '';
+				dispatch(action, arg, event);
+			});
 		}
+
+		if (workbenchKeyHandler === null && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+			workbenchKeyHandler = (event) => {
+				if (event.key === 'Escape' && state.workbenchOpen) {
+					event.preventDefault();
+					event.stopPropagation();
+					toggleWorkbench(false);
+				}
+			};
+			window.addEventListener('keydown', workbenchKeyHandler, true);
+		}
+
 		overlay.innerHTML = '';
 
-		const head = el('header', 'lg-team-panelHead');
-		head.appendChild(el('h3', 'lg-team-panelTitle', 'Super-agent Mission Control'));
-		const close = el('button', 'lg-team-btn lg-team-btnXs', '关闭全景');
-		close.type = 'button';
-		close.dataset.action = 'workbench-toggle';
-		head.appendChild(close);
+		const head = el('header', 'lg-team-workbenchHead');
+		const titleGroup = el('div', 'lg-team-workbenchTitleGroup');
+		titleGroup.appendChild(el('h3', 'lg-team-workbenchTitle', 'Super-agent Mission Control'));
+		titleGroup.appendChild(el('span', 'lg-team-workbenchBadge', '全景控制台'));
+		head.appendChild(titleGroup);
+
+		const actions = el('div', 'lg-team-workbenchActions');
+
+		const collapseBtn = el('button', 'lg-team-btn lg-team-btnXs lg-team-workbenchCollapseBtn', '‹ 收起全景 (Esc)');
+		collapseBtn.type = 'button';
+		collapseBtn.title = '收起全景控制台，回到侧边栏 (Esc)';
+		collapseBtn.dataset.action = 'workbench-toggle';
+		collapseBtn.addEventListener('click', (e) => {
+			if (e && typeof e.preventDefault === 'function') e.preventDefault();
+			if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+			toggleWorkbench(false);
+		});
+		actions.appendChild(collapseBtn);
+
+		const navBtn = el('button', 'lg-team-btn lg-team-btnXs lg-team-workbenchNavBtn', '« 收纳团队');
+		navBtn.type = 'button';
+		navBtn.title = '收起全景并收纳团队面板，回到会话列表';
+		navBtn.dataset.action = 'workbench-collapse-all';
+		navBtn.addEventListener('click', (e) => {
+			if (e && typeof e.preventDefault === 'function') e.preventDefault();
+			if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+			toggleWorkbench(false);
+			if (!collapsedPref()) toggleCollapsed();
+		});
+		actions.appendChild(navBtn);
+
+		const closeIcon = el('button', 'lg-team-btn lg-team-btnXs lg-team-iconBtn', '✕');
+		closeIcon.type = 'button';
+		closeIcon.title = '关闭全景 (Esc)';
+		closeIcon.dataset.action = 'workbench-toggle';
+		closeIcon.addEventListener('click', (e) => {
+			if (e && typeof e.preventDefault === 'function') e.preventDefault();
+			if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+			toggleWorkbench(false);
+		});
+		actions.appendChild(closeIcon);
+
+		head.appendChild(actions);
 		overlay.appendChild(head);
 
 		const grid = el('div', 'lg-team-workbenchGrid');
@@ -1989,14 +2052,14 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		});
 		root.addEventListener('keydown', (event) => {
 			if (event.key === 'Escape') {
+				if (state.workbenchOpen) {
+					event.preventDefault();
+					toggleWorkbench(false);
+					return;
+				}
 				if (state.panel !== null) {
 					event.preventDefault();
 					closePanel();
-					return;
-				}
-				if (state.workbenchOpen) {
-					event.preventDefault();
-					toggleWorkbench();
 					return;
 				}
 			}
@@ -2058,6 +2121,15 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		if (keyHandler !== null) {
 			document.removeEventListener('keydown', keyHandler, true);
 			keyHandler = null;
+		}
+		if (workbenchKeyHandler !== null && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+			window.removeEventListener('keydown', workbenchKeyHandler, true);
+			workbenchKeyHandler = null;
+		}
+		state.workbenchOpen = false;
+		if (typeof document !== 'undefined') {
+			const overlay = document.getElementById('lg-team-workbench-overlay');
+			if (overlay && overlay.parentElement) overlay.parentElement.removeChild(overlay);
 		}
 		closeMenu({});
 		closePalette({});
@@ -2220,6 +2292,7 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		};
 
 		const MissionControlWorkbench = () => {
+			if (!state.workbenchOpen) return null;
 			const team = state.team || { profiles: [] };
 			const profiles = Array.isArray(team.profiles) ? team.profiles : [];
 			const lead = profiles.find((p) => p.role === 'lead') || profiles[0];
@@ -2229,16 +2302,46 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 				{ className: 'lg-team-workbench', id: 'lg-team-workbench' },
 				React.createElement(
 					'header',
-					{ className: 'lg-team-panelHead' },
-					React.createElement('h3', { className: 'lg-team-panelTitle' }, 'Super-agent Mission Control'),
+					{ className: 'lg-team-workbenchHead' },
 					React.createElement(
-						'button',
-						{
-							type: 'button',
-							className: 'lg-team-btn lg-team-btnXs',
-							onClick: () => toggleWorkbench(),
-						},
-						'关闭'
+						'div',
+						{ className: 'lg-team-workbenchTitleGroup' },
+						React.createElement('h3', { className: 'lg-team-workbenchTitle' }, 'Super-agent Mission Control'),
+						React.createElement('span', { className: 'lg-team-workbenchBadge' }, '全景控制台')
+					),
+					React.createElement(
+						'div',
+						{ className: 'lg-team-workbenchActions' },
+						React.createElement(
+							'button',
+							{
+								type: 'button',
+								className: 'lg-team-btn lg-team-btnXs lg-team-workbenchCollapseBtn',
+								onClick: () => toggleWorkbench(false),
+							},
+							'‹ 收起全景 (Esc)'
+						),
+						React.createElement(
+							'button',
+							{
+								type: 'button',
+								className: 'lg-team-btn lg-team-btnXs lg-team-workbenchNavBtn',
+								onClick: () => {
+									toggleWorkbench(false);
+									if (!collapsedPref()) toggleCollapsed();
+								},
+							},
+							'« 收纳团队'
+						),
+						React.createElement(
+							'button',
+							{
+								type: 'button',
+								className: 'lg-team-btn lg-team-btnXs lg-team-iconBtn',
+								onClick: () => toggleWorkbench(false),
+							},
+							'✕'
+						)
 					)
 				),
 				React.createElement(
