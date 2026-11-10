@@ -1,0 +1,35 @@
+# Proposal
+
+## Why
+
+The current team capability in `dsh-liquid-glass` fails to deliver the DeepSeek Super-agent (`Router + Isolated Worker`) architecture or Apple Liquid Glass interaction quality: dispatching a ticket from the Lead row assigns `workerId = lead.id` (and unassigned tickets fall back to `state.profiles[0]`, which is always the Lead), trapping tickets on the Resident Router with zero execution loop (`trigger-intake`, `ticket-complete`, and `watchdog-check` have zero runtime callers). Furthermore, `src/host/team-live.js` discards all `reasoning` (thinking) and `tool_use` / `tool_result` (execution) events from DSH sessions, `focusSession()` fails because the native session list DOM is unmounted while the team sidebar is open, and `src/css/team.css` crowds five vertical panels into a 240px sidebar with glass-on-glass material violations and undefined CSS variables (`--dsw-alias-accent`, `--dsw-alias-label-invert`, `--lg-surface-hover`).
+
+## What Changes
+
+- **Separate Resident Router Console from Worker Execution Slots**: Replace the homogeneous Lead row dispatch trap with a dedicated top **Router Console Card** in the sidebar that accepts task triggers/tickets and automatically routes them to an eligible Worker (by role match or idle workload) or an explicitly chosen Worker—never assigning execution tickets to `lead` unless no Workers exist and the user explicitly forces fallback.
+- **Close the Super-agent Ticket & Watchdog Loop**: Connect UI and host routes to `trigger-intake`, `ticket-add`, `ticket-approve`, `ticket-complete`, and `watchdog-check`; automatically bind Workers to real DSH sessions (including auto-discovering `origin === "subagent"` sessions via `parentSessionId`/title/ticket correlation and allowing manual session binding), advance ticket lifecycle states from live session activity, and run `evaluateWatchdog()` during `team-live` refresh ticks.
+- **Introduce Live Worker Observability (Thinking, Tool Execution, and Session Stream)**: Upgrade `src/host/team-live.js` (`sessionQuery.observeSession(id, { projectionMode: "none" })`) to extract live `reasoning` blocks, streaming `assistant/attempt` chunks, `tool_use` / `tool_result` execution timelines, and recent conversation turns per bound session, exposing them in real time to the client.
+- **Adopt Dual-Space Apple Inspector Architecture (Scheme 1)**: Keep the left sidebar (~260px) focused on the Router Console, live Worker Roster (single-click to inspect, `⋯` button or right-click for context menu), and Thread Rooms, while rendering member/ticket details in a wide **Slide-Over Live Inspector Drawer (380px–440px)** with a one-click toggle to expand into a full-canvas **Super-agent Mission Control** view (`main` slot, following `src/workspace.js`) and programmatic session switching via the client `sessions` service.
+- **Refactor Inspector Information Architecture & Ground `/side` in Live Snapshots**: Replace the 5-section vertical stack with a 3-tab Apple Segmented Control featuring a traveling selection pill:
+  1. **Live Pulse (`pulse`)**: Live thinking stream (`reasoning` + `assistant/attempt`), tool execution timeline (`tool_use` / `tool_result`), and bound session transcript preview.
+  2. **Tickets & Recall (`recall`)**: Active/observed tickets, interactive `Trigger -> Thread -> Mandate -> Ticket -> Session` Chain of Recall nodes, and deliverable summaries.
+  3. **Side Chat & Memory (`cognition`)**: Read-only `/side` responder grounded in the member's live thinking/tool snapshot (`side-send`), Steward handoff checkpoints, learning cards, and long-term memory.
+- **Enforce Apple Liquid Glass & Fluid Motion Standards**: Eliminate glass-on-glass nesting in `src/css/team.css` (outer floating drawer uses Liquid Glass with `inset 0 0.5px 0 var(--lg-edge-top)`; inner cards use solid/elevated surfaces `var(--lg-surface)` / `var(--lg-surface-raised)` with concentric corner radii `r_inner = r_outer - gap`), replace all undefined CSS custom properties and raw hex colors with `src/css/tokens.css` semantic tokens, and add physical `:active` press scaling (`scale(0.97)`) and `--lg-ease-spring` transitions.
+
+## Capabilities
+
+### New Capabilities
+- `team-live-inspector`: Real-time Worker observability pipeline and wide slide-over / full-canvas inspector surface displaying live thinking streams (`reasoning` / `assistant/attempt`), tool execution timelines (`tool_use` / `tool_result`), session binding controls, and native DSH session switching.
+
+### Modified Capabilities
+- `team-roster`: Separate the pinned Resident Router (`lead`) into a dedicated Router Console header card; change Worker row primary click from opening a context menu to selecting and opening the member's live inspector with a traveling selection indicator and real-time activity pulse caption (`thinking`, `tool: <name>`, `waiting`, `stalled`, `idle`).
+- `team-rooms`: Connect room Thread (`thd_*`) trigger intake (`trigger-intake`) and Thread Subscription Direct Pass-Through to real Worker routing and live session activity tracking.
+- `team-sidebar-actions`: Route tickets dispatched from the Router Console or command palette through Worker selection/auto-routing instead of trapping them on `lead.id` or `profiles[0]`; wire `ticket-complete` and live `watchdog-check` evaluation into the ticket lifecycle.
+- `team-sidebar-panels`: Reorganize the 5 stacked companion sections into a 3-way segmented inspector (`pulse`, `recall`, `cognition`) and ground `/side` (`side-send`) in live session reasoning and tool-call snapshots rather than static string templates.
+- `team-sidebar-shell`: Support the wide slide-over inspector drawer and optional `main`-slot Mission Control view alongside the sidebar region, and enforce Apple Liquid Glass material rules, valid `tokens.css` variables, concentric corner geometry, and spring motion.
+
+## Impact
+
+- **Client UI (`src/team.js`, `src/css/team.css`, `locale/zh.json`, `locale/en.json`)**: Refactors roster row interaction, adds the Router Console card, replaces the 240px overlay panel with the wide Slide-Over Live Inspector + optional `main` Mission Control view, fixes `focusSession()` to use the DSH `sessions` client service with fallback, and overhauls `src/css/team.css` to conform to `src/css/tokens.css` and `apple-liquid-glass`.
+- **Host Engine & Live Telemetry (`src/host/team-store.js`, `src/host/team-live.js`, `src/host/routes.js`)**: Fixes Worker selection/routing in `ticket-add` and `trigger-intake`, extracts structured `reasoning`, `tool_use`/`tool_result`, and `assistant/attempt` telemetry via `sessionQuery.observeSession`, auto-correlates `origin === "subagent"` sessions with Workers/Tickets, runs `evaluateWatchdog` + `watchdog-check` on live poll ticks, and grounds `side-send` in live session telemetry.
+- **Tests (`tests/team-*.test.mjs`)**: Updates and expands unit and integration tests for Router-to-Worker dispatch, live thinking/tool telemetry projection, Watchdog auto-evaluation, and Apple Liquid Glass CSS token compliance.

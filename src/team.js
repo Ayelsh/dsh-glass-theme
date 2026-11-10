@@ -261,6 +261,16 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		const rows = state.live && Array.isArray(state.live.sessions) ? state.live.sessions : [];
 		return rows.find((row) => row.id === sessionId) || null;
 	};
+	const liveTelemetry = (sessionId) => {
+		if (!sessionId || !state.live || !state.live.telemetry) return null;
+		return state.live.telemetry[sessionId] || null;
+	};
+	const liveRecord = (sessionId) => {
+		const telem = liveTelemetry(sessionId);
+		const sess = liveRow(sessionId);
+		if (!telem && !sess) return null;
+		return Object.assign({}, sess || {}, telem || {});
+	};
 	const sessionTitle = (sessionId) => {
 		const row = liveRow(sessionId);
 		return row && typeof row.title === 'string' ? row.title.trim() : '';
@@ -315,6 +325,29 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 	 * never guesses its way into the wrong conversation. */
 
 	const focusSession = (sessionId) => {
+		if (!sessionId) return false;
+		try {
+			const ui = ctx && typeof ctx.get === 'function' ? ctx.get('uiSession') : null;
+			if (ui) {
+				if (typeof ui.selectSession === 'function') { ui.selectSession(sessionId); void markSeen(sessionId); return true; }
+				if (typeof ui.switchSession === 'function') { ui.switchSession(sessionId); void markSeen(sessionId); return true; }
+				if (typeof ui.openSession === 'function') { ui.openSession(sessionId); void markSeen(sessionId); return true; }
+				if (typeof ui.open === 'function') { ui.open(sessionId); void markSeen(sessionId); return true; }
+				if (typeof ui.select === 'function') { ui.select(sessionId); void markSeen(sessionId); return true; }
+				if (typeof ui.setCurrent === 'function') { ui.setCurrent(sessionId); void markSeen(sessionId); return true; }
+			}
+		} catch {}
+		try {
+			const sessions = ctx && typeof ctx.get === 'function' ? ctx.get('sessions') : null;
+			if (sessions) {
+				if (typeof sessions.selectSession === 'function') { sessions.selectSession(sessionId); void markSeen(sessionId); return true; }
+				if (typeof sessions.switchSession === 'function') { sessions.switchSession(sessionId); void markSeen(sessionId); return true; }
+				if (typeof sessions.openSession === 'function') { sessions.openSession(sessionId); void markSeen(sessionId); return true; }
+				if (typeof sessions.open === 'function') { sessions.open(sessionId); void markSeen(sessionId); return true; }
+				if (typeof sessions.select === 'function') { sessions.select(sessionId); void markSeen(sessionId); return true; }
+				if (typeof sessions.setCurrent === 'function') { sessions.setCurrent(sessionId); void markSeen(sessionId); return true; }
+			}
+		} catch {}
 		const title = sessionTitle(sessionId);
 		if (title === '') return false;
 		let rows = [];
@@ -504,11 +537,17 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 
 	/* --- member panel ------------------------------------------------------ */
 
+	const clampText = (text, max = 50) => {
+		const str = typeof text === 'string' ? text.trim() : '';
+		if (str.length <= max) return str;
+		return str.slice(0, max) + '…';
+	};
+
 	const closePanel = () => {
 		state.panel = null;
 		state.panelEdit = null;
 		if (root !== null) {
-			const panel = root.querySelector('.lg-team-panel');
+			const panel = root.querySelector('.lg-team-panel, .lg-team-inspector');
 			if (panel && panel.parentElement) panel.parentElement.removeChild(panel);
 		}
 	};
@@ -522,7 +561,7 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 	};
 	const renderPanel = () => {
 		if (root === null) return;
-		const old = root.querySelector('.lg-team-panel');
+		const old = root.querySelector('.lg-team-inspector, .lg-team-panel');
 		const panel = state.panel;
 		if (panel === null || panel.kind !== 'member') {
 			if (old && old.parentElement) old.parentElement.removeChild(old);
@@ -555,121 +594,338 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		}
 
 		if (old && old.parentElement) old.parentElement.removeChild(old);
-		const node = el('aside', 'lg-team-panel');
+		const node = el('aside', 'lg-team-inspector lg-team-panel');
 		node.dataset.panelId = member.id;
-		const head = el('header', 'lg-team-panelHead');
-		head.appendChild(el('h3', 'lg-team-panelTitle', member.name));
-		const close = el('button', 'lg-team-btn', '×');
+
+		// Header
+		const head = el('header', 'lg-team-inspectorHead lg-team-panelHead');
+		const headMain = el('div', 'lg-team-inspectorHeadMain');
+		const avatarBox = el('span', 'lg-team-avatarBox');
+		avatarBox.innerHTML = avatarHtml(member);
+		headMain.appendChild(avatarBox);
+
+		const titleGroup = el('div', 'lg-team-rowText');
+		titleGroup.appendChild(el('h3', 'lg-team-panelTitle', member.name));
+		titleGroup.appendChild(el('span', `lg-team-role lg-team-roleBadge is-${member.role}`, member.role === 'lead' ? '主控 (Router)' : '成员 (Worker)'));
+		headMain.appendChild(titleGroup);
+		head.appendChild(headMain);
+
+		const headActions = el('div', 'lg-team-inspectorHeadActions');
+
+		// Session select
+		const sessionSelect = el('select', 'lg-team-sessionSelect');
+		sessionSelect.dataset.action = 'bind-session';
+		sessionSelect.title = '绑定或切换当前成员的 DSH 会话';
+		const optNone = el('option', '', '未绑定会话');
+		optNone.value = '';
+		sessionSelect.appendChild(optNone);
+
+		const liveSessions = state.live && Array.isArray(state.live.sessions) ? state.live.sessions : [];
+		for (const s of liveSessions) {
+			const opt = el('option', '', s.title || s.id);
+			opt.value = s.id;
+			if (s.id === member.sessionId) opt.selected = true;
+			sessionSelect.appendChild(opt);
+		}
+		headActions.appendChild(sessionSelect);
+
+		// Jump to native session
+		if (member.sessionId) {
+			const jumpBtn = el('button', 'lg-team-btn lg-team-btnXs lg-team-openNativeSession', '打开原生会话');
+			jumpBtn.type = 'button';
+			jumpBtn.title = '切换主界面对话到此会话';
+			jumpBtn.dataset.action = 'focus-session';
+			jumpBtn.dataset.arg = member.sessionId;
+			headActions.appendChild(jumpBtn);
+		}
+
+		// Expand to canvas
+		const canvasBtn = el('button', 'lg-team-btn lg-team-btnXs lg-team-expandCanvas', state.workbenchOpen ? '收起全景' : '全景控制台');
+		canvasBtn.type = 'button';
+		canvasBtn.title = '在主工作区展开/收起全景 Mission Control';
+		canvasBtn.dataset.action = 'workbench-toggle';
+		headActions.appendChild(canvasBtn);
+
+		// Close button
+		const close = el('button', 'lg-team-btn lg-team-btnXs lg-team-closeBtn', '×');
 		close.type = 'button';
 		close.setAttribute('aria-label', '关闭面板');
 		close.dataset.action = 'panel-close';
-		head.appendChild(close);
+		headActions.appendChild(close);
+
+		head.appendChild(headActions);
 		node.appendChild(head);
 
+		// 3-Way Apple Segmented Control
+		const currentTab = state.inspectorTab || 'pulse';
+		const seg = el('div', 'lg-team-seg');
+		const pill = el('div', 'lg-team-segPill');
+		pill.dataset.active = currentTab;
+		seg.appendChild(pill);
+
+		const tabs = [
+			{ key: 'pulse', label: '实时脉冲' },
+			{ key: 'recall', label: '工单召回' },
+			{ key: 'cognition', label: '认知交接' },
+		];
+		for (const t of tabs) {
+			const btn = el('button', `lg-team-segBtn${t.key === currentTab ? ' is-active' : ''}`, t.label);
+			btn.type = 'button';
+			btn.dataset.action = 'seg-tab';
+			btn.dataset.arg = t.key;
+			btn.dataset.seg = t.key;
+			seg.appendChild(btn);
+		}
+		node.appendChild(seg);
+
+		// Inspector Body
+		const body = el('div', 'lg-team-inspectorBody');
+		const live = liveRecord(member.sessionId);
 		const team = state.team || {};
-		const learning = (Array.isArray(team.learning) ? team.learning : []).filter((card) => card.memberId === member.id && card.status === 'pending');
-		const checkpoints = (Array.isArray(team.checkpoints) ? team.checkpoints : []).filter((card) => card.memberId === member.id || card.memberId === '');
-		const memory = memoryEntries(member.id);
-		const side = sideMessages(member.id);
-		const tickets = (Array.isArray(team.tickets) ? team.tickets : []).filter((t) => t.workerId === member.id || t.workerId === '');
 
-		if (tickets.length > 0) {
-			const section = el('section', 'lg-team-section lg-team-recallSection');
-			section.appendChild(el('h4', 'lg-team-label', '工单 / 召回 (Chain of Recall)'));
-			const list = el('div', 'lg-team-ticketList');
-			for (const t of tickets) {
-				const item = el('div', `lg-team-card lg-team-ticketCard is-${t.status}`);
-				item.dataset.ticketId = t.id;
-				const header = el('div', 'lg-team-cardHeader');
-				header.appendChild(el('span', 'lg-team-ticketTitle', t.title));
-				const statusBadge = el('span', `lg-team-badge lg-team-statusBadge is-${t.status}`, t.status);
-				header.appendChild(statusBadge);
-				item.appendChild(header);
+		if (currentTab === 'pulse') {
+			// Tab 1: Live Pulse
+			// 1. Thinking stream
+			const thinkingCard = el('div', 'lg-team-pulseCard');
+			const thinkingHead = el('div', 'lg-team-cardHeader');
+			const thinkingTitle = el('span', 'lg-team-ticketTitle', '实时思考 (Thinking)');
+			thinkingHead.appendChild(thinkingTitle);
+			if (live && live.phase === 'thinking') {
+				const activeDot = el('span', 'lg-team-thinkingDot');
+				thinkingHead.appendChild(activeDot);
+			}
+			thinkingCard.appendChild(thinkingHead);
 
-				if (t.summary) {
-					item.appendChild(el('p', 'lg-team-ticketSummary', t.summary));
-				}
+			if (live && live.thinking) {
+				const pre = el('pre', 'lg-team-thinkingStream', live.thinking);
+				thinkingCard.appendChild(pre);
+			} else {
+				thinkingCard.appendChild(el('p', 'lg-team-empty', '当前无进行中的思考'));
+			}
+			body.appendChild(thinkingCard);
 
-				if (t.recallRefs) {
-					const refsRow = el('div', 'lg-team-chips lg-team-recallRefs');
-					if (t.recallRefs.mandateId) refsRow.appendChild(el('span', 'lg-team-chip', `授权: ${t.recallRefs.mandateId}`));
-					if (t.recallRefs.threadId) refsRow.appendChild(el('span', 'lg-team-chip', `线程: ${t.recallRefs.threadId}`));
-					if (Array.isArray(t.recallRefs.triggerIds) && t.recallRefs.triggerIds.length > 0) {
-						refsRow.appendChild(el('span', 'lg-team-chip', `触发: ${t.recallRefs.triggerIds.length} 次`));
+			// 2. Tool Timeline
+			const toolCard = el('div', 'lg-team-pulseCard');
+			toolCard.appendChild(el('span', 'lg-team-ticketTitle', '工具调用时间线'));
+			const timeline = el('div', 'lg-team-toolTimeline');
+			const tools = live && Array.isArray(live.tools) ? live.tools : [];
+			if (tools.length === 0) {
+				timeline.appendChild(el('p', 'lg-team-empty', '暂无工具调用记录'));
+			} else {
+				for (const tool of tools) {
+					const toolRow = el('div', 'lg-team-toolRow');
+					const toolHead = el('div', 'lg-team-toolHeader');
+					toolHead.appendChild(el('span', 'lg-team-toolName', tool.name || 'tool'));
+					const statusPill = el('span', `lg-team-toolStatus is-${tool.status || 'running'}`, tool.status || 'running');
+					toolHead.appendChild(statusPill);
+					toolRow.appendChild(toolHead);
+					if (tool.inputSummary) {
+						toolRow.appendChild(el('div', 'lg-team-toolExcerpt', tool.inputSummary));
 					}
-					item.appendChild(refsRow);
+					if (tool.outputExcerpt) {
+						toolRow.appendChild(el('div', 'lg-team-toolExcerpt', tool.outputExcerpt));
+					}
+					timeline.appendChild(toolRow);
 				}
+			}
+			toolCard.appendChild(timeline);
+			body.appendChild(toolCard);
 
-				const isExpanded = state.expandedTickets && state.expandedTickets[t.id];
-				const toggleSpill = el('button', 'lg-team-btn lg-team-btnXs', isExpanded ? '收起详情 (Spill)' : '展开详情 (Spill)');
-				toggleSpill.type = 'button';
-				toggleSpill.dataset.action = 'ticket-spill-toggle';
-				toggleSpill.dataset.arg = t.id;
-				item.appendChild(toggleSpill);
-
-				if (isExpanded) {
-					const spillBox = el('div', 'lg-team-spillDetails');
-					const detailsText = t.spill && typeof t.spill === 'object' ? (t.spill.details || JSON.stringify(t.spill)) : String(t.spill || t.summary || '');
-					spillBox.appendChild(el('pre', 'lg-team-pre', detailsText));
-					item.appendChild(spillBox);
+			// 3. Recent Turns
+			const turnsCard = el('div', 'lg-team-pulseCard');
+			turnsCard.appendChild(el('span', 'lg-team-ticketTitle', '最近对话轮次'));
+			const messages = live && Array.isArray(live.messages) ? live.messages : [];
+			if (messages.length === 0) {
+				turnsCard.appendChild(el('p', 'lg-team-empty', '暂无对话记录'));
+			} else {
+				for (const msg of messages) {
+					const turnRow = el('div', 'lg-team-turnRow');
+					const roleBadge = el('span', `lg-team-roleBadge is-${msg.role}`, msg.role === 'user' ? '用户' : '助手');
+					turnRow.appendChild(roleBadge);
+					turnRow.appendChild(el('span', '', ` ${msg.text}`));
+					turnsCard.appendChild(turnRow);
 				}
+			}
+			body.appendChild(turnsCard);
+		} else if (currentTab === 'recall') {
+			// Tab 2: Recall & Tickets (strict filtering)
+			const section = el('section', 'lg-team-section lg-team-recallSection');
+			section.appendChild(el('h4', 'lg-team-label', member.role === 'lead' ? '全局工单队列 (Router Global Queue)' : `${member.name} 的工单`));
+			const list = el('div', 'lg-team-ticketList');
+			const allTickets = Array.isArray(team.tickets) ? team.tickets : [];
+			const tickets = member.role === 'lead'
+				? allTickets
+				: allTickets.filter((t) => t.workerId === member.id);
 
-				const actRow = el('div', 'lg-team-cardRow');
-				if (t.status === 'observed') {
-					const appBtn = el('button', 'lg-team-btn', '批准');
-					appBtn.type = 'button';
-					appBtn.dataset.action = 'ticket-approve';
-					appBtn.dataset.arg = t.id;
-					actRow.appendChild(appBtn);
-				}
-				if (t.status === 'stalled') {
-					const retryBtn = el('button', 'lg-team-btn', '重试');
-					retryBtn.type = 'button';
-					retryBtn.dataset.action = 'watchdog-retry';
-					retryBtn.dataset.arg = t.id;
-					const dismissBtn = el('button', 'lg-team-btn', '忽略');
-					dismissBtn.type = 'button';
-					dismissBtn.dataset.action = 'watchdog-dismiss';
-					dismissBtn.dataset.arg = t.id;
-					actRow.appendChild(retryBtn);
-					actRow.appendChild(dismissBtn);
-				}
-				if (actRow.childNodes.length > 0) item.appendChild(actRow);
+			if (tickets.length === 0) {
+				list.appendChild(el('p', 'lg-team-empty', '暂无工单记录'));
+			} else {
+				for (const t of tickets) {
+					const item = el('div', `lg-team-card lg-team-ticketCard is-${t.status}`);
+					item.dataset.ticketId = t.id;
+					const header = el('div', 'lg-team-cardHeader');
+					header.appendChild(el('span', 'lg-team-ticketTitle', t.title));
+					const statusBadge = el('span', `lg-team-badge lg-team-statusBadge is-${t.status}`, t.status);
+					header.appendChild(statusBadge);
+					item.appendChild(header);
 
-				list.appendChild(item);
+					if (t.summary) {
+						item.appendChild(el('p', 'lg-team-ticketSummary', t.summary));
+					}
+
+					if (t.recallRefs) {
+						const refsRow = el('div', 'lg-team-chips lg-team-recallRefs');
+						if (t.recallRefs.mandateId) refsRow.appendChild(el('span', 'lg-team-chip', `授权: ${t.recallRefs.mandateId}`));
+						if (t.recallRefs.threadId) refsRow.appendChild(el('span', 'lg-team-chip', `线程: ${t.recallRefs.threadId}`));
+						if (Array.isArray(t.recallRefs.triggerIds) && t.recallRefs.triggerIds.length > 0) {
+							refsRow.appendChild(el('span', 'lg-team-chip', `触发: ${t.recallRefs.triggerIds.length} 次`));
+						}
+						item.appendChild(refsRow);
+					}
+
+					const isExpanded = state.expandedTickets && state.expandedTickets[t.id];
+					const toggleSpill = el('button', 'lg-team-btn lg-team-btnXs lg-team-spillToggle', isExpanded ? '收起详情 (Spill)' : '展开详情 (Spill)');
+					toggleSpill.type = 'button';
+					toggleSpill.dataset.action = 'ticket-spill-toggle';
+					toggleSpill.dataset.arg = t.id;
+					item.appendChild(toggleSpill);
+
+					if (isExpanded) {
+						const spillBox = el('div', 'lg-team-spillDetails');
+						const detailsText = t.spill && typeof t.spill === 'object' ? (t.spill.details || JSON.stringify(t.spill)) : String(t.spill || t.summary || '');
+						spillBox.appendChild(el('pre', 'lg-team-pre', detailsText));
+						item.appendChild(spillBox);
+					}
+
+					const actRow = el('div', 'lg-team-cardRow');
+					if (t.status === 'observed') {
+						const appBtn = el('button', 'lg-team-btn lg-team-btnXs', '批准');
+						appBtn.type = 'button';
+						appBtn.dataset.action = 'ticket-approve';
+						appBtn.dataset.arg = t.id;
+						actRow.appendChild(appBtn);
+					}
+					if (t.status === 'working') {
+						const compBtn = el('button', 'lg-team-btn lg-team-btnXs', '完成');
+						compBtn.type = 'button';
+						compBtn.dataset.action = 'ticket-complete';
+						compBtn.dataset.arg = t.id;
+						actRow.appendChild(compBtn);
+					}
+					if (t.status === 'stalled') {
+						const retryBtn = el('button', 'lg-team-btn lg-team-btnXs', '重试');
+						retryBtn.type = 'button';
+						retryBtn.dataset.action = 'watchdog-retry';
+						retryBtn.dataset.arg = t.id;
+						const dismissBtn = el('button', 'lg-team-btn lg-team-btnXs', '忽略');
+						dismissBtn.type = 'button';
+						dismissBtn.dataset.action = 'watchdog-dismiss';
+						dismissBtn.dataset.arg = t.id;
+						actRow.appendChild(retryBtn);
+						actRow.appendChild(dismissBtn);
+					}
+					if (actRow.childNodes.length > 0) item.appendChild(actRow);
+					list.appendChild(item);
+				}
 			}
 			section.appendChild(list);
-			node.appendChild(section);
-		}
+			body.appendChild(section);
+		} else if (currentTab === 'cognition') {
+			// Tab 3: Cognition (Side chat, Checkpoints, Learning, Memory)
+			const learning = (Array.isArray(team.learning) ? team.learning : []).filter((card) => card.memberId === member.id && card.status === 'pending');
+			const checkpoints = (Array.isArray(team.checkpoints) ? team.checkpoints : []).filter((card) => card.memberId === member.id || card.memberId === '');
+			const memory = memoryEntries(member.id);
+			const side = sideMessages(member.id);
 
-		if (hasFeature('memory') && learning.length > 0) {
-			const section = el('section', 'lg-team-section');
-			section.appendChild(el('h4', 'lg-team-label', '学习卡片'));
-			for (const card of learning) {
-				const box = el('div', 'lg-team-card');
-				box.appendChild(el('p', 'lg-team-cardText', card.text));
-				const row = el('div', 'lg-team-cardRow');
-				const yes = el('button', 'lg-team-btn', '采纳');
-				yes.type = 'button';
-				yes.dataset.action = 'learning-accept';
-				yes.dataset.arg = card.id;
-				const no = el('button', 'lg-team-btn', '丢弃');
-				no.type = 'button';
-				no.dataset.action = 'learning-discard';
-				no.dataset.arg = card.id;
-				row.appendChild(yes);
-				row.appendChild(no);
-				box.appendChild(row);
-				section.appendChild(box);
+			// Side chat
+			const sideSection = el('section', 'lg-team-section');
+			sideSection.appendChild(el('h4', 'lg-team-label', '旁聊 (/side)'));
+			const log = el('div', 'lg-team-sideLog');
+			if (side.length === 0) log.appendChild(el('p', 'lg-team-empty', '旁聊只写自己的记录，不进入主对话'));
+			for (const message of side) {
+				const line = el('div', `lg-team-sideMsg is-${message.role === 'assistant' ? 'them' : 'me'}`);
+				line.appendChild(el('span', 'lg-team-sideTime', fmtTime(message.time)));
+				line.appendChild(el('p', 'lg-team-sideText', message.text));
+				log.appendChild(line);
 			}
-			node.appendChild(section);
-		}
+			sideSection.appendChild(log);
+			const sideComposer = el('div', 'lg-team-composer');
+			const sideInput = el('input', 'lg-team-composerInput');
+			sideInput.type = 'text';
+			sideInput.placeholder = '对这位成员说…';
+			sideInput.dataset.panelInput = 'side';
+			if (draftValues['side']) sideInput.value = draftValues['side'];
+			const sideSend = el('button', 'lg-team-btn', '发送');
+			sideSend.type = 'button';
+			sideSend.dataset.action = 'side-send';
+			sideSend.dataset.arg = member.id;
+			sideComposer.appendChild(sideInput);
+			sideComposer.appendChild(sideSend);
+			sideSection.appendChild(sideComposer);
+			body.appendChild(sideSection);
 
-		if (hasFeature('memory')) {
-			const section = el('section', 'lg-team-section');
-			section.appendChild(el('h4', 'lg-team-label', '记忆'));
-			const list = el('div', 'lg-team-memList');
-			if (memory.length === 0) list.appendChild(el('p', 'lg-team-empty', '还没有记忆条目'));
+			// Checkpoints
+			const ckptSection = el('section', 'lg-team-section');
+			ckptSection.appendChild(el('h4', 'lg-team-label', '交接检查点'));
+			const ckptList = el('div', 'lg-team-ckptList');
+			if (checkpoints.length === 0) ckptList.appendChild(el('p', 'lg-team-empty', '没有待交接的检查点'));
+			for (const card of checkpoints) {
+				const item = el('div', 'lg-team-card');
+				item.appendChild(el('p', 'lg-team-cardText', card.text));
+				const row = el('div', 'lg-team-cardRow');
+				const dismiss = el('button', 'lg-team-btn lg-team-btnXs', '完成');
+				dismiss.type = 'button';
+				dismiss.dataset.action = 'checkpoint-remove';
+				dismiss.dataset.arg = card.id;
+				row.appendChild(dismiss);
+				item.appendChild(row);
+				ckptList.appendChild(item);
+			}
+			ckptSection.appendChild(ckptList);
+			const ckptComposer = el('div', 'lg-team-composer');
+			const ckptInput = el('input', 'lg-team-composerInput');
+			ckptInput.type = 'text';
+			ckptInput.placeholder = '手动记一条交接说明…';
+			ckptInput.dataset.panelInput = 'checkpoint';
+			if (draftValues['checkpoint']) ckptInput.value = draftValues['checkpoint'];
+			const ckptAdd = el('button', 'lg-team-btn', '记录');
+			ckptAdd.type = 'button';
+			ckptAdd.dataset.action = 'checkpoint-add';
+			ckptAdd.dataset.arg = member.id;
+			ckptComposer.appendChild(ckptInput);
+			ckptComposer.appendChild(ckptAdd);
+			ckptSection.appendChild(ckptComposer);
+			body.appendChild(ckptSection);
+
+			// Learning
+			if (learning.length > 0) {
+				const learnSection = el('section', 'lg-team-section');
+				learnSection.appendChild(el('h4', 'lg-team-label', '学习卡片'));
+				for (const card of learning) {
+					const box = el('div', 'lg-team-card');
+					box.appendChild(el('p', 'lg-team-cardText', card.text));
+					const row = el('div', 'lg-team-cardRow');
+					const yes = el('button', 'lg-team-btn lg-team-btnXs', '采纳');
+					yes.type = 'button';
+					yes.dataset.action = 'learning-accept';
+					yes.dataset.arg = card.id;
+					const no = el('button', 'lg-team-btn lg-team-btnXs', '丢弃');
+					no.type = 'button';
+					no.dataset.action = 'learning-discard';
+					no.dataset.arg = card.id;
+					row.appendChild(yes);
+					row.appendChild(no);
+					box.appendChild(row);
+					learnSection.appendChild(box);
+				}
+				body.appendChild(learnSection);
+			}
+
+			// Memory
+			const memSection = el('section', 'lg-team-section');
+			memSection.appendChild(el('h4', 'lg-team-label', '记忆'));
+			const memList = el('div', 'lg-team-memList');
+			if (memory.length === 0) memList.appendChild(el('p', 'lg-team-empty', '还没有记忆条目'));
 			for (const entry of memory) {
 				const item = el('div', 'lg-team-memItem');
 				const pair = `${member.id}:${entry.id}`;
@@ -680,33 +936,24 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 					editInput.dataset.panelInput = 'memory-edit';
 					item.appendChild(editInput);
 					const row = el('div', 'lg-team-cardRow');
-					const save = el('button', 'lg-team-btn', '保存');
+					const save = el('button', 'lg-team-btn lg-team-btnXs', '保存');
 					save.type = 'button';
 					save.dataset.action = 'memory-edit-save';
 					save.dataset.arg = pair;
-					const cancel = el('button', 'lg-team-btn', '取消');
+					const cancel = el('button', 'lg-team-btn lg-team-btnXs', '取消');
 					cancel.type = 'button';
 					cancel.dataset.action = 'memory-edit-cancel';
-					editInput.addEventListener('keydown', (e) => {
-						if (e.key === 'Enter') {
-							e.preventDefault();
-							save.click();
-						} else if (e.key === 'Escape') {
-							e.preventDefault();
-							cancel.click();
-						}
-					});
 					row.appendChild(save);
 					row.appendChild(cancel);
 					item.appendChild(row);
 				} else {
 					item.appendChild(el('p', 'lg-team-memText', entry.text));
 					const row = el('div', 'lg-team-cardRow');
-					const edit = el('button', 'lg-team-btn', '编辑');
+					const edit = el('button', 'lg-team-btn lg-team-btnXs', '编辑');
 					edit.type = 'button';
 					edit.dataset.action = 'memory-edit-start';
 					edit.dataset.arg = pair;
-					const remove = el('button', 'lg-team-btn', '移除');
+					const remove = el('button', 'lg-team-btn lg-team-btnXs', '移除');
 					remove.type = 'button';
 					remove.dataset.action = 'memory-remove';
 					remove.dataset.arg = pair;
@@ -714,104 +961,26 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 					row.appendChild(remove);
 					item.appendChild(row);
 				}
-				list.appendChild(item);
+				memList.appendChild(item);
 			}
-			section.appendChild(list);
-			const composer = el('div', 'lg-team-composer');
-			const input = el('input', 'lg-team-composerInput');
-			input.type = 'text';
-			input.placeholder = '为这位成员记一条…';
-			input.dataset.panelInput = 'memory';
-			if (draftValues['memory']) input.value = draftValues['memory'];
-			const add = el('button', 'lg-team-btn', '添加');
-			add.type = 'button';
-			add.dataset.action = 'memory-add';
-			add.dataset.arg = member.id;
-			input.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					add.click();
-				}
-			});
-			composer.appendChild(input);
-			composer.appendChild(add);
-			section.appendChild(composer);
-			node.appendChild(section);
+			memSection.appendChild(memList);
+			const memComposer = el('div', 'lg-team-composer');
+			const memInput = el('input', 'lg-team-composerInput');
+			memInput.type = 'text';
+			memInput.placeholder = '为这位成员记一条…';
+			memInput.dataset.panelInput = 'memory';
+			if (draftValues['memory']) memInput.value = draftValues['memory'];
+			const memAdd = el('button', 'lg-team-btn', '添加');
+			memAdd.type = 'button';
+			memAdd.dataset.action = 'memory-add';
+			memAdd.dataset.arg = member.id;
+			memComposer.appendChild(memInput);
+			memComposer.appendChild(memAdd);
+			memSection.appendChild(memComposer);
+			body.appendChild(memSection);
 		}
 
-		if (hasFeature('sideChat')) {
-			const section = el('section', 'lg-team-section');
-			section.appendChild(el('h4', 'lg-team-label', '旁聊'));
-			const log = el('div', 'lg-team-sideLog');
-			if (side.length === 0) log.appendChild(el('p', 'lg-team-empty', '旁聊只写自己的记录，不进入主对话'));
-			for (const message of side) {
-				const line = el('div', `lg-team-sideMsg is-${message.role === 'assistant' ? 'them' : 'me'}`);
-				line.appendChild(el('span', 'lg-team-sideTime', fmtTime(message.time)));
-				line.appendChild(el('p', 'lg-team-sideText', message.text));
-				log.appendChild(line);
-			}
-			section.appendChild(log);
-			const composer = el('div', 'lg-team-composer');
-			const input = el('input', 'lg-team-composerInput');
-			input.type = 'text';
-			input.placeholder = '对这位成员说…';
-			input.dataset.panelInput = 'side';
-			if (draftValues['side']) input.value = draftValues['side'];
-			const send = el('button', 'lg-team-btn', '发送');
-			send.type = 'button';
-			send.dataset.action = 'side-send';
-			send.dataset.arg = member.id;
-			input.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					send.click();
-				}
-			});
-			composer.appendChild(input);
-			composer.appendChild(send);
-			section.appendChild(composer);
-			node.appendChild(section);
-		}
-
-		if (hasFeature('handoff')) {
-			const section = el('section', 'lg-team-section');
-			section.appendChild(el('h4', 'lg-team-label', '交接检查点'));
-			const list = el('div', 'lg-team-ckptList');
-			if (checkpoints.length === 0) list.appendChild(el('p', 'lg-team-empty', '没有待交接的检查点'));
-			for (const card of checkpoints) {
-				const item = el('div', 'lg-team-card');
-				item.appendChild(el('p', 'lg-team-cardText', card.text));
-				const row = el('div', 'lg-team-cardRow');
-				const dismiss = el('button', 'lg-team-btn', '完成');
-				dismiss.type = 'button';
-				dismiss.dataset.action = 'checkpoint-remove';
-				dismiss.dataset.arg = card.id;
-				row.appendChild(dismiss);
-				item.appendChild(row);
-				list.appendChild(item);
-			}
-			section.appendChild(list);
-			const composer = el('div', 'lg-team-composer');
-			const input = el('input', 'lg-team-composerInput');
-			input.type = 'text';
-			input.placeholder = '手动记一条交接说明…';
-			input.dataset.panelInput = 'checkpoint';
-			if (draftValues['checkpoint']) input.value = draftValues['checkpoint'];
-			const add = el('button', 'lg-team-btn', '记录');
-			add.type = 'button';
-			add.dataset.action = 'checkpoint-add';
-			add.dataset.arg = member.id;
-			input.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					add.click();
-				}
-			});
-			composer.appendChild(input);
-			composer.appendChild(add);
-			section.appendChild(composer);
-			node.appendChild(section);
-		}
+		node.appendChild(body);
 		root.appendChild(node);
 
 		if (focusedKey) {
@@ -1067,14 +1236,15 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 	};
 	const rowMenu = (profile) => {
 		const items = [];
-		if (profile.sessionId) items.push({ label: '打开对话', run: () => focusSession(profile.sessionId) });
-		if (hasFeature('memory') || hasFeature('sideChat') || hasFeature('handoff')) items.push({ label: '打开面板', run: () => openPanel('member', profile.id) });
+		if (profile.sessionId) items.push({ label: '打开原生会话', run: () => focusSession(profile.sessionId) });
+		items.push({ label: '实时脉冲 (Pulse)', run: () => { state.inspectorTab = 'pulse'; openPanel('member', profile.id); } });
+		items.push({ label: '工单召回 (Recall)', run: () => { state.inspectorTab = 'recall'; openPanel('member', profile.id); } });
+		items.push({ label: '认知交接 (Cognition)', run: () => { state.inspectorTab = 'cognition'; openPanel('member', profile.id); } });
 		items.push({ label: '派发工单', run: () => {
 			state.newBox = { kind: 'ticket', workerId: profile.id };
 			renderNewBox();
 		} });
-		items.push({ label: '工单 / 召回', run: () => openPanel('member', profile.id) });
-		items.push({ label: '重命名', run: () => {
+		items.push({ label: '重命名 / 配置', run: () => {
 			state.newBox = { kind: 'rename-member', id: profile.id };
 			renderNewBox();
 		} });
@@ -1092,25 +1262,114 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		items.push({ label: '解散房间', danger: true, run: () => askConfirm('remove-room', room.id, `解散房间 ${room.name}？对话不会被删除。`) });
 		return items;
 	};
+	const renderRouterCard = (host) => {
+		const targetHost = host || (root ? root.querySelector('.lg-team-routerSlot') : null);
+		if (targetHost === null) return;
+		targetHost.innerHTML = '';
+		const team = state.team || { profiles: [] };
+		const profiles = Array.isArray(team.profiles) ? team.profiles : [];
+		const lead = profiles.find((p) => p.role === 'lead') || profiles[0];
+		if (!lead) return;
+
+		const card = el('div', 'lg-team-routerCard');
+		card.dataset.memberId = lead.id;
+
+		// Header
+		const head = el('div', 'lg-team-routerHead');
+		head.dataset.action = 'router-inspect';
+		head.dataset.arg = lead.id;
+		head.title = '点击查看全局工单与路由队列';
+
+		const headMain = el('div', 'lg-team-routerHeadMain');
+		const avatarBox = el('span', 'lg-team-avatarBox');
+		avatarBox.innerHTML = avatarHtml(lead);
+		headMain.appendChild(avatarBox);
+
+		const text = el('div', 'lg-team-rowText');
+		text.appendChild(el('span', 'lg-team-name', lead.name));
+		text.appendChild(el('span', 'lg-team-role lg-team-roleBadge is-lead', '主控 (Router)'));
+		headMain.appendChild(text);
+		head.appendChild(headMain);
+
+		const meta = el('div', 'lg-team-rowMeta');
+		const allTickets = Array.isArray(team.tickets) ? team.tickets : [];
+		const activeTickets = allTickets.filter((t) => t.status === 'working' || t.status === 'queued' || t.status === 'observed');
+		const queuePill = el('span', 'lg-team-routerQueuePill', `${activeTickets.length} 个活跃工单`);
+		queuePill.title = `全局活跃工单: ${activeTickets.length} 个`;
+		meta.appendChild(queuePill);
+
+		const mode = autonomyModePref();
+		const modeBtn = el('button', 'lg-team-badge lg-team-modeBtn');
+		modeBtn.type = 'button';
+		modeBtn.dataset.action = 'autonomy-toggle';
+		modeBtn.dataset.mode = mode;
+		modeBtn.textContent = mode === 'auto' ? '自动直派' : '观察待批';
+		modeBtn.title = `自治模式: ${mode === 'auto' ? '自动直派' : '观察待批'} (点击切换)`;
+		meta.appendChild(modeBtn);
+
+		head.appendChild(meta);
+		card.appendChild(head);
+
+		// Quick Task Intake
+		const intake = el('div', 'lg-team-routerIntake');
+		const input = el('input', 'lg-team-routerInput');
+		input.type = 'text';
+		input.placeholder = '下发任务给团队…';
+		input.dataset.action = 'router-input';
+
+		const controls = el('div', 'lg-team-routerControls');
+		const targetSelect = el('select', 'lg-team-routerTarget');
+		const optAuto = el('option', '', '自动分派');
+		optAuto.value = 'auto';
+		targetSelect.appendChild(optAuto);
+
+		const workers = profiles.filter((p) => p.role !== 'lead');
+		for (const w of workers) {
+			const opt = el('option', '', w.name);
+			opt.value = w.id;
+			targetSelect.appendChild(opt);
+		}
+		controls.appendChild(targetSelect);
+
+		const dispatchBtn = el('button', 'lg-team-btn lg-team-routerDispatch', '分派');
+		dispatchBtn.type = 'button';
+		dispatchBtn.dataset.action = 'router-dispatch';
+		controls.appendChild(dispatchBtn);
+
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				dispatchBtn.click();
+			}
+		});
+
+		intake.appendChild(input);
+		intake.appendChild(controls);
+		card.appendChild(intake);
+
+		targetHost.appendChild(card);
+	};
 	const renderRoster = () => {
-		const host = root.querySelector('.lg-team-roster');
+		renderRouterCard();
+		const host = root ? root.querySelector('.lg-team-roster') : null;
 		if (host === null) return;
 		const team = state.team || { profiles: [] };
 		const profiles = Array.isArray(team.profiles) ? team.profiles : [];
+		const workers = profiles.filter((p) => p.role !== 'lead');
 		const focused = currentSessionId();
 		host.innerHTML = '';
-		if (profiles.length === 0) {
+		if (workers.length === 0) {
 			host.appendChild(el('p', 'lg-team-empty', '团队还没有成员，从下方添加'));
 			return;
 		}
-		for (const profile of profiles) {
-			const row = el('div', `lg-team-row${profile.role === 'lead' ? ' is-lead' : ''}`);
-			row.dataset.action = 'row-menu';
+		for (const profile of workers) {
+			const row = el('div', 'lg-team-row');
+			row.dataset.action = 'row-select';
 			row.dataset.arg = profile.id;
 			row.dataset.memberId = profile.id;
 			row.dataset.sessionId = profile.sessionId || '';
 			const counts = scopeCounts(profile.sessionId);
-			const live = liveRow(profile.sessionId);
+			const live = liveRecord(profile.sessionId);
 			const presence = live ? live.presence || 'idle' : 'idle';
 			row.setAttribute('data-presence', presence);
 			const shell = el('div', 'lg-team-rowMain');
@@ -1119,10 +1378,26 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			shell.appendChild(shellAvatar);
 			const text = el('div', 'lg-team-rowText');
 			text.appendChild(el('span', 'lg-team-name', profile.name));
-			const roleLabel = profile.role === 'lead' ? '主控 (Router)' : '成员 (Worker)';
-			text.appendChild(el('span', `lg-team-role lg-team-roleBadge is-${profile.role}`, roleLabel));
+
+			// Activity caption
+			let captionText = '成员 (Worker)';
+			if (live && live.thinking) {
+				const shortThinking = live.thinking.length > 25 ? live.thinking.slice(0, 25) + '…' : live.thinking;
+				captionText = `💭 ${shortThinking}`;
+			} else if (live && Array.isArray(live.tools) && live.tools.length > 0) {
+				const lastTool = live.tools[live.tools.length - 1];
+				captionText = `⚡ ${lastTool.name || 'tool'}`;
+			} else {
+				const allTickets = Array.isArray(team.tickets) ? team.tickets : [];
+				const active = allTickets.filter((t) => t.workerId === profile.id && (t.status === 'working' || t.status === 'queued'));
+				if (active.length > 0) {
+					captionText = `${active.length} 工单进行中`;
+				}
+			}
+			text.appendChild(el('span', 'lg-team-role lg-team-roleBadge is-member', captionText));
 			shell.appendChild(text);
 			row.appendChild(shell);
+
 			const meta = el('div', 'lg-team-rowMeta');
 			if (profile.sessionId === focused) row.classList.add('is-focused');
 			meta.insertAdjacentHTML('beforeend', badgeHtml(profile.sessionId));
@@ -1133,6 +1408,14 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 				const tktPill = el('span', 'lg-team-badge lg-team-ticketBadge', `${activeTickets.length} 工单`);
 				tktPill.title = `进行中工单: ${activeTickets.length} 个`;
 				meta.appendChild(tktPill);
+			}
+
+			const stalledTickets = allTickets.filter((t) => t.workerId === profile.id && t.status === 'stalled');
+			if (stalledTickets.length > 0) {
+				const stalledPill = el('span', 'lg-team-badge lg-team-ticketBadge is-stalled', '停滞');
+				stalledPill.style.backgroundColor = 'var(--lg-accent-soft)';
+				stalledPill.style.color = 'var(--lg-danger)';
+				meta.appendChild(stalledPill);
 			}
 
 			const allRooms = Array.isArray(team.rooms) ? team.rooms : [];
@@ -1156,6 +1439,14 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			const dot = el('span', 'lg-team-dot');
 			dot.dataset.presence = presence;
 			meta.appendChild(dot);
+
+			const menuBtn = el('button', 'lg-team-btn lg-team-btnXs lg-team-menuBtn', '⋯');
+			menuBtn.type = 'button';
+			menuBtn.title = '操作菜单';
+			menuBtn.dataset.action = 'row-menu';
+			menuBtn.dataset.arg = profile.id;
+			meta.appendChild(menuBtn);
+
 			row.appendChild(meta);
 			host.appendChild(row);
 			if (counts.mentions > 0 || counts.unread > 0) row.title = counts.mentions > 0 ? `有 ${counts.mentions} 条 @提及` : `有 ${counts.unread} 条新消息`;
@@ -1244,8 +1535,8 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		syncOpen();
 	};
 	const openPanel = (kind, id) => {
-		if (!hasFeature('memory') && !hasFeature('sideChat') && !hasFeature('handoff')) return;
 		state.panel = { kind, id };
+		if (!state.inspectorTab) state.inspectorTab = 'pulse';
 		renderAll();
 	};
 	const dispatch = (action, arg, event) => {
@@ -1466,6 +1757,156 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			renderPanel();
 			return;
 		}
+		if (action === 'row-select') {
+			openPanel('member', arg);
+			return;
+		}
+		if (action === 'router-inspect') {
+			openPanel('member', arg);
+			return;
+		}
+		if (action === 'router-dispatch') {
+			const card = root ? root.querySelector('.lg-team-routerCard') : null;
+			const input = card ? card.querySelector('.lg-team-routerInput') : null;
+			const select = card ? card.querySelector('.lg-team-routerTarget') : null;
+			const text = input ? String(input.value ?? '').trim() : '';
+			if (text === '') return;
+			const target = select ? String(select.value ?? 'auto') : 'auto';
+			if (input) input.value = '';
+			void postTeam('ticket-add', {
+				title: text,
+				summary: text,
+				workerId: target === 'auto' ? '' : target,
+				mode: autonomyModePref(),
+			}).then(() => {
+				renderAll();
+			});
+			return;
+		}
+		if (action === 'seg-tab') {
+			state.inspectorTab = arg;
+			renderPanel();
+			return;
+		}
+		if (action === 'bind-session') {
+			const memberId = state.panel ? state.panel.id : '';
+			if (!memberId) return;
+			const select = event && event.target;
+			const sessionId = select ? String(select.value ?? '') : '';
+			void postTeam('profile-bind-session', { id: memberId, sessionId }).then(() => {
+				renderAll();
+			});
+			return;
+		}
+		if (action === 'focus-session') {
+			focusSession(arg);
+			return;
+		}
+		if (action === 'ticket-complete') {
+			void postTeam('ticket-complete', { id: arg }).then(renderAll);
+			return;
+		}
+		if (action === 'workbench-toggle') {
+			toggleWorkbench();
+			return;
+		}
+	};
+
+	const toggleWorkbench = () => {
+		state.workbenchOpen = !state.workbenchOpen;
+		renderWorkbench();
+		renderPanel();
+	};
+
+	const renderWorkbench = () => {
+		let overlay = typeof document !== 'undefined' ? document.getElementById('lg-team-workbench-overlay') : null;
+		if (!state.workbenchOpen) {
+			if (overlay && overlay.parentElement) overlay.parentElement.removeChild(overlay);
+			return;
+		}
+		if (typeof document === 'undefined') return;
+		if (overlay === null) {
+			overlay = el('div', 'lg-team-workbench lg-team-workbenchOverlay');
+			overlay.id = 'lg-team-workbench-overlay';
+			overlay.style.position = 'fixed';
+			overlay.style.top = '0';
+			overlay.style.left = '0';
+			overlay.style.right = '0';
+			overlay.style.bottom = '0';
+			overlay.style.zIndex = '999';
+			overlay.style.backgroundColor = 'var(--lg-surface)';
+			overlay.style.display = 'flex';
+			overlay.style.flexDirection = 'column';
+			document.body.appendChild(overlay);
+		}
+		overlay.innerHTML = '';
+
+		const head = el('header', 'lg-team-panelHead');
+		head.appendChild(el('h3', 'lg-team-panelTitle', 'Super-agent Mission Control'));
+		const close = el('button', 'lg-team-btn lg-team-btnXs', '关闭全景');
+		close.type = 'button';
+		close.dataset.action = 'workbench-toggle';
+		head.appendChild(close);
+		overlay.appendChild(head);
+
+		const grid = el('div', 'lg-team-workbenchGrid');
+
+		// Col 1: Router
+		const col1 = el('div', 'lg-team-workbenchCol');
+		col1.appendChild(el('h4', 'lg-team-label', '主控路由器 (Router)'));
+		renderRouterCard(col1);
+		grid.appendChild(col1);
+
+		// Col 2: Workers
+		const col2 = el('div', 'lg-team-workbenchCol');
+		col2.appendChild(el('h4', 'lg-team-label', '成员工作区 (Workers)'));
+		const team = state.team || { profiles: [] };
+		const profiles = Array.isArray(team.profiles) ? team.profiles : [];
+		const workers = profiles.filter((p) => p.role !== 'lead');
+		for (const w of workers) {
+			const wCard = el('div', 'lg-team-card');
+			const wHead = el('div', 'lg-team-cardHeader');
+			wHead.appendChild(el('span', 'lg-team-ticketTitle', w.name));
+			const live = liveRecord(w.sessionId);
+			const presence = live ? live.presence || 'idle' : 'idle';
+			const dot = el('span', 'lg-team-dot');
+			dot.dataset.presence = presence;
+			wHead.appendChild(dot);
+			wCard.appendChild(wHead);
+
+			if (live && live.thinking) {
+				wCard.appendChild(el('p', 'lg-team-ticketSummary', `💭 ${clampText(live.thinking, 60)}`));
+			}
+			const selectBtn = el('button', 'lg-team-btn lg-team-btnXs', '监控详情');
+			selectBtn.type = 'button';
+			selectBtn.dataset.action = 'row-select';
+			selectBtn.dataset.arg = w.id;
+			wCard.appendChild(selectBtn);
+			col2.appendChild(wCard);
+		}
+		grid.appendChild(col2);
+
+		// Col 3: Selected Worker Inspector
+		const col3 = el('div', 'lg-team-workbenchCol');
+		col3.appendChild(el('h4', 'lg-team-label', '实时监控 (Live Inspector)'));
+		const selectedMemberId = state.panel ? state.panel.id : (workers[0] ? workers[0].id : '');
+		const inspected = memberById(selectedMemberId);
+		if (inspected) {
+			const live = liveRecord(inspected.sessionId);
+			const liveCard = el('div', 'lg-team-pulseCard');
+			liveCard.appendChild(el('h5', 'lg-team-ticketTitle', `${inspected.name} · 实时脉冲`));
+			if (live && live.thinking) {
+				liveCard.appendChild(el('pre', 'lg-team-thinkingStream', live.thinking));
+			} else {
+				liveCard.appendChild(el('p', 'lg-team-empty', '当前无进行中的思考'));
+			}
+			col3.appendChild(liveCard);
+		} else {
+			col3.appendChild(el('p', 'lg-team-empty', '选择一个成员进行监控'));
+		}
+		grid.appendChild(col3);
+
+		overlay.appendChild(grid);
 	};
 
 	/* --- mount ------------------------------------------------------------- */
@@ -1490,6 +1931,7 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 		root.appendChild(head);
 		root.appendChild(el('div', 'lg-team-scroll'));
 		const scroll = root.querySelector('.lg-team-scroll');
+		scroll.appendChild(el('div', 'lg-team-routerSlot'));
 		scroll.appendChild(el('h3', 'lg-team-label', '成员'));
 		scroll.appendChild(el('div', 'lg-team-roster'));
 		scroll.appendChild(el('h3', 'lg-team-label', '房间'));
@@ -1516,7 +1958,38 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			else if (action === 'room-menu') dispatch(action, node.dataset.arg, event);
 			else if (action !== undefined && action !== '') dispatch(action, node.dataset.arg, event);
 		});
+		root.addEventListener('contextmenu', (event) => {
+			const row = event.target && typeof event.target.closest === 'function' ? event.target.closest('[data-member-id]') : null;
+			if (row && row.dataset.memberId) {
+				event.preventDefault();
+				const member = memberById(row.dataset.memberId);
+				if (member !== null) {
+					openMenu(rowMenu(member), event.clientX, event.clientY);
+				}
+				return;
+			}
+			const roomRow = event.target && typeof event.target.closest === 'function' ? event.target.closest('.lg-team-room') : null;
+			if (roomRow && roomRow.dataset.arg) {
+				event.preventDefault();
+				const room = roomById(roomRow.dataset.arg);
+				if (room !== null) {
+					openMenu(roomMenu(room), event.clientX, event.clientY);
+				}
+			}
+		});
 		root.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape') {
+				if (state.panel !== null) {
+					event.preventDefault();
+					closePanel();
+					return;
+				}
+				if (state.workbenchOpen) {
+					event.preventDefault();
+					toggleWorkbench();
+					return;
+				}
+			}
 			if (event.key !== 'Enter' || event.target === null || typeof event.target.closest !== 'function') return;
 			const input = event.target.closest("[data-panel-input]");
 			if (input === null) return;
@@ -1736,16 +2209,128 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			} catch {}
 		};
 
+		const MissionControlWorkbench = () => {
+			const team = state.team || { profiles: [] };
+			const profiles = Array.isArray(team.profiles) ? team.profiles : [];
+			const lead = profiles.find((p) => p.role === 'lead') || profiles[0];
+			const workers = profiles.filter((p) => p.role !== 'lead');
+			return React.createElement(
+				'div',
+				{ className: 'lg-team-workbench', id: 'lg-team-workbench' },
+				React.createElement(
+					'header',
+					{ className: 'lg-team-panelHead' },
+					React.createElement('h3', { className: 'lg-team-panelTitle' }, 'Super-agent Mission Control'),
+					React.createElement(
+						'button',
+						{
+							type: 'button',
+							className: 'lg-team-btn lg-team-btnXs',
+							onClick: () => toggleWorkbench(),
+						},
+						'关闭'
+					)
+				),
+				React.createElement(
+					'div',
+					{ className: 'lg-team-workbenchGrid' },
+					React.createElement(
+						'div',
+						{ className: 'lg-team-workbenchCol' },
+						React.createElement('h4', { className: 'lg-team-label' }, '主控路由器 (Router)'),
+						React.createElement(
+							'div',
+							{ className: 'lg-team-card' },
+							React.createElement('p', null, lead ? lead.name : 'Resident Router')
+						)
+					),
+					React.createElement(
+						'div',
+						{ className: 'lg-team-workbenchCol' },
+						React.createElement('h4', { className: 'lg-team-label' }, '成员工作区 (Workers)'),
+						...workers.map((w) =>
+							React.createElement(
+								'div',
+								{ key: w.id, className: 'lg-team-card' },
+								React.createElement('p', null, w.name),
+								React.createElement(
+									'button',
+									{
+										type: 'button',
+										className: 'lg-team-btn lg-team-btnXs',
+										onClick: () => openPanel('member', w.id),
+									},
+									'监控详情'
+								)
+							)
+						)
+					),
+					React.createElement(
+						'div',
+						{ className: 'lg-team-workbenchCol' },
+						React.createElement('h4', { className: 'lg-team-label' }, '实时监控 (Live Inspector)'),
+						React.createElement('p', { className: 'lg-team-empty' }, '侧边栏抽屉与全景保持同步')
+					)
+				)
+			);
+		};
+
+		let mainHandle = null;
+		const mountMain = () => {
+			if (mainHandle !== null) return;
+			try {
+				mainHandle = slots.inject('main', () => {
+					let off = null;
+					try {
+						off = slots.register(
+							{
+								name: 'main',
+								key: 'lg-team-workbench',
+								inject: () => ({}),
+							},
+							MissionControlWorkbench
+						);
+					} catch (err) {
+						console.warn('[dsh-liquid-glass] could not register main slot lg-team-workbench:', err);
+					}
+					return () => {
+						if (typeof off === 'function') {
+							try { off(); } catch {}
+						}
+					};
+				});
+			} catch {
+				mainHandle = null;
+			}
+			if (mainHandle !== null && typeof mainHandle.start === 'function') {
+				try { mainHandle.start(); } catch {}
+			}
+		};
+
+		const unmountMain = () => {
+			if (mainHandle === null) return;
+			const cur = mainHandle;
+			mainHandle = null;
+			try {
+				if (typeof cur === 'function') cur();
+				else if (typeof cur.stop === 'function') cur.stop();
+			} catch {}
+		};
+
 		return {
 			start() {
 				mountFooter();
+				mountMain();
 			},
 			stop() {
 				unmountRegion();
 				unmountFooter();
+				unmountMain();
 			},
 			mountRegion,
 			unmountRegion,
+			mountMain,
+			unmountMain,
 		};
 	})();
 
@@ -1755,7 +2340,8 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 			stop,
 			/* Test seams: the shell check drives these directly. */
 			__lg: {
-				root,
+				get root() { return root; },
+				buildDom,
 				slotsHandle,
 				state,
 				dispatch,
@@ -1766,6 +2352,10 @@ function createTeam(require, ctx, catalog, shared, prefs) {
 				openPanel,
 				closePanel,
 				renderPanel,
+				renderRoster,
+				renderRouterCard,
+				renderWorkbench,
+				toggleWorkbench,
 				renderAll,
 				syncOpen,
 				tick,

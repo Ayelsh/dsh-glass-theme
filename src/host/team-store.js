@@ -306,6 +306,86 @@ function outboxFromStored(raw) {
   }
   return outbox;
 }
+function selectWorkerForDispatch(state, { workerId, text = "", roomId = "" } = {}) {
+  const profiles = Array.isArray(state?.profiles) ? state.profiles : [];
+  const workers = profiles.filter((p) => p && p.role === "member");
+  const lead = profiles.find((p) => p && p.role === "lead") || profiles[0] || null;
+
+  if (workers.length === 0) {
+    return lead;
+  }
+
+  // 1. If explicit workerId given and is a valid Worker (and not lead/auto/""), use it
+  if (workerId && workerId !== "auto" && (!lead || workerId !== lead.id)) {
+    const explicitWorker = workers.find((w) => w.id === workerId);
+    if (explicitWorker) return explicitWorker;
+  }
+
+  const rawText = typeof text === "string" ? text : "";
+
+  // 2. Check for @mention matching Worker name or id
+  if (rawText) {
+    const mentionedWorker = workers.find(
+      (w) => rawText.includes(`@${w.name}`) || rawText.includes(`@${w.id}`)
+    );
+    if (mentionedWorker) return mentionedWorker;
+  }
+
+  // 3. Narrow candidate pool by room if roomId is provided
+  let candidates = workers;
+  if (roomId && Array.isArray(state?.rooms)) {
+    const room = state.rooms.find((r) => r.id === roomId);
+    if (room && Array.isArray(room.subscribedWorkerIds) && room.subscribedWorkerIds.length > 0) {
+      const roomWorkers = workers.filter((w) => room.subscribedWorkerIds.includes(w.id));
+      if (roomWorkers.length > 0) {
+        candidates = roomWorkers;
+      }
+    }
+  }
+
+  // 4. Keyword matching on roleTitle or instructions
+  if (rawText && candidates.length > 1) {
+    const lowerText = rawText.toLowerCase();
+    const keywordMatches = candidates.filter((w) => {
+      const roleTitle = (w.roleTitle || "").toLowerCase();
+      const instructions = (w.instructions || "").toLowerCase();
+      const matchRole = roleTitle && (lowerText.includes(roleTitle) || roleTitle.split(/[\s,;]+/).some((t) => t.length > 2 && lowerText.includes(t)));
+      const matchInst = instructions && (lowerText.includes(instructions) || instructions.split(/[\s,;]+/).some((t) => t.length > 2 && lowerText.includes(t)));
+      return matchRole || matchInst;
+    });
+    if (keywordMatches.length === 1) {
+      return keywordMatches[0];
+    }
+    if (keywordMatches.length > 1) {
+      candidates = keywordMatches;
+    }
+  }
+
+  // 5. Workload balancing: select candidate with lowest count of active tickets (working / queued)
+  const tickets = Array.isArray(state?.tickets) ? state.tickets : [];
+  const workload = new Map();
+  for (const w of candidates) {
+    workload.set(w.id, 0);
+  }
+  for (const t of tickets) {
+    if ((t.status === "working" || t.status === "queued") && workload.has(t.workerId)) {
+      workload.set(t.workerId, workload.get(t.workerId) + 1);
+    }
+  }
+
+  let minWorker = candidates[0];
+  let minCount = workload.get(minWorker.id) ?? 0;
+  for (let i = 1; i < candidates.length; i++) {
+    const count = workload.get(candidates[i].id) ?? 0;
+    if (count < minCount) {
+      minCount = count;
+      minWorker = candidates[i];
+    }
+  }
+
+  return minWorker;
+}
+
 function normalizeState(raw) {
   const state = emptyState();
   if (raw === null || typeof raw !== "object") return state;
@@ -344,6 +424,29 @@ function normalizeState(raw) {
   state.mandates = mandatesFromStored(raw.mandates);
   state.tickets = ticketsFromStored(raw.tickets, memberIds);
   state.outbox = outboxFromStored(raw.outbox);
+
+  // Migrate legacy tickets stuck on lead or unassigned when Workers exist
+  const workers = state.profiles.filter((p) => p.role === "member");
+  const lead = state.profiles.find((p) => p.role === "lead") || state.profiles[0];
+  if (workers.length > 0) {
+    for (const t of state.tickets) {
+      if (!t.workerId || (lead && t.workerId === lead.id)) {
+        const selected = selectWorkerForDispatch(state, {
+          text: `${t.title || ""} ${t.summary || ""}`,
+          roomId: t.threadId
+        });
+        if (selected && selected.id !== (lead ? lead.id : "")) {
+          t.workerId = selected.id;
+          if (t.recallRefs) {
+            t.recallRefs.workerId = selected.id;
+            if (!t.recallRefs.sessionId && selected.sessionId) {
+              t.recallRefs.sessionId = selected.sessionId;
+            }
+          }
+        }
+      }
+    }
+  }
   return state;
 }
 function stateOf(stored) {
@@ -447,8 +550,28 @@ function createTeamStore(ctx) {
         if (patch.role !== void 0 && ROLES.includes(patch.role)) profile.role = patch.role;
         if (patch.instructions !== void 0) profile.instructions = clampText(patch.instructions, CAPS.instructionsMax);
         if (patch.avatar !== void 0) profile.avatar = avatarOf(patch.avatar);
-        if (patch.sessionId !== void 0) profile.sessionId = clampText(patch.sessionId, 200);
+        if (patch.sessionId !== void 0) {
+          profile.sessionId = clampText(patch.sessionId, 200);
+          for (const t of state.tickets) {
+            if (t.workerId === profile.id && t.recallRefs && !t.recallRefs.sessionId) {
+              t.recallRefs.sessionId = profile.sessionId;
+            }
+          }
+        }
         state.profiles = sortProfiles(state.profiles);
+        break;
+      }
+      case "profile-bind-session": {
+        const id = typeof request.memberId === "string" && request.memberId !== "" ? request.memberId : request.id;
+        const profile = findProfile(id);
+        if (profile === void 0) return { ok: false, error: "unknown member" };
+        const sessionId = clampText(request.sessionId, 200);
+        profile.sessionId = sessionId;
+        for (const t of state.tickets) {
+          if (t.workerId === profile.id && t.recallRefs && !t.recallRefs.sessionId) {
+            t.recallRefs.sessionId = sessionId;
+          }
+        }
         break;
       }
       case "profile-remove": {
@@ -578,7 +701,27 @@ function createTeamStore(ctx) {
           const memoryEntries = state.memory[member.id] ?? [];
           const activeTickets = state.tickets.filter((t) => t.workerId === member.id && (t.status === "working" || t.status === "queued"));
           const latestCheckpoint = state.checkpoints.filter((c) => c.memberId === member.id).slice(-1)[0];
-          reply = `[${member.name}] 收到关于 "${text}" 的咨询。角色: ${member.role === "lead" ? "主控(Router)" : "成员(Worker)"}；活跃工单: ${activeTickets.length} 个；记忆条目: ${memoryEntries.length} 条；最新交接: ${latestCheckpoint ? latestCheckpoint.text : "暂无"}。主会话与工单状态保持未修改。`;
+
+          let telemetrySummary = "";
+          const telemetry = request.telemetry && typeof request.telemetry === "object"
+            ? request.telemetry
+            : (request.context && typeof request.context === "object" ? request.context : null);
+          if (telemetry) {
+            const phaseStr = telemetry.phase ? `当前阶段: ${telemetry.phase}` : "";
+            const thinkingText = telemetry.thinking && (telemetry.thinking.text || telemetry.thinking.fullText)
+              ? `思考摘要: "${clampText(telemetry.thinking.text || telemetry.thinking.fullText, 80)}"`
+              : "";
+            const latestTool = Array.isArray(telemetry.tools) && telemetry.tools.length > 0
+              ? telemetry.tools[telemetry.tools.length - 1]
+              : null;
+            const toolStr = latestTool ? `最近工具: ${latestTool.name} (${latestTool.status || "done"})` : "";
+            const parts = [phaseStr, thinkingText, toolStr].filter(Boolean);
+            if (parts.length > 0) {
+              telemetrySummary = ` [实时遥测] ${parts.join(" | ")}。`;
+            }
+          }
+
+          reply = `[${member.name}] 收到关于 "${text}" 的咨询。角色: ${member.role === "lead" ? "主控(Router)" : "成员(Worker)"}；活跃工单: ${activeTickets.length} 个；记忆条目: ${memoryEntries.length} 条；最新交接: ${latestCheckpoint ? latestCheckpoint.text : "暂无"}。${telemetrySummary}主会话与工单状态保持未修改。`;
           messages.push({ role: "assistant", text: reply, time: Date.now() });
         }
         if (messages.length > CAPS.sideMessages) messages.splice(0, messages.length - CAPS.sideMessages);
@@ -670,7 +813,11 @@ function createTeamStore(ctx) {
         }
 
         const mode = request.mode === "auto" ? "auto" : "observe";
-        const worker = targetMemberId !== "" ? findProfile(targetMemberId) : state.profiles.find((p) => p.role === "member") || state.profiles[0];
+        const worker = selectWorkerForDispatch(state, {
+          workerId: targetMemberId,
+          text,
+          roomId: room ? room.id : threadId
+        });
         const workerId = worker ? worker.id : "";
 
         if (mode === "observe" && type === "candidate") {
@@ -774,8 +921,15 @@ function createTeamStore(ctx) {
         if (title === "") return { ok: false, error: "ticket needs a title" };
         const threadId = typeof src.threadId === "string" ? src.threadId : "";
         const room = findRoom(threadId);
-        const worker = typeof src.workerId === "string" ? findProfile(src.workerId) : state.profiles.find((p) => p.role === "member") || state.profiles[0];
+        const worker = selectWorkerForDispatch(state, {
+          workerId: src.workerId,
+          text: `${title} ${src.summary || ""}`,
+          roomId: threadId
+        });
         const workerId = worker ? worker.id : "";
+        if (src.sessionId && worker && !worker.sessionId) {
+          worker.sessionId = clampText(src.sessionId, 200);
+        }
         const summary = clampText(src.summary, CAPS.goalMax);
         const mode = src.mode === "observe" ? "observe" : "auto";
         const mandateStatus = mode === "observe" ? "observed" : "authorized";
@@ -808,14 +962,14 @@ function createTeamStore(ctx) {
             mandateId: typeof src.recallRefs.mandateId === "string" ? src.recallRefs.mandateId : mandate.id,
             ticketId,
             workerId,
-            sessionId: typeof src.recallRefs.sessionId === "string" ? src.recallRefs.sessionId : (worker ? worker.sessionId : "")
+            sessionId: typeof src.recallRefs.sessionId === "string" ? src.recallRefs.sessionId : (src.sessionId || (worker ? worker.sessionId : ""))
           } : {
             triggerIds: Array.isArray(src.triggerIds) ? src.triggerIds.map(String) : [],
             threadId,
             mandateId: mandate.id,
             ticketId,
             workerId,
-            sessionId: worker ? worker.sessionId : ""
+            sessionId: src.sessionId || (worker ? worker.sessionId : "")
           },
           spill: src.spill !== undefined && src.spill !== null ? src.spill : { details: summary || title, continuation: null },
           retryCount: 0,
@@ -866,6 +1020,12 @@ function createTeamStore(ctx) {
         if (ticket === void 0) return { ok: false, error: "unknown ticket" };
         ticket.status = "ready";
         if (request.deliverable !== void 0) ticket.deliverable = clampText(request.deliverable, CAPS.textMax);
+        if (request.sessionId) {
+          const sessId = clampText(request.sessionId, 200);
+          if (ticket.recallRefs) ticket.recallRefs.sessionId = sessId;
+          const worker = findProfile(ticket.workerId);
+          if (worker && !worker.sessionId) worker.sessionId = sessId;
+        }
         ticket.lastActivityMs = Date.now();
         ticket.updatedAt = Date.now();
 
@@ -956,15 +1116,26 @@ function createTeamStore(ctx) {
       case "watchdog-resolve": {
         const ticket = state.tickets.find((t) => t.id === request.id);
         if (ticket === void 0) return { ok: false, error: "unknown ticket" };
-        const action = request.action === "dismiss" ? "dismiss" : "retry";
-        if (action === "retry") {
+        const targetWorkerId = request.workerId || request.targetWorkerId;
+        if (targetWorkerId) {
+          const newWorker = findProfile(targetWorkerId);
+          if (newWorker) {
+            ticket.workerId = newWorker.id;
+            if (ticket.recallRefs) {
+              ticket.recallRefs.workerId = newWorker.id;
+              if (newWorker.sessionId) ticket.recallRefs.sessionId = newWorker.sessionId;
+            }
+          }
+        }
+        const action = request.action === "dismiss" ? "dismiss" : (request.action === "reassign" ? "reassign" : "retry");
+        if (action === "dismiss") {
+          ticket.status = "merged";
+          ticket.watchdogReason = "dismissed";
+        } else {
           ticket.status = "working";
           ticket.retryCount = 0;
           ticket.lastActivityMs = Date.now();
           ticket.watchdogReason = "";
-        } else {
-          ticket.status = "merged";
-          ticket.watchdogReason = "dismissed";
         }
         ticket.updatedAt = Date.now();
         persist();
@@ -998,5 +1169,6 @@ function createTeamStore(ctx) {
 export {
   CAPS,
   STORE_VERSION,
-  createTeamStore
+  createTeamStore,
+  selectWorkerForDispatch
 };
